@@ -114,6 +114,8 @@ export const BridgeTransactionsPage = ({ bridges }) => {
 		})
 	}
 
+	let today = new Date().toISOString().split('T')[0]
+
 	return (
 		<>
 			<div className="flex flex-col gap-3 items-center w-full max-w-sm mx-auto rounded-md relative xl:fixed xl:left-0 xl:right-0 lg:top-4 xl:top-11 bg-(--cards-bg) p-3">
@@ -128,6 +130,7 @@ export const BridgeTransactionsPage = ({ bridges }) => {
 								name="startDate"
 								value={startDate}
 								onChange={(e) => handleStartDateChange(e.target.value)}
+								max={today}
 								required
 								className="py-2 px-3 text-base bg-[#f2f2f2] dark:bg-black text-black dark:text-white rounded-lg placeholder:text-opacity-40"
 							/>
@@ -140,6 +143,7 @@ export const BridgeTransactionsPage = ({ bridges }) => {
 								value={endDate}
 								onChange={(e) => handleEndDateChange(e.target.value)}
 								min={startDate}
+								max={today}
 								required
 								className="py-2 px-3 text-base bg-[#f2f2f2] dark:bg-black text-black dark:text-white rounded-lg placeholder:text-opacity-40"
 							/>
