@@ -6,14 +6,29 @@ import { useScrollToTop } from '~/hooks'
 import { IChartProps as IAreaChartProps } from '~/components/ECharts/types'
 import { ProtocolsChainsSearch } from '~/components/Search/ProtocolsChains'
 
-interface IChartProps {
-	chartData: any[]
-	title?: string
+export interface ITreemapChartProps {
+	chartData: Array<{
+		categoryName: string
+		change: number
+		change1M: number
+		change1W: number
+		change1Y: number
+		changeYtd: number
+		id: string
+		mcap: number
+		name: string
+		nbCoins: number
+		returnField: number
+		volume1D: number
+	}>
+	customLegendOptions: string[]
+	legendTitle: string
+	showSubcategoryLabels: boolean
 }
 
 const BarChart = React.lazy(() => import('~/components/ECharts/BarChart/NonTimeSeries')) as React.FC<IBarChartProps>
 
-const TreemapChart = React.lazy(() => import('~/components/ECharts/TreemapChart2')) as React.FC<IChartProps>
+const TreemapChart = React.lazy(() => import('~/components/ECharts/TreemapChart2')) as React.FC<ITreemapChartProps>
 
 const AreaChart = React.lazy(() => import('~/components/ECharts/AreaChart')) as React.FC<IAreaChartProps>
 
@@ -61,7 +76,7 @@ function calculateDenominatedChange2(data, denominatedCoin, field) {
 export const CategoryPerformanceContainer = ({
 	pctChanges,
 	performanceTimeSeries,
-	areaChartLegend,
+	categoryNames,
 	isCoinPage,
 	categoryName
 }) => {
@@ -98,9 +113,9 @@ export const CategoryPerformanceContainer = ({
 			? pctChangesDenom.filter((i) => !['bitcoin', 'ethereum', 'solana'].includes(i.id))
 			: pctChangesDenom
 
-		const sorted = [...pctChangesDenom].sort((a, b) => b[field] - a[field]).map((i) => ({ ...i, change: i[field] }))
+		const sorted = pctChangesDenom.toSorted((a, b) => b[field] - a[field]).map((i) => ({ ...i, change: i[field] }))
 		const barChart = sorted.map((i) => [i.name, i[field]?.toFixed(2)])
-		const treemapChart = sorted.map((i) => ({ ...i, returnField: i[field] }))
+		const treemapChart = sorted.map((i) => ({ ...i, categoryName: i.name, returnField: i[field] }))
 
 		let lineChart =
 			cumulativeWindow === '7D'
@@ -187,12 +202,12 @@ export const CategoryPerformanceContainer = ({
 							<AreaChart
 								title=""
 								chartData={lineChart}
-								stacks={areaChartLegend}
+								stacks={categoryNames}
 								valueSymbol="%"
 								hideDefaultLegend={true}
 								hideGradient={true}
 								customLegendName={isCoinPage ? 'Coin' : 'Category'}
-								customLegendOptions={areaChartLegend}
+								customLegendOptions={categoryNames}
 								tooltipValuesRelative
 								hideOthersInTooltip
 								chartOptions={areaChartoptions}
@@ -201,7 +216,12 @@ export const CategoryPerformanceContainer = ({
 						</React.Suspense>
 					) : (
 						<React.Suspense fallback={<></>}>
-							<TreemapChart chartData={treemapChart} />
+							<TreemapChart
+								chartData={treemapChart}
+								showSubcategoryLabels={false}
+								customLegendOptions={categoryNames}
+								legendTitle="Categories"
+							/>
 						</React.Suspense>
 					)}
 				</div>

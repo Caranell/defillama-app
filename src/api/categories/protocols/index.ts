@@ -701,7 +701,7 @@ export async function getCategoryPerformance() {
 	return {
 		pctChanges,
 		performanceTimeSeries,
-		areaChartLegend: info.map((i) => i.name),
+		categoryNames: info.map((i) => i.name),
 		isCoinPage: false
 	}
 }
@@ -789,7 +789,7 @@ export async function getCoinPerformance(categoryId) {
 	return {
 		pctChanges,
 		performanceTimeSeries,
-		areaChartLegend: coinInfo.filter((i) => !['Bitcoin', 'Ethereum', 'Solana'].includes(i.name)).map((i) => i.name),
+		coinNames: coinInfo.filter((i) => !['Bitcoin', 'Ethereum', 'Solana'].includes(i.name)).map((i) => i.name),
 		isCoinPage: true,
 		categoryName: (await getCategoryInfo()).find((i) => i.id === categoryId).name
 	}

@@ -1,16 +1,14 @@
-import { useCallback, useEffect, useId, useMemo } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { TreemapChart as EChartTreemap } from 'echarts/charts'
 import { TooltipComponent, TitleComponent, ToolboxComponent } from 'echarts/components'
 import { useDarkModeManager } from '~/contexts/LocalStorage'
 import { toK } from '~/utils'
+import { SelectWithCombobox } from '~/components/SelectWithCombobox'
+import { ITreemapChartProps } from '~/containers/NarrativeTracker'
 
 echarts.use([TitleComponent, TooltipComponent, EChartTreemap, CanvasRenderer, ToolboxComponent])
-
-interface IChartProps {
-	chartData: any
-}
 
 const visualMin = -100
 const visualMax = 100
@@ -51,8 +49,14 @@ function addColorGradientField(chartDataTree) {
 	}
 }
 
-export default function TreemapChart({ chartData }: IChartProps) {
+export default function TreemapChart({
+	chartData,
+	showSubcategoryLabels = true,
+	customLegendOptions = [],
+	legendTitle = 'Categories'
+}: ITreemapChartProps) {
 	const id = useId()
+	const [legendOptions, setLegendOptions] = useState(customLegendOptions)
 
 	const [isDark] = useDarkModeManager()
 
@@ -61,8 +65,11 @@ export default function TreemapChart({ chartData }: IChartProps) {
 
 		const cData = chartData
 
+		const uniqueCategories: string[] = [...new Set(cData.map((p) => p.categoryName))]
+		const selectedCategories = uniqueCategories.filter((cat) => legendOptions.includes(cat))
+
 		// structure into hierarchy
-		for (let cat of [...new Set(cData.map((p) => p.categoryName))]) {
+		for (let cat of selectedCategories) {
 			const catData = cData.filter((p) => p.categoryName === cat)
 			const catMcap = catData.map((p) => p.mcap).reduce((a, b) => a + b, 0)
 
@@ -81,7 +88,7 @@ export default function TreemapChart({ chartData }: IChartProps) {
 		addColorGradientField(treeData)
 
 		return treeData
-	}, [chartData])
+	}, [chartData, legendOptions])
 
 	const createInstance = useCallback(() => {
 		const instance = echarts.getInstanceByDom(document.getElementById(id))
@@ -162,7 +169,7 @@ export default function TreemapChart({ chartData }: IChartProps) {
 						}
 					},
 					upperLabel: {
-						show: true,
+						show: showSubcategoryLabels,
 						height: 20,
 						color: '#fff'
 					},
@@ -221,5 +228,25 @@ export default function TreemapChart({ chartData }: IChartProps) {
 		}
 	}, [id, chartDataTree, createInstance, isDark])
 
-	return <div id={id} className="min-h-[533px] my-auto" />
+	return (
+		<div className="px-2">
+			{legendTitle && customLegendOptions?.length > 1 && (
+				<SelectWithCombobox
+					allValues={customLegendOptions}
+					selectedValues={legendOptions}
+					setSelectedValues={setLegendOptions}
+					label={legendTitle}
+					clearAll={() => setLegendOptions([])}
+					toggleAll={() => setLegendOptions(customLegendOptions)}
+					labelType="smol"
+					triggerProps={{
+						className:
+							'flex items-center justify-between gap-2 p-2 text-xs rounded-md cursor-pointer flex-nowrap relative border border-(--form-control-border) text-[#666] dark:text-[#919296] hover:bg-(--link-hover-bg) focus-visible:bg-(--link-hover-bg) font-medium'
+					}}
+					portal
+				/>
+			)}
+			<div id={id} className="min-h-[533px] my-auto" />
+		</div>
+	)
 }
