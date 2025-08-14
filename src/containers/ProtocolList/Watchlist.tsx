@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Menu } from '~/components/Menu'
-import { DEFAULT_PORTFOLIO_NAME, useLocalStorageSettingsManager, useWatchlistManager } from '~/contexts/LocalStorage'
-import { formatProtocolsList } from '~/hooks/data/defi'
+import {
+	DEFAULT_PORTFOLIO_NAME,
+	useLocalStorageSettingsManager,
+	useWatchlistManager,
+	useChainsWatchlistManager
+} from '~/contexts/LocalStorage'
+import { formatDataWithExtraTvls, formatProtocolsList } from '~/hooks/data/defi'
 import { useGetProtocolsList } from '~/api/categories/protocols/client'
 import { useGetProtocolsFeesAndRevenueByChain, useGetProtocolsVolumeByChain } from '~/api/categories/chains/client'
 import { ProtocolsByChainTable } from '~/components/Table/Defi/Protocols'
@@ -11,8 +17,38 @@ import { WatchListTabs } from '../Yields/Watchlist'
 import { SelectWithCombobox } from '~/components/SelectWithCombobox'
 import type { IFormattedProtocol } from '~/api/types'
 import { tvlOptions } from '~/components/Filters/options'
+import { ChainsByCategoryTable } from '~/containers/ChainsByCategory/Table'
+import { CHAINS_API_V2 } from '~/constants'
+import { fetchJson } from '~/utils/async'
+import metadataCache from '~/utils/metadata'
+import { slug } from '~/utils'
 
 export function DefiWatchlistContainer() {
+	const { portfolios, selectedPortfolio, addPortfolio, removePortfolio, setSelectedPortfolio } =
+		useWatchlistManager('defi')
+
+	return (
+		<>
+			<ProtocolsChainsSearch options={tvlOptions} />
+			<WatchListTabs />
+			<div className="bg-(--cards-bg) border border-(--cards-border) rounded-md">
+				<PortfolioSelection
+					portfolios={portfolios}
+					selectedPortfolio={selectedPortfolio}
+					setSelectedPortfolio={setSelectedPortfolio}
+					addPortfolio={addPortfolio}
+					removePortfolio={removePortfolio}
+				/>
+				<ProtocolsManager selectedPortfolio={selectedPortfolio} />
+				<ChainsManager selectedPortfolio={selectedPortfolio} />
+				<PortfolioItems selectedPortfolio={selectedPortfolio} />
+			</div>
+		</>
+	)
+}
+
+// Protocols Manager Component
+function ProtocolsManager({ selectedPortfolio }: { selectedPortfolio: string }) {
 	const [extraTvlsEnabled] = useLocalStorageSettingsManager('tvl')
 
 	const { fullProtocolsList, parentProtocols, isLoading: fetchingProtocolsList } = useGetProtocolsList({ chain: 'All' })
@@ -22,16 +58,7 @@ export function DefiWatchlistContainer() {
 	const { data: chainProtocolsFees, isLoading: fetchingProtocolsFeesAndRevenueByChain } =
 		useGetProtocolsFeesAndRevenueByChain('All')
 
-	const {
-		portfolios,
-		selectedPortfolio,
-		savedProtocols,
-		addPortfolio,
-		removePortfolio,
-		setSelectedPortfolio,
-		addProtocol,
-		removeProtocol
-	} = useWatchlistManager('defi')
+	const { savedProtocols, addProtocol, removeProtocol } = useWatchlistManager('defi')
 
 	const formattedProtocols = useMemo(() => {
 		return formatProtocolsList({
@@ -43,10 +70,6 @@ export function DefiWatchlistContainer() {
 			noSubrows: true
 		})
 	}, [fullProtocolsList, parentProtocols, extraTvlsEnabled, chainProtocolsVolumes, chainProtocolsFees])
-
-	const filteredProtocols = useMemo(() => {
-		return formattedProtocols.filter((p) => savedProtocols.has(p.name))
-	}, [fullProtocolsList, savedProtocols, extraTvlsEnabled, parentProtocols, chainProtocolsVolumes, chainProtocolsFees])
 
 	const protocolOptions = useMemo(() => {
 		return formattedProtocols.map((protocol) => ({
@@ -71,63 +94,217 @@ export function DefiWatchlistContainer() {
 	}
 
 	return (
-		<>
-			<ProtocolsChainsSearch options={tvlOptions} />
-			<WatchListTabs />
-			<div className="bg-(--cards-bg) border border-(--cards-border) rounded-md">
-				<PortfolioSelection
-					portfolios={portfolios}
-					selectedPortfolio={selectedPortfolio}
-					setSelectedPortfolio={setSelectedPortfolio}
-					addPortfolio={addPortfolio}
-					removePortfolio={removePortfolio}
-				/>
-				<ProtocolSelection
-					protocolOptions={protocolOptions}
-					selectedProtocolNames={selectedProtocolNames}
-					handleProtocolSelection={handleProtocolSelection}
-					selectedPortfolio={selectedPortfolio}
-				/>
-				{filteredProtocols.length > 0 && <TopMovers protocols={filteredProtocols} />}
-				<div className="p-4">
-					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-lg font-medium">
-							{selectedPortfolio === DEFAULT_PORTFOLIO_NAME ? 'Watchlist' : `${selectedPortfolio} Portfolio`}
-						</h2>
+		<ProtocolSelection
+			protocolOptions={protocolOptions}
+			selectedProtocolNames={selectedProtocolNames}
+			handleProtocolSelection={handleProtocolSelection}
+			selectedPortfolio={selectedPortfolio}
+		/>
+	)
+}
+
+// Chains Manager Component
+function ChainsManager({ selectedPortfolio }: { selectedPortfolio: string }) {
+	const [extraTvlsEnabled] = useLocalStorageSettingsManager('tvl')
+
+	const { data: chainsPayload } = useQuery({
+		queryKey: ['chains2', 'All'],
+		queryFn: () => fetchJson(`${CHAINS_API_V2}/All`),
+		staleTime: 60 * 60 * 1000,
+		retry: 0
+	})
+
+	const formattedChains = useMemo(() => {
+		const chainTvls = chainsPayload?.chainTvls ?? []
+		const base = formatDataWithExtraTvls({
+			data: chainTvls,
+			applyLqAndDc: true,
+			extraTvlsEnabled,
+			chainAssets: undefined
+		})
+		// augment with protocol counts if available
+		return base.map((c: any) => ({
+			...c,
+			protocols: metadataCache.chainMetadata?.[slug(c.name)]?.protocolCount ?? c.protocols ?? 0
+		}))
+	}, [chainsPayload, extraTvlsEnabled])
+
+	const { savedChains, addChain, removeChain } = useChainsWatchlistManager()
+
+	const chainOptions = useMemo(() => {
+		return formattedChains.map((c) => ({ key: c.name, name: c.name }))
+	}, [formattedChains])
+
+	const selectedChainNames = useMemo(() => Array.from(savedChains), [savedChains])
+
+	const handleChainSelection = (selectedValues: string[]) => {
+		const currentSet = new Set(selectedChainNames)
+		const newSet = new Set(selectedValues)
+
+		const toAdd = selectedValues.filter((name) => !currentSet.has(name))
+		const toRemove = selectedChainNames.filter((name) => !newSet.has(name))
+
+		toAdd.forEach((name) => addChain(name))
+		toRemove.forEach((name) => removeChain(name))
+	}
+
+	return (
+		<ChainSelection
+			chainOptions={chainOptions}
+			selectedChainNames={selectedChainNames}
+			handleChainSelection={handleChainSelection}
+			selectedPortfolio={selectedPortfolio}
+		/>
+	)
+}
+
+type PortfolioItemsProps = {
+	selectedPortfolio: string
+}
+
+function PortfolioItems({ selectedPortfolio }: PortfolioItemsProps) {
+	const [extraTvlsEnabled] = useLocalStorageSettingsManager('tvl')
+
+	// Protocols data
+	const { fullProtocolsList, parentProtocols, isLoading: fetchingProtocolsList } = useGetProtocolsList({ chain: 'All' })
+	const { data: chainProtocolsVolumes, isLoading: fetchingProtocolsVolumeByChain } = useGetProtocolsVolumeByChain('All')
+	const { data: chainProtocolsFees, isLoading: fetchingProtocolsFeesAndRevenueByChain } =
+		useGetProtocolsFeesAndRevenueByChain('All')
+	const { savedProtocols } = useWatchlistManager('defi')
+
+	const formattedProtocols = useMemo(() => {
+		return formatProtocolsList({
+			extraTvlsEnabled,
+			protocols: fullProtocolsList,
+			volumeData: chainProtocolsVolumes,
+			feesData: chainProtocolsFees,
+			parentProtocols: parentProtocols,
+			noSubrows: true
+		})
+	}, [fullProtocolsList, parentProtocols, extraTvlsEnabled, chainProtocolsVolumes, chainProtocolsFees])
+
+	const filteredProtocols = useMemo(() => {
+		return formattedProtocols.filter((p) => savedProtocols.has(p.name))
+	}, [formattedProtocols, savedProtocols])
+
+	const loadingProtocols =
+		fetchingProtocolsList || fetchingProtocolsVolumeByChain || fetchingProtocolsFeesAndRevenueByChain
+
+	// Chains data
+	const { data: chainsPayload, isLoading: fetchingChains } = useQuery({
+		queryKey: ['chains2', 'All'],
+		queryFn: () => fetchJson(`${CHAINS_API_V2}/All`),
+		staleTime: 60 * 60 * 1000,
+		retry: 0
+	})
+
+	const formattedChains = useMemo(() => {
+		const chainTvls = chainsPayload?.chainTvls ?? []
+		const base = formatDataWithExtraTvls({
+			data: chainTvls,
+			applyLqAndDc: true,
+			extraTvlsEnabled,
+			chainAssets: undefined
+		})
+		return base.map((c: any) => ({
+			...c,
+			protocols: metadataCache.chainMetadata?.[slug(c.name)]?.protocolCount ?? c.protocols ?? 0
+		}))
+	}, [chainsPayload, extraTvlsEnabled])
+
+	const { savedChains } = useChainsWatchlistManager()
+
+	const filteredChains = useMemo(() => {
+		return formattedChains.filter((c) => savedChains.has(c.name))
+	}, [formattedChains, savedChains])
+
+	const selectedProtocolNames = Array.from(savedProtocols)
+	const selectedChainNames = Array.from(savedChains)
+	const hasNoItems = selectedProtocolNames.length === 0 && selectedChainNames.length === 0
+
+	return (
+		<div className="p-4">
+			<div className="flex items-center justify-between mb-4">
+				<h2 className="text-lg font-medium">
+					{selectedPortfolio === DEFAULT_PORTFOLIO_NAME ? 'Watchlist' : `${selectedPortfolio} Portfolio`}
+				</h2>
+				{(selectedProtocolNames.length > 0 || selectedChainNames.length > 0) && (
+					<div className="flex items-center gap-4">
 						{selectedProtocolNames.length > 0 && (
 							<span className="text-sm text-(--text-secondary)">
 								{selectedProtocolNames.length} protocol{selectedProtocolNames.length === 1 ? '' : 's'}
 							</span>
 						)}
+						{selectedChainNames.length > 0 && (
+							<span className="text-sm text-(--text-secondary)">
+								{selectedChainNames.length} chain{selectedChainNames.length === 1 ? '' : 's'}
+							</span>
+						)}
 					</div>
-					{fetchingProtocolsList || fetchingProtocolsVolumeByChain || fetchingProtocolsFeesAndRevenueByChain ? (
-						<div className="p-8 text-center">
-							<div className="inline-flex items-center gap-2 text-(--text-secondary)">
-								<div className="animate-spin rounded-full h-4 w-4 border-2 border-(--text-secondary) border-t-transparent"></div>
-								<span>Loading protocols...</span>
-							</div>
-						</div>
-					) : filteredProtocols.length ? (
-						<ProtocolsByChainTable data={filteredProtocols} />
-					) : (
-						<div className="p-8 text-center">
-							<div className="max-w-sm mx-auto">
-								<Icon
-									name="bookmark"
-									height={48}
-									width={48}
-									className="mx-auto mb-4 text-(--text-secondary) opacity-50"
-								/>
-								<p className="text-(--text-secondary) mb-2">No protocols in this portfolio</p>
-								<p className="text-sm text-(--text-secondary) opacity-75">
-									Use the protocol selector above to add protocols to your portfolio
-								</p>
-							</div>
-						</div>
-					)}
-				</div>
+				)}
 			</div>
-		</>
+			{hasNoItems ? (
+				<div className="p-8 text-center">
+					<div className="max-w-sm mx-auto">
+						<Icon name="bookmark" height={48} width={48} className="mx-auto mb-4 text-(--text-secondary) opacity-50" />
+						<p className="text-(--text-secondary) mb-2">No items in this portfolio</p>
+						<p className="text-sm text-(--text-secondary) opacity-75">
+							Use the selectors above to add items to your portfolio
+						</p>
+					</div>
+				</div>
+			) : (
+				<>
+					{filteredProtocols.length > 0 && <TopMovers protocols={filteredProtocols} />}
+					<PortfolioProtocolsTable loadingProtocols={loadingProtocols} filteredProtocols={filteredProtocols} />
+					<PortfolioChainsTable loadingChains={fetchingChains} filteredChains={filteredChains} />
+				</>
+			)}
+		</div>
+	)
+}
+
+function PortfolioProtocolsTable({ loadingProtocols, filteredProtocols }: any) {
+	return loadingProtocols ? (
+		<div className="p-8 text-center">
+			<div className="inline-flex items-center gap-2 text-(--text-secondary)">
+				<div className="animate-spin rounded-full h-4 w-4 border-2 border-(--text-secondary) border-t-transparent"></div>
+				<span>Loading protocols...</span>
+			</div>
+		</div>
+	) : filteredProtocols.length ? (
+		<ProtocolsByChainTable data={filteredProtocols} />
+	) : (
+		<div className="p-8 text-center">
+			<div className="max-w-sm mx-auto">
+				<Icon name="bookmark" height={48} width={48} className="mx-auto mb-4 text-(--text-secondary) opacity-50" />
+				<p className="text-(--text-secondary) mb-2">No protocols in this portfolio</p>
+				<p className="text-sm text-(--text-secondary) opacity-75">
+					Use the protocol selector above to add protocols to your portfolio
+				</p>
+			</div>
+		</div>
+	)
+}
+
+function PortfolioChainsTable({ loadingChains, filteredChains }: any) {
+	return loadingChains ? (
+		<div className="p-8 text-center">
+			<div className="inline-flex items-center gap-2 text-(--text-secondary)">
+				<div className="animate-spin rounded-full h-4 w-4 border-2 border-(--text-secondary) border-t-transparent"></div>
+				<span>Loading chains...</span>
+			</div>
+		</div>
+	) : filteredChains.length ? (
+		<ChainsByCategoryTable data={filteredChains as any} />
+	) : (
+		<div className="p-8 text-center">
+			<div className="max-w-sm mx-auto">
+				<Icon name="bookmark" height={48} width={48} className="mx-auto mb-4 text-(--text-secondary) opacity-50" />
+				<p className="text-(--text-secondary) mb-2">No chains in this portfolio</p>
+				<p className="text-sm text-(--text-secondary) opacity-75">Use the chain selector above to add chains</p>
+			</div>
+		</div>
 	)
 }
 
@@ -215,6 +392,42 @@ function ProtocolSelection({
 					selectedProtocolNames.length > 0
 						? `${selectedProtocolNames.length} protocol${selectedProtocolNames.length === 1 ? '' : 's'} selected`
 						: 'Select protocols...'
+				}
+				labelType="regular"
+			/>
+		</div>
+	)
+}
+
+type ChainSelectionProps = {
+	chainOptions: Array<{ key: string; name: string }>
+	selectedChainNames: string[]
+	handleChainSelection: (selectedValues: string[]) => void
+	selectedPortfolio: string
+}
+
+function ChainSelection({
+	chainOptions,
+	selectedChainNames,
+	handleChainSelection,
+	selectedPortfolio
+}: ChainSelectionProps) {
+	return (
+		<div className="p-4 border-b border-(--cards-border)">
+			<div className="mb-3">
+				<h2 className="text-lg font-medium mb-1">Manage Chains</h2>
+				<p className="text-sm text-(--text-secondary)">
+					Select or deselect chains for the "{selectedPortfolio}" portfolio
+				</p>
+			</div>
+			<SelectWithCombobox
+				allValues={chainOptions}
+				selectedValues={selectedChainNames}
+				setSelectedValues={handleChainSelection}
+				label={
+					selectedChainNames.length > 0
+						? `${selectedChainNames.length} chain${selectedChainNames.length === 1 ? '' : 's'} selected`
+						: 'Select chains...'
 				}
 				labelType="regular"
 			/>

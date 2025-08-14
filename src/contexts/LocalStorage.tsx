@@ -65,6 +65,8 @@ const DEFI_WATCHLIST = 'DEFI_WATCHLIST'
 const YIELDS_WATCHLIST = 'YIELDS_WATCHLIST'
 const DEFI_SELECTED_PORTFOLIO = 'DEFI_SELECTED_PORTFOLIO'
 const YIELDS_SELECTED_PORTFOLIO = 'YIELDS_SELECTED_PORTFOLIO'
+// Chains Watchlist (DeFi)
+const DEFI_CHAINS_WATCHLIST = 'DEFI_CHAINS_WATCHLIST'
 export const DEFAULT_PORTFOLIO_NAME = 'main'
 
 // YIELDS SAVED FILTERS
@@ -421,6 +423,41 @@ export function useWatchlistManager(type: 'defi' | 'yields') {
 			}
 		}
 	}, [store, type])
+}
+
+// Chains-specific watchlist manager for DeFi watchlist page
+export function useChainsWatchlistManager() {
+	const store = useSyncExternalStore(
+		subscribeToLocalStorage,
+		() => localStorage.getItem(DEFILLAMA) ?? '{}',
+		() => '{}'
+	)
+
+	return useMemo(() => {
+		const watchlistKey = DEFI_CHAINS_WATCHLIST
+		const selectedPortfolio = JSON.parse(store)?.[DEFI_SELECTED_PORTFOLIO] ?? DEFAULT_PORTFOLIO_NAME
+		const watchlist = JSON.parse(store)?.[watchlistKey] ?? { [DEFAULT_PORTFOLIO_NAME]: {} }
+
+		return {
+			savedChains: new Set(Object.values(watchlist[selectedPortfolio] ?? {})) as Set<string>,
+			addChain: (name: string) => {
+				const wl = JSON.parse(store)?.[watchlistKey] ?? { [DEFAULT_PORTFOLIO_NAME]: {} }
+				const newWatchlist = {
+					...wl,
+					[selectedPortfolio]: { ...wl[selectedPortfolio], [slug(name)]: name }
+				}
+				localStorage.setItem(DEFILLAMA, JSON.stringify({ ...JSON.parse(store), [watchlistKey]: newWatchlist }))
+				window.dispatchEvent(new Event('storage'))
+			},
+			removeChain: (name: string) => {
+				const wl = JSON.parse(store)?.[watchlistKey] ?? { [DEFAULT_PORTFOLIO_NAME]: {} }
+				const newWatchlist = { ...wl, [selectedPortfolio]: { ...wl[selectedPortfolio] } }
+				delete newWatchlist[selectedPortfolio][slug(name)]
+				localStorage.setItem(DEFILLAMA, JSON.stringify({ ...JSON.parse(store), [watchlistKey]: newWatchlist }))
+				window.dispatchEvent(new Event('storage'))
+			}
+		}
+	}, [store])
 }
 
 export function useCustomColumns() {
