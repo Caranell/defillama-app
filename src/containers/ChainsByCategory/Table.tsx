@@ -25,7 +25,15 @@ import { IFormattedDataWithExtraTvl } from '~/hooks/data/defi'
 
 const optionsKey = 'chains-overview-table-columns'
 
-export function ChainsByCategoryTable({ data }: { data: Array<IFormattedDataWithExtraTvl> }) {
+export function ChainsByCategoryTable({
+	data,
+	title,
+	showSearch = true
+}: {
+	data: Array<IFormattedDataWithExtraTvl>
+	title: string
+	showSearch?: boolean
+}) {
 	const columnsInStorage = React.useSyncExternalStore(
 		subscribeToLocalStorage,
 		() => localStorage.getItem(optionsKey) ?? defaultColumns,
@@ -159,24 +167,29 @@ export function ChainsByCategoryTable({ data }: { data: Array<IFormattedDataWith
 	}, [groupTvls])
 
 	return (
-		<div className="bg-(--cards-bg) border border-(--cards-border) rounded-md isolate">
+		<div className="bg-(--cards-bg)  rounded-md isolate">
+			<div className="flex items-center justify-between p-2">
+				<h2 className="text-lg font-medium">{title}</h2>
+			</div>
 			<div className="flex items-center justify-end flex-wrap gap-2 p-2">
-				<div className="relative w-full sm:max-w-[280px] mr-auto">
-					<Icon
-						name="search"
-						height={16}
-						width={16}
-						className="absolute text-(--text-tertiary) top-0 bottom-0 my-auto left-2"
-					/>
-					<input
-						value={projectName}
-						onChange={(e) => {
-							setProjectName(e.target.value)
-						}}
-						placeholder="Search..."
-						className="border border-(--form-control-border) w-full pl-7 pr-2 py-[6px] bg-white dark:bg-black text-black dark:text-white rounded-md text-sm"
-					/>
-				</div>
+				{showSearch && (
+					<div className="relative w-full sm:max-w-[280px] mr-auto">
+						<Icon
+							name="search"
+							height={16}
+							width={16}
+							className="absolute text-(--text-tertiary) top-0 bottom-0 my-auto left-2"
+						/>
+						<input
+							value={projectName}
+							onChange={(e) => {
+								setProjectName(e.target.value)
+							}}
+							placeholder="Search..."
+							className="border border-(--form-control-border) w-full pl-7 pr-2 py-[6px] bg-white dark:bg-black text-black dark:text-white rounded-md text-sm"
+						/>
+					</div>
+				)}
 
 				<div className="flex items-center gap-2 max-sm:w-full max-sm:flex-col">
 					<div className="flex items-center gap-2 w-full sm:w-auto">

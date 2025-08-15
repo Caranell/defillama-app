@@ -12,7 +12,7 @@ export const getStaticProps = withPerformanceLogging('watchlist', async () => {
 
 export default function Portfolio() {
 	return (
-		<Layout title={`Saved TVL Rankings - DefiLlama`} defaultSEO>
+		<Layout title={`Watchlist - DefiLlama`} defaultSEO>
 			<DefiWatchlistContainer />
 		</Layout>
 	)

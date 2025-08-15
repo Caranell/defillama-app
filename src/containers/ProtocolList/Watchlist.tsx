@@ -18,10 +18,52 @@ import { SelectWithCombobox } from '~/components/SelectWithCombobox'
 import type { IFormattedProtocol } from '~/api/types'
 import { tvlOptions } from '~/components/Filters/options'
 import { ChainsByCategoryTable } from '~/containers/ChainsByCategory/Table'
-import { CHAINS_API_V2 } from '~/constants'
-import { fetchJson } from '~/utils/async'
+import { CHAINS_API_V2, ACTIVE_USERS_API, CHAINS_ASSETS, TEMP_CHAIN_NFTS } from '~/constants'
+import { fetchJson, postRuntimeLogs } from '~/utils/async'
 import metadataCache from '~/utils/metadata'
 import { slug } from '~/utils'
+import { getAdapterChainOverview } from '~/containers/DimensionAdapters/queries'
+import { getPeggedAssets } from '~/containers/Stablecoins/queries.server'
+import {
+	ADAPTER_TYPES,
+	ADAPTER_TYPES_TO_METADATA_TYPE,
+	ADAPTER_DATA_TYPES
+} from '~/containers/DimensionAdapters/constants'
+
+// Helper function to get dimension adapter data for all chains
+async function getDimensionAdapterOverviewOfAllChains({
+	adapterType,
+	dataType
+}: {
+	adapterType: `${ADAPTER_TYPES}`
+	dataType?: `${ADAPTER_DATA_TYPES}`
+}) {
+	const metadataCache = await import('~/utils/metadata').then((m) => m.default)
+
+	const chains = []
+	for (const chain in metadataCache.chainMetadata) {
+		if (metadataCache.chainMetadata[chain][ADAPTER_TYPES_TO_METADATA_TYPE[adapterType]]) {
+			chains.push(chain)
+		}
+	}
+
+	const data = await Promise.all(
+		chains.map((chain) =>
+			getAdapterChainOverview({
+				chain,
+				adapterType,
+				excludeTotalDataChart: true,
+				excludeTotalDataChartBreakdown: true,
+				dataType
+			}).catch(() => {
+				postRuntimeLogs(`getDimensionAdapterOverviewOfAllChains:${chain}:${adapterType}:failed`)
+				return null
+			})
+		)
+	)
+
+	return data.filter(Boolean)
+}
 
 export function DefiWatchlistContainer() {
 	const { portfolios, selectedPortfolio, addPortfolio, removePortfolio, setSelectedPortfolio } =
@@ -39,8 +81,14 @@ export function DefiWatchlistContainer() {
 					addPortfolio={addPortfolio}
 					removePortfolio={removePortfolio}
 				/>
-				<ProtocolsManager selectedPortfolio={selectedPortfolio} />
-				<ChainsManager selectedPortfolio={selectedPortfolio} />
+				<div className="flex flex-col lg:flex-row border-b border-(--cards-border)">
+					<div className="flex-1 lg:border-r lg:border-(--cards-border)">
+						<ProtocolsManager selectedPortfolio={selectedPortfolio} />
+					</div>
+					<div className="flex-1">
+						<ChainsManager selectedPortfolio={selectedPortfolio} />
+					</div>
+				</div>
 				<PortfolioItems selectedPortfolio={selectedPortfolio} />
 			</div>
 		</>
@@ -103,36 +151,128 @@ function ProtocolsManager({ selectedPortfolio }: { selectedPortfolio: string }) 
 	)
 }
 
-// Chains Manager Component
-function ChainsManager({ selectedPortfolio }: { selectedPortfolio: string }) {
+// Hook to fetch comprehensive chain data
+function useEnhancedChainsData() {
 	const [extraTvlsEnabled] = useLocalStorageSettingsManager('tvl')
 
-	const { data: chainsPayload } = useQuery({
-		queryKey: ['chains2', 'All'],
-		queryFn: () => fetchJson(`${CHAINS_API_V2}/All`),
-		staleTime: 60 * 60 * 1000,
-		retry: 0
-	})
+	return useQuery({
+		queryKey: ['enhanced-chains-data', extraTvlsEnabled],
+		queryFn: async () => {
+			// Fetch all data sources in parallel similar to getChainsByCategory
+			const [
+				chainsResponse,
+				dexsData,
+				feesData,
+				revenueData,
+				stablecoinsData,
+				activeUsersData,
+				chainsAssetsData,
+				chainNftsVolumeData,
+				appRevenueData
+			] = await Promise.all([
+				fetchJson(`${CHAINS_API_V2}/All`),
+				getDimensionAdapterOverviewOfAllChains({ adapterType: 'dexs' }).catch((err) => {
+					console.log('Failed to fetch DEXs data:', err)
+					return []
+				}),
+				getAdapterChainOverview({
+					adapterType: 'fees',
+					chain: 'All',
+					excludeTotalDataChart: true,
+					excludeTotalDataChartBreakdown: true
+				}).catch((err) => {
+					console.log('Failed to fetch fees data:', err)
+					return null
+				}),
+				getAdapterChainOverview({
+					adapterType: 'fees',
+					chain: 'All',
+					excludeTotalDataChart: true,
+					excludeTotalDataChartBreakdown: true,
+					dataType: 'dailyRevenue'
+				}).catch((err) => {
+					console.log('Failed to fetch revenue data:', err)
+					return null
+				}),
+				getPeggedAssets().catch((err) => {
+					console.log('Failed to fetch stablecoins data:', err)
+					return { chains: [] }
+				}),
+				fetchJson(ACTIVE_USERS_API).catch((err) => {
+					console.log('Failed to fetch active users data:', err)
+					return {}
+				}),
+				fetchJson(CHAINS_ASSETS).catch((err) => {
+					console.log('Failed to fetch chain assets data:', err)
+					return null
+				}),
+				fetchJson(TEMP_CHAIN_NFTS).catch((err) => {
+					console.log('Failed to fetch chain NFTs data:', err)
+					return {}
+				}),
+				getDimensionAdapterOverviewOfAllChains({ adapterType: 'fees', dataType: 'dailyAppRevenue' }).catch((err) => {
+					console.log('Failed to fetch app revenue data:', err)
+					return []
+				})
+			])
 
-	const formattedChains = useMemo(() => {
-		const chainTvls = chainsPayload?.chainTvls ?? []
-		const base = formatDataWithExtraTvls({
-			data: chainTvls,
-			applyLqAndDc: true,
-			extraTvlsEnabled,
-			chainAssets: undefined
-		})
-		// augment with protocol counts if available
-		return base.map((c: any) => ({
-			...c,
-			protocols: metadataCache.chainMetadata?.[slug(c.name)]?.protocolCount ?? c.protocols ?? 0
-		}))
-	}, [chainsPayload, extraTvlsEnabled])
+			const chainTvls = chainsResponse?.chainTvls ?? []
+
+			// Calculate stables mcap by chain
+			const stablesChainMcaps =
+				stablecoinsData?.chains?.map((chain: any) => ({
+					name: chain.name,
+					mcap: Object.values(chain.totalCirculatingUSD || {}).reduce((a: number, b: number) => a + b, 0)
+				})) ?? []
+
+			// Enhance chains with all additional data
+			const enhancedChains = chainTvls.map((chain: any) => {
+				const name = slug(chain.name)
+				const nftVolume = chainNftsVolumeData?.[name] ?? null
+				const totalFees24h = feesData?.protocols?.find((x: any) => x.displayName === chain.name)?.total24h ?? null
+				const totalRevenue24h = revenueData?.protocols?.find((x: any) => x.displayName === chain.name)?.total24h ?? null
+				const totalAppRevenue24h = appRevenueData?.find((x: any) => x.chain === chain.name)?.total24h ?? null
+				const totalVolume24h = dexsData?.find((x: any) => x.chain === chain.name)?.total24h ?? null
+				const stablesMcap = stablesChainMcaps.find((x: any) => slug(x.name) === name)?.mcap ?? null
+				const users = activeUsersData?.[`chain#${name}`]?.users?.value
+				const protocols = metadataCache.chainMetadata?.[name]?.protocolCount ?? chain.protocols ?? 0
+
+				return {
+					...chain,
+					protocols,
+					nftVolume: nftVolume ? +Number(nftVolume).toFixed(2) : null,
+					totalVolume24h,
+					totalFees24h,
+					totalRevenue24h,
+					totalAppRevenue24h,
+					stablesMcap,
+					users: users ? +users : null
+				}
+			})
+
+			// Format with extra TVLs and chain assets
+			const formattedChains = formatDataWithExtraTvls({
+				data: enhancedChains,
+				applyLqAndDc: true,
+				extraTvlsEnabled,
+				chainAssets: chainsAssetsData
+			})
+
+			return formattedChains
+		},
+		staleTime: 60 * 60 * 1000, // 1 hour
+		retry: 1
+	})
+}
+
+// Chains Manager Component
+function ChainsManager({ selectedPortfolio }: { selectedPortfolio: string }) {
+	const { data: formattedChains = [], isLoading, isError } = useEnhancedChainsData()
 
 	const { savedChains, addChain, removeChain } = useChainsWatchlistManager()
 
 	const chainOptions = useMemo(() => {
-		return formattedChains.map((c) => ({ key: c.name, name: c.name }))
+		return formattedChains.map((c: any) => ({ key: c.name, name: c.name }))
 	}, [formattedChains])
 
 	const selectedChainNames = useMemo(() => Array.from(savedChains), [savedChains])
@@ -148,12 +288,17 @@ function ChainsManager({ selectedPortfolio }: { selectedPortfolio: string }) {
 		toRemove.forEach((name) => removeChain(name))
 	}
 
+	if (isError) {
+		console.error('Failed to load enhanced chains data')
+	}
+
 	return (
 		<ChainSelection
 			chainOptions={chainOptions}
 			selectedChainNames={selectedChainNames}
 			handleChainSelection={handleChainSelection}
 			selectedPortfolio={selectedPortfolio}
+			isLoading={isLoading}
 		/>
 	)
 }
@@ -190,32 +335,12 @@ function PortfolioItems({ selectedPortfolio }: PortfolioItemsProps) {
 	const loadingProtocols =
 		fetchingProtocolsList || fetchingProtocolsVolumeByChain || fetchingProtocolsFeesAndRevenueByChain
 
-	// Chains data
-	const { data: chainsPayload, isLoading: fetchingChains } = useQuery({
-		queryKey: ['chains2', 'All'],
-		queryFn: () => fetchJson(`${CHAINS_API_V2}/All`),
-		staleTime: 60 * 60 * 1000,
-		retry: 0
-	})
-
-	const formattedChains = useMemo(() => {
-		const chainTvls = chainsPayload?.chainTvls ?? []
-		const base = formatDataWithExtraTvls({
-			data: chainTvls,
-			applyLqAndDc: true,
-			extraTvlsEnabled,
-			chainAssets: undefined
-		})
-		return base.map((c: any) => ({
-			...c,
-			protocols: metadataCache.chainMetadata?.[slug(c.name)]?.protocolCount ?? c.protocols ?? 0
-		}))
-	}, [chainsPayload, extraTvlsEnabled])
-
+	// Enhanced chains data
+	const { data: formattedChains = [], isLoading: fetchingChains } = useEnhancedChainsData()
 	const { savedChains } = useChainsWatchlistManager()
 
 	const filteredChains = useMemo(() => {
-		return formattedChains.filter((c) => savedChains.has(c.name))
+		return formattedChains.filter((c: any) => savedChains.has(c.name))
 	}, [formattedChains, savedChains])
 
 	const selectedProtocolNames = Array.from(savedProtocols)
@@ -254,17 +379,17 @@ function PortfolioItems({ selectedPortfolio }: PortfolioItemsProps) {
 					</div>
 				</div>
 			) : (
-				<>
+				<div className="flex flex-col gap-4">
 					{filteredProtocols.length > 0 && <TopMovers protocols={filteredProtocols} />}
-					<PortfolioProtocolsTable loadingProtocols={loadingProtocols} filteredProtocols={filteredProtocols} />
-					<PortfolioChainsTable loadingChains={fetchingChains} filteredChains={filteredChains} />
-				</>
+					<PortfolioProtocols loadingProtocols={loadingProtocols} filteredProtocols={filteredProtocols} />
+					<PortfolioChains loadingChains={fetchingChains} filteredChains={filteredChains} />
+				</div>
 			)}
 		</div>
 	)
 }
 
-function PortfolioProtocolsTable({ loadingProtocols, filteredProtocols }: any) {
+function PortfolioProtocols({ loadingProtocols, filteredProtocols }: any) {
 	return loadingProtocols ? (
 		<div className="p-8 text-center">
 			<div className="inline-flex items-center gap-2 text-(--text-secondary)">
@@ -273,21 +398,11 @@ function PortfolioProtocolsTable({ loadingProtocols, filteredProtocols }: any) {
 			</div>
 		</div>
 	) : filteredProtocols.length ? (
-		<ProtocolsByChainTable data={filteredProtocols} />
-	) : (
-		<div className="p-8 text-center">
-			<div className="max-w-sm mx-auto">
-				<Icon name="bookmark" height={48} width={48} className="mx-auto mb-4 text-(--text-secondary) opacity-50" />
-				<p className="text-(--text-secondary) mb-2">No protocols in this portfolio</p>
-				<p className="text-sm text-(--text-secondary) opacity-75">
-					Use the protocol selector above to add protocols to your portfolio
-				</p>
-			</div>
-		</div>
-	)
+		<ProtocolsByChainTable data={filteredProtocols} title="Protocols" />
+	) : null
 }
 
-function PortfolioChainsTable({ loadingChains, filteredChains }: any) {
+function PortfolioChains({ loadingChains, filteredChains }: any) {
 	return loadingChains ? (
 		<div className="p-8 text-center">
 			<div className="inline-flex items-center gap-2 text-(--text-secondary)">
@@ -296,16 +411,8 @@ function PortfolioChainsTable({ loadingChains, filteredChains }: any) {
 			</div>
 		</div>
 	) : filteredChains.length ? (
-		<ChainsByCategoryTable data={filteredChains as any} />
-	) : (
-		<div className="p-8 text-center">
-			<div className="max-w-sm mx-auto">
-				<Icon name="bookmark" height={48} width={48} className="mx-auto mb-4 text-(--text-secondary) opacity-50" />
-				<p className="text-(--text-secondary) mb-2">No chains in this portfolio</p>
-				<p className="text-sm text-(--text-secondary) opacity-75">Use the chain selector above to add chains</p>
-			</div>
-		</div>
-	)
+		<ChainsByCategoryTable data={filteredChains as any} title="Chains" showSearch={false} />
+	) : null
 }
 
 type PortfolioSelectionProps = {
@@ -377,7 +484,7 @@ function ProtocolSelection({
 	selectedPortfolio
 }: ProtocolSelectionProps) {
 	return (
-		<div className="p-4 border-b border-(--cards-border)">
+		<div className="p-4">
 			<div className="mb-3">
 				<h2 className="text-lg font-medium mb-1">Manage Protocols</h2>
 				<p className="text-sm text-(--text-secondary)">
@@ -404,33 +511,42 @@ type ChainSelectionProps = {
 	selectedChainNames: string[]
 	handleChainSelection: (selectedValues: string[]) => void
 	selectedPortfolio: string
+	isLoading?: boolean
 }
 
 function ChainSelection({
 	chainOptions,
 	selectedChainNames,
 	handleChainSelection,
-	selectedPortfolio
+	selectedPortfolio,
+	isLoading = false
 }: ChainSelectionProps) {
 	return (
-		<div className="p-4 border-b border-(--cards-border)">
+		<div className="p-4">
 			<div className="mb-3">
 				<h2 className="text-lg font-medium mb-1">Manage Chains</h2>
 				<p className="text-sm text-(--text-secondary)">
 					Select or deselect chains for the "{selectedPortfolio}" portfolio
 				</p>
 			</div>
-			<SelectWithCombobox
-				allValues={chainOptions}
-				selectedValues={selectedChainNames}
-				setSelectedValues={handleChainSelection}
-				label={
-					selectedChainNames.length > 0
-						? `${selectedChainNames.length} chain${selectedChainNames.length === 1 ? '' : 's'} selected`
-						: 'Select chains...'
-				}
-				labelType="regular"
-			/>
+			{isLoading ? (
+				<div className="flex items-center gap-2 p-3 border border-(--form-control-border) rounded-md bg-(--bg-main)">
+					<div className="animate-spin rounded-full h-4 w-4 border-2 border-(--text-secondary) border-t-transparent"></div>
+					<span className="text-sm text-(--text-secondary)">Loading chains...</span>
+				</div>
+			) : (
+				<SelectWithCombobox
+					allValues={chainOptions}
+					selectedValues={selectedChainNames}
+					setSelectedValues={handleChainSelection}
+					label={
+						selectedChainNames.length > 0
+							? `${selectedChainNames.length} chain${selectedChainNames.length === 1 ? '' : 's'} selected`
+							: 'Select chains...'
+					}
+					labelType="regular"
+				/>
+			)}
 		</div>
 	)
 }

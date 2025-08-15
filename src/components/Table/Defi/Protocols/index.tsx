@@ -221,7 +221,12 @@ const ProtocolsTable = ({ data, columnsInStorage }: { data: Array<IProtocolRow>;
 	)
 }
 
-export function ProtocolsByChainTable({ data }: { data: Array<IProtocolRow> }) {
+interface IProtocolsByChainTableProps {
+	data: Array<IProtocolRow>
+	title?: string
+}
+
+export function ProtocolsByChainTable({ data, title = 'Protocol Rankings' }: IProtocolsByChainTableProps) {
 	const columnsInStorage = React.useSyncExternalStore(
 		subscribeToLocalStorage,
 		() => localStorage.getItem(optionsKey) ?? defaultColumns,
@@ -282,7 +287,7 @@ export function ProtocolsByChainTable({ data }: { data: Array<IProtocolRow> }) {
 	return (
 		<div className="rounded-md bg-(--cards-bg)">
 			<div className="flex items-center justify-between flex-wrap gap-2 p-3">
-				<h3 className="text-lg font-medium mr-auto">Protocol Rankings</h3>
+				<h3 className="text-lg font-medium mr-auto">{title ?? 'Protocol Rankings'}</h3>
 				<TagGroup
 					setValue={setFilter('category')}
 					selectedValue={filterState}
