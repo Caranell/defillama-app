@@ -43,7 +43,7 @@ export function ChatHistorySidebar({
 				acc[groupName] = [...(acc[groupName] || []), session]
 				return acc
 			}, {})
-		).sort((a, b) => new Date(b[1][0].lastActivity).getTime() - new Date(a[1][0].lastActivity).getTime()) as Array<
+		).sort((a, b) => Date.parse(b[1][0].lastActivity) - Date.parse(a[1][0].lastActivity)) as Array<
 			[string, Array<ChatSession>]
 		>
 	}, [sessions])
@@ -88,7 +88,7 @@ export function ChatHistorySidebar({
 								<h2 className="pt-2.5 text-xs text-[#666] group-first/parent:pt-0 dark:text-[#919296]">{groupName}</h2>
 								{sessions.map((session) => (
 									<SessionItem
-										key={session.sessionId}
+										key={`${session.sessionId}-${session.isPublic}-${session.lastActivity}`}
 										session={session}
 										isActive={session.sessionId === currentSessionId}
 										onSessionSelect={onSessionSelect}

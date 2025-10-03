@@ -1,8 +1,7 @@
-import { RefObject, useEffect, useRef, useState } from 'react'
+import { RefObject, useCallback, useDeferredValue, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
+import * as Ariakit from '@ariakit/react'
 import { useMutation } from '@tanstack/react-query'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { Icon } from '~/components/Icon'
 import { LoadingDots, LoadingSpinner } from '~/components/Loaders'
 import { Tooltip } from '~/components/Tooltip'
@@ -12,7 +11,10 @@ import Layout from '~/layout'
 import { handleSimpleFetchResponse } from '~/utils/async'
 import { ChartRenderer } from './components/ChartRenderer'
 import { ChatHistorySidebar } from './components/ChatHistorySidebar'
+import { MarkdownRenderer } from './components/MarkdownRenderer'
+import { RecommendedPrompts } from './components/RecommendedPrompts'
 import { useChatHistory } from './hooks/useChatHistory'
+import { debounce, throttle } from './utils/scrollUtils'
 
 class StreamingContent {
 	private content: string = ''
@@ -44,7 +46,7 @@ async function fetchPromptResponse({
 	prompt?: string
 	userQuestion: string
 	onProgress?: (data: {
-		type: 'token' | 'progress' | 'session' | 'suggestions' | 'charts' | 'error' | 'title'
+		type: 'token' | 'progress' | 'session' | 'suggestions' | 'charts' | 'error' | 'title' | 'message_id'
 		content: string
 		stage?: string
 		sessionId?: string
@@ -52,6 +54,7 @@ async function fetchPromptResponse({
 		charts?: any[]
 		chartData?: any[]
 		title?: string
+		messageId?: string
 	}) => void
 	abortSignal?: AbortSignal
 	sessionId?: string | null
@@ -138,6 +141,10 @@ async function fetchPromptResponse({
 							fullResponse += data.content
 							if (onProgress && !abortSignal?.aborted) {
 								onProgress({ type: 'token', content: data.content })
+							}
+						} else if (data.type === 'message_id') {
+							if (onProgress && !abortSignal?.aborted) {
+								onProgress({ type: 'message_id', content: data.content, messageId: data.messageId })
 							}
 						} else if (data.type === 'progress') {
 							if (onProgress && !abortSignal?.aborted) {
@@ -231,9 +238,10 @@ interface LlamaAIProps {
 	sharedSession?: SharedSession
 	isPublicView?: boolean
 	readOnly?: boolean
+	showDebug?: boolean
 }
 
-export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: LlamaAIProps = {}) {
+export function LlamaAI({ initialSessionId, sharedSession, readOnly = false, showDebug = false }: LlamaAIProps = {}) {
 	const { authorizedFetch, user } = useAuthContext()
 	const {
 		sidebarVisible,
@@ -257,6 +265,7 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 			response: { answer: string; metadata?: any; suggestions?: any[]; charts?: any[]; chartData?: any[] }
 			timestamp: number
 			messageId?: string
+			userRating?: 'good' | 'bad' | null
 		}>
 	>([])
 	const [paginationState, setPaginationState] = useState<{
@@ -266,50 +275,7 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 		totalMessages?: number
 	}>({ hasMore: false, isLoadingMore: false })
 
-	useEffect(() => {
-		userRef.current = user
-	}, [user])
-
-	useEffect(() => {
-		sessionIdRef.current = sessionId
-	}, [sessionId])
-
-	useEffect(() => {
-		if (initialSessionId && !sessionId) {
-			setSessionId(initialSessionId)
-			setHasRestoredSession(null)
-		}
-	}, [initialSessionId, sessionId])
-
-	useEffect(() => {
-		if (sharedSession) {
-			setConversationHistory(sharedSession.conversationHistory)
-			setSessionId(sharedSession.session.sessionId)
-		}
-	}, [sharedSession])
-
 	const [hasRestoredSession, setHasRestoredSession] = useState<string | null>(null)
-	useEffect(() => {
-		if (
-			sessionId &&
-			user &&
-			!sharedSession &&
-			!readOnly &&
-			hasRestoredSession !== sessionId &&
-			!newlyCreatedSessionsRef.current.has(sessionId)
-		) {
-			setHasRestoredSession(sessionId)
-			restoreSession(sessionId)
-				.then((result) => {
-					setConversationHistory(result.conversationHistory)
-					setPaginationState(result.pagination)
-				})
-				.catch((error) => {
-					console.error('Failed to restore session:', error)
-				})
-		}
-	}, [sessionId, user, sharedSession, readOnly, hasRestoredSession, restoreSession])
-
 	const [streamingResponse, setStreamingResponse] = useState('')
 	const [streamingError, setStreamingError] = useState('')
 	const [isStreaming, setIsStreaming] = useState(false)
@@ -324,10 +290,70 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 	const [expectedChartInfo, setExpectedChartInfo] = useState<{ count?: number; types?: string[] } | null>(null)
 	const [resizeTrigger, setResizeTrigger] = useState(0)
 	const [shouldAnimateSidebar, setShouldAnimateSidebar] = useState(false)
+	const [currentMessageId, setCurrentMessageId] = useState<string | null>(null)
+	const [showScrollToBottom, setShowScrollToBottom] = useState(false)
+	const [prompt, setPrompt] = useState('')
+
 	const abortControllerRef = useRef<AbortController | null>(null)
 	const streamingContentRef = useRef<StreamingContent>(new StreamingContent())
 	const scrollContainerRef = useRef<HTMLDivElement>(null)
 	const shouldAutoScrollRef = useRef(true)
+	const rafIdRef = useRef<number | null>(null)
+	const resizeObserverRef = useRef<ResizeObserver | null>(null)
+	const isAutoScrollingRef = useRef(false) // Flag during session restoration auto-scroll
+	const promptInputRef = useRef<HTMLTextAreaElement>(null)
+
+	const resetScrollState = useCallback(() => {
+		setShowScrollToBottom(false)
+		shouldAutoScrollRef.current = true
+		isAutoScrollingRef.current = true
+	}, [])
+
+	useEffect(() => {
+		userRef.current = user
+	}, [user])
+
+	useEffect(() => {
+		sessionIdRef.current = sessionId
+	}, [sessionId])
+
+	useEffect(() => {
+		if (initialSessionId && !sessionId) {
+			resetScrollState()
+			setSessionId(initialSessionId)
+			setHasRestoredSession(null)
+		}
+	}, [initialSessionId, sessionId, resetScrollState])
+
+	useEffect(() => {
+		if (sharedSession) {
+			resetScrollState()
+			setConversationHistory(sharedSession.conversationHistory)
+			setSessionId(sharedSession.session.sessionId)
+		}
+	}, [sharedSession, resetScrollState])
+
+	useEffect(() => {
+		if (
+			sessionId &&
+			user &&
+			!sharedSession &&
+			!readOnly &&
+			hasRestoredSession !== sessionId &&
+			!newlyCreatedSessionsRef.current.has(sessionId)
+		) {
+			resetScrollState()
+			setHasRestoredSession(sessionId)
+			restoreSession(sessionId)
+				.then((result) => {
+					setConversationHistory(result.conversationHistory)
+					setPaginationState(result.pagination)
+				})
+				.catch((error) => {
+					console.log('Failed to restore session:', error)
+				})
+		}
+	}, [sessionId, user, sharedSession, readOnly, hasRestoredSession, restoreSession, resetScrollState])
 
 	const parseChartInfo = (message: string): { count?: number; types?: string[] } => {
 		const info: { count?: number; types?: string[] } = {}
@@ -365,9 +391,6 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 
 		return info
 	}
-
-	const [prompt, setPrompt] = useState('')
-	const promptInputRef = useRef<HTMLTextAreaElement>(null)
 
 	const {
 		data: promptResponse,
@@ -416,6 +439,8 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 					if (data.type === 'token') {
 						const processedContent = streamingContentRef.current.addChunk(data.content)
 						setStreamingResponse(processedContent)
+					} else if (data.type === 'message_id') {
+						setCurrentMessageId(data.messageId || null)
 					} else if (data.type === 'progress') {
 						setProgressMessage(data.content)
 						setProgressStage(data.stage || '')
@@ -475,12 +500,14 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 						charts: data?.response?.charts,
 						chartData: data?.response?.chartData
 					},
+					messageId: currentMessageId,
 					timestamp: Date.now()
 				}
 			])
 
 			setPrompt('')
 			resetPrompt()
+			setCurrentMessageId(null)
 			setTimeout(() => {
 				promptInputRef.current?.focus()
 			}, 100)
@@ -498,6 +525,7 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 				console.log('Request failed:', error)
 			}
 
+			setCurrentMessageId(null)
 			setTimeout(() => {
 				promptInputRef.current?.focus()
 			}, 100)
@@ -543,17 +571,7 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 	const handleSubmit = (prompt: string) => {
 		const finalPrompt = prompt.trim()
 		setPrompt(finalPrompt)
-
 		shouldAutoScrollRef.current = true
-
-		setTimeout(() => {
-			if (scrollContainerRef.current) {
-				scrollContainerRef.current.scrollTo({
-					top: scrollContainerRef.current.scrollHeight,
-					behavior: 'smooth'
-				})
-			}
-		}, 0)
 
 		if (sessionId) {
 			moveSessionToTop(sessionId)
@@ -565,17 +583,7 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 	const handleSubmitWithSuggestion = (prompt: string, suggestion: any) => {
 		const finalPrompt = prompt.trim()
 		setPrompt(finalPrompt)
-
 		shouldAutoScrollRef.current = true
-
-		setTimeout(() => {
-			if (scrollContainerRef.current) {
-				scrollContainerRef.current.scrollTo({
-					top: scrollContainerRef.current.scrollHeight,
-					behavior: 'smooth'
-				})
-			}
-		}, 0)
 
 		if (sessionId) {
 			moveSessionToTop(sessionId)
@@ -651,6 +659,8 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 		selectedSessionId: string,
 		data: { conversationHistory: any[]; pagination?: any }
 	) => {
+		resetScrollState()
+
 		if (sessionId && isStreaming) {
 			try {
 				await authorizedFetch(`${MCP_SERVER}/chatbot-agent/stop`, {
@@ -691,19 +701,10 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 		streamingContentRef.current.reset()
 		setResizeTrigger((prev) => prev + 1)
 
-		setTimeout(() => {
-			if (scrollContainerRef.current) {
-				scrollContainerRef.current.scrollTo({
-					top: scrollContainerRef.current.scrollHeight,
-					behavior: 'smooth'
-				})
-			}
-		}, 0)
-
 		promptInputRef.current?.focus()
 	}
 
-	const handleLoadMoreMessages = async () => {
+	const handleLoadMoreMessages = useCallback(async () => {
 		if (!sessionId || !paginationState.hasMore || paginationState.isLoadingMore || !paginationState.cursor) return
 
 		const scrollContainer = scrollContainerRef.current
@@ -725,10 +726,10 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 				}
 			}, 0)
 		} catch (error) {
-			console.error('Failed to load more messages:', error)
+			console.log('Failed to load more messages:', error)
 			setPaginationState((prev) => ({ ...prev, isLoadingMore: false }))
 		}
-	}
+	}, [sessionId, paginationState.hasMore, paginationState.isLoadingMore, paginationState.cursor, loadMoreMessages])
 
 	const handleSuggestionClick = (suggestion: any) => {
 		let promptText = ''
@@ -745,45 +746,88 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 	}
 
 	useEffect(() => {
-		const handleScroll = () => {
-			if (!scrollContainerRef.current) return
+		const container = scrollContainerRef.current
+		if (!container) return
 
-			const container = scrollContainerRef.current
-			const { scrollTop, scrollHeight, clientHeight } = container
-			const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100
+		const checkScrollState = () => {
+			if (rafIdRef.current) {
+				cancelAnimationFrame(rafIdRef.current)
+			}
 
-			shouldAutoScrollRef.current = isNearBottom
+			rafIdRef.current = requestAnimationFrame(() => {
+				if (!container) return
+				const { scrollTop, scrollHeight, clientHeight } = container
 
-			if (sessionId && paginationState.hasMore && !paginationState.isLoadingMore && scrollTop <= 50) {
-				handleLoadMoreMessages()
+				const scrollBottom = Math.ceil(scrollTop + clientHeight)
+				const threshold = scrollHeight - 20
+				const isAtBottom = scrollBottom >= threshold
+				const hasScrollableContent = scrollHeight > clientHeight
+
+				if (isAutoScrollingRef.current && hasScrollableContent) {
+					container.scrollTop = scrollHeight
+					setTimeout(() => {
+						isAutoScrollingRef.current = false
+					}, 300)
+					return
+				}
+
+				shouldAutoScrollRef.current = isAtBottom
+
+				const shouldShowButton = hasScrollableContent && !isAtBottom && !isStreaming && !isAutoScrollingRef.current
+				setShowScrollToBottom(shouldShowButton)
+
+				if (sessionId && paginationState.hasMore && !paginationState.isLoadingMore && scrollTop <= 50) {
+					handleLoadMoreMessages()
+				}
+			})
+		}
+
+		const throttledScroll = throttle(checkScrollState, 150)
+		const debouncedResize = debounce(checkScrollState, 100)
+
+		if ('ResizeObserver' in window) {
+			resizeObserverRef.current = new ResizeObserver(debouncedResize)
+			resizeObserverRef.current.observe(container)
+		}
+
+		container.addEventListener('scroll', throttledScroll, { passive: true })
+		container.addEventListener('scrollend', checkScrollState, { passive: true })
+		checkScrollState()
+
+		return () => {
+			container.removeEventListener('scroll', throttledScroll)
+			container.removeEventListener('scrollend', checkScrollState)
+			if (resizeObserverRef.current) {
+				resizeObserverRef.current.disconnect()
+			}
+			if (rafIdRef.current) {
+				cancelAnimationFrame(rafIdRef.current)
 			}
 		}
-
-		const container = scrollContainerRef.current
-		if (container) {
-			container.addEventListener('scroll', handleScroll)
-			return () => container.removeEventListener('scroll', handleScroll)
-		}
-	}, [sessionId, paginationState.hasMore, paginationState.isLoadingMore])
+	}, [sessionId, paginationState.hasMore, paginationState.isLoadingMore, handleLoadMoreMessages, isStreaming])
 
 	useEffect(() => {
 		if (shouldAutoScrollRef.current && scrollContainerRef.current && (streamingResponse || isStreaming)) {
-			scrollContainerRef.current.scrollTo({
-				top: scrollContainerRef.current.scrollHeight,
-				behavior: 'smooth'
+			requestAnimationFrame(() => {
+				if (scrollContainerRef.current) {
+					scrollContainerRef.current.scrollTo({
+						top: scrollContainerRef.current.scrollHeight,
+						behavior: 'smooth'
+					})
+				}
 			})
 		}
 	}, [streamingResponse, isStreaming])
 
 	useEffect(() => {
 		if (shouldAutoScrollRef.current && scrollContainerRef.current && conversationHistory.length > 0) {
-			setTimeout(() => {
+			requestAnimationFrame(() => {
 				if (scrollContainerRef.current && shouldAutoScrollRef.current) {
 					scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
 				}
-			}, 0)
+			})
 		}
-	}, [conversationHistory])
+	}, [conversationHistory.length])
 
 	useEffect(() => {
 		return () => {
@@ -793,12 +837,11 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 		}
 	}, [])
 
-	// Reset animation flag after animation completes
 	useEffect(() => {
 		if (shouldAnimateSidebar) {
 			const timer = setTimeout(() => {
 				setShouldAnimateSidebar(false)
-			}, 220) // Match the animation duration (0.22s = 220ms)
+			}, 220)
 			return () => clearTimeout(timer)
 		}
 	}, [shouldAnimateSidebar])
@@ -824,130 +867,184 @@ export function LlamaAI({ initialSessionId, sharedSession, readOnly = false }: L
 						<ChatControls handleSidebarToggle={handleSidebarToggle} handleNewChat={handleNewChat} />
 					))}
 				<div
-					className={`relative isolate flex flex-1 flex-col rounded-lg border border-[#e6e6e6] bg-(--cards-bg) dark:border-[#222324] ${sidebarVisible && shouldAnimateSidebar ? 'lg:animate-[shrinkToRight_0.22s_ease-out]' : ''}`}
+					className={`relative isolate flex flex-1 flex-col rounded-lg border border-[#e6e6e6] bg-(--cards-bg) px-2.5 dark:border-[#222324] ${sidebarVisible && shouldAnimateSidebar ? 'lg:animate-[shrinkToRight_0.22s_ease-out]' : ''}`}
 				>
-					<div ref={scrollContainerRef} className="thin-scrollbar flex-1 overflow-y-auto p-2.5">
-						<div className="relative mx-auto flex w-full max-w-3xl flex-col gap-2.5">
-							{/* Show loading when restoring session */}
-							{isRestoringSession && conversationHistory.length === 0 ? (
-								<p className="mt-[100px] flex items-center justify-center gap-2 text-[#666] dark:text-[#919296]">
-									Loading conversation
-									<LoadingDots />
-								</p>
-							) : conversationHistory.length > 0 || isSubmitted ? (
-								<div className="flex w-full flex-col gap-2 p-2">
-									{paginationState.isLoadingMore && (
-										<p className="flex items-center justify-center gap-2 text-[#666] dark:text-[#919296]">
-											Loading more messages
-											<LoadingDots />
-										</p>
-									)}
-									<div className="flex flex-col gap-2.5">
-										{conversationHistory.map((item) => (
-											<div
-												key={`${item.question}-${item.timestamp}`}
-												className={`flex flex-col gap-2.5 ${isPending || isStreaming || promptResponse || error ? '' : 'last:min-h-[calc(100dvh-260px)]'}`}
-											>
-												<SentPrompt prompt={item.question} />
-												<div className="flex flex-col gap-2.5">
-													<Answer content={item.response.answer} messageId={item.messageId} />
-													{item.response.charts && item.response.charts.length > 0 && (
-														<ChartRenderer
-															charts={item.response.charts}
-															chartData={item.response.chartData || []}
-															resizeTrigger={resizeTrigger}
-														/>
-													)}
-													{item.response.suggestions && item.response.suggestions.length > 0 && (
-														<SuggestedActions
-															suggestions={item.response.suggestions}
-															handleSuggestionClick={handleSuggestionClick}
-															isPending={isPending}
-															isStreaming={isStreaming}
-														/>
-													)}
-													{item.response.metadata && <QueryMetadata metadata={item.response.metadata} />}
-												</div>
-											</div>
-										))}
-									</div>
-									{(isPending || isStreaming || promptResponse || error) && (
-										<div className="flex min-h-[calc(100dvh-260px)] flex-col gap-2.5">
-											{prompt && <SentPrompt prompt={prompt} />}
-											<PromptResponse
-												response={
-													promptResponse?.response ||
-													(streamingSuggestions || streamingCharts
-														? {
-																answer: '',
-																suggestions: streamingSuggestions,
-																charts: streamingCharts,
-																chartData: streamingChartData
-															}
-														: undefined)
-												}
-												error={error?.message}
-												streamingError={streamingError}
-												isPending={isPending}
-												streamingResponse={streamingResponse}
-												isStreaming={isStreaming}
-												progressMessage={progressMessage}
-												progressStage={progressStage}
-												onSuggestionClick={handleSuggestionClick}
-												isGeneratingCharts={isGeneratingCharts}
-												isAnalyzingForCharts={isAnalyzingForCharts}
-												hasChartError={hasChartError}
-												expectedChartInfo={expectedChartInfo}
-												resizeTrigger={resizeTrigger}
-											/>
-										</div>
-									)}
+					{conversationHistory.length === 0 &&
+					prompt.length === 0 &&
+					!isRestoringSession &&
+					!isPending &&
+					!isStreaming ? (
+						initialSessionId ? (
+							<div className="mx-auto flex w-full max-w-3xl flex-col gap-2.5">
+								<div className="relative mx-auto flex w-full max-w-3xl flex-col gap-2.5">
+									<p className="mt-[100px] flex items-center justify-center gap-2 text-[#666] dark:text-[#919296]">
+										Failed to restore session,{' '}
+										<button onClick={handleNewChat} className="text-(--link-text) underline">
+											Start a new chat
+										</button>
+									</p>
 								</div>
-							) : (
+							</div>
+						) : (
+							<div className="mx-auto flex w-full max-w-3xl flex-col gap-2.5">
 								<div className="mt-[100px] flex flex-col items-center justify-center gap-2.5">
 									<img src="/icons/llama-ai.svg" alt="LlamaAI" className="object-contain" width={64} height={77} />
 									<h1 className="text-2xl font-semibold">What can I help you with ?</h1>
 								</div>
-							)}
-							{conversationHistory.length === 0 && !isSubmitted && !isRestoringSession ? (
-								<div className="flex w-full flex-wrap items-center justify-center gap-4 pb-[100px]">
-									{recommendedPrompts.map((prompt) => (
-										<button
-											key={prompt}
-											onClick={() => {
-												setPrompt(prompt)
-												submitPrompt({ userQuestion: prompt })
-											}}
-											disabled={isPending}
-											className="flex items-center justify-center gap-2 rounded-lg border border-[#e6e6e6] px-4 py-1 text-[#666] dark:border-[#222324] dark:text-[#919296]"
-										>
-											{prompt}
-										</button>
-									))}
-								</div>
-							) : null}
-						</div>
-					</div>
-					{!readOnly && (
-						<div className="border-t border-[#e6e6e6] bg-(--cards-bg) p-2.5 dark:border-[#222324]">
-							<div className="mx-auto w-full max-w-3xl">
-								<PromptInput
-									handleSubmit={handleSubmit}
-									promptInputRef={promptInputRef}
-									isPending={isPending}
-									handleStopRequest={handleStopRequest}
-									isStreaming={isStreaming}
-								/>
+								{!readOnly && (
+									<>
+										<PromptInput
+											handleSubmit={handleSubmit}
+											promptInputRef={promptInputRef}
+											isPending={isPending}
+											handleStopRequest={handleStopRequest}
+											isStreaming={isStreaming}
+										/>
+										<RecommendedPrompts setPrompt={setPrompt} submitPrompt={submitPrompt} isPending={isPending} />
+									</>
+								)}
 							</div>
-						</div>
+						)
+					) : (
+						<>
+							<div ref={scrollContainerRef} className="thin-scrollbar relative flex-1 overflow-y-auto p-2.5">
+								<div className="relative mx-auto flex w-full max-w-3xl flex-col gap-2.5">
+									{isRestoringSession && conversationHistory.length === 0 ? (
+										<p className="mt-[100px] flex items-center justify-center gap-2 text-[#666] dark:text-[#919296]">
+											Loading conversation
+											<LoadingDots />
+										</p>
+									) : conversationHistory.length > 0 || isSubmitted ? (
+										<div className="flex w-full flex-col gap-2 px-2 pb-5">
+											{paginationState.isLoadingMore && (
+												<p className="flex items-center justify-center gap-2 text-[#666] dark:text-[#919296]">
+													Loading more messages
+													<LoadingDots />
+												</p>
+											)}
+											<div className="flex flex-col gap-2.5">
+												{conversationHistory.map((item) => (
+													<div
+														key={`${item.question}-${item.timestamp}`}
+														className={`flex flex-col gap-2.5 ${isPending || isStreaming || promptResponse || error ? '' : 'last:min-h-[calc(100dvh-260px)]'}`}
+													>
+														<SentPrompt prompt={item.question} />
+														<div className="flex flex-col gap-2.5">
+															<MarkdownRenderer content={item.response.answer} />
+															{item.response.charts && item.response.charts.length > 0 && (
+																<ChartRenderer
+																	charts={item.response.charts}
+																	chartData={item.response.chartData || []}
+																	resizeTrigger={resizeTrigger}
+																/>
+															)}
+															<MessageRating
+																messageId={item.messageId}
+																content={item.response.answer}
+																initialRating={item.userRating}
+															/>
+															{item.response.suggestions && item.response.suggestions.length > 0 && (
+																<SuggestedActions
+																	suggestions={item.response.suggestions}
+																	handleSuggestionClick={handleSuggestionClick}
+																	isPending={isPending}
+																	isStreaming={isStreaming}
+																/>
+															)}
+															{showDebug && item.response.metadata && (
+																<QueryMetadata metadata={item.response.metadata} />
+															)}
+														</div>
+													</div>
+												))}
+											</div>
+											{(isPending || isStreaming || promptResponse || error) && (
+												<div className="flex min-h-[calc(100dvh-260px)] flex-col gap-2.5">
+													{prompt && <SentPrompt prompt={prompt} />}
+													<PromptResponse
+														response={
+															promptResponse?.response ||
+															(streamingSuggestions || streamingCharts
+																? {
+																		answer: '',
+																		suggestions: streamingSuggestions,
+																		charts: streamingCharts,
+																		chartData: streamingChartData
+																	}
+																: undefined)
+														}
+														error={error?.message}
+														streamingError={streamingError}
+														isPending={isPending}
+														streamingResponse={streamingResponse}
+														isStreaming={isStreaming}
+														progressMessage={progressMessage}
+														progressStage={progressStage}
+														onSuggestionClick={handleSuggestionClick}
+														isGeneratingCharts={isGeneratingCharts}
+														isAnalyzingForCharts={isAnalyzingForCharts}
+														hasChartError={hasChartError}
+														expectedChartInfo={expectedChartInfo}
+														resizeTrigger={resizeTrigger}
+														showMetadata={showDebug}
+													/>
+												</div>
+											)}
+										</div>
+									) : (
+										<div className="mt-[100px] flex flex-col items-center justify-center gap-2.5">
+											<img src="/icons/llama-ai.svg" alt="LlamaAI" className="object-contain" width={64} height={77} />
+											<h1 className="text-2xl font-semibold">What can I help you with ?</h1>
+										</div>
+									)}
+								</div>
+							</div>
+							<div
+								className={`pointer-events-none sticky bottom-40 z-10 mx-auto -mb-8 transition-opacity duration-200 ${showScrollToBottom ? 'opacity-100' : ''} ${!showScrollToBottom ? 'opacity-0' : ''}`}
+							>
+								<Tooltip
+									content="Scroll to bottom"
+									render={
+										<button
+											onClick={() => {
+												if (scrollContainerRef.current) {
+													setShowScrollToBottom(false)
+
+													scrollContainerRef.current.scrollTo({
+														top: scrollContainerRef.current.scrollHeight,
+														behavior: 'smooth'
+													})
+												}
+											}}
+										/>
+									}
+									className="pointer-events-auto mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-[#e6e6e6] bg-(--app-bg) shadow-md hover:bg-[#f7f7f7] focus-visible:bg-[#f7f7f7] dark:border-[#222324] dark:hover:bg-[#222324] dark:focus-visible:bg-[#222324]"
+								>
+									<Icon name="arrow-down" height={16} width={16} />
+									<span className="sr-only">Scroll to bottom</span>
+								</Tooltip>
+							</div>
+							<div className="relative mx-auto w-full max-w-3xl pb-2.5">
+								{!readOnly && (
+									<div className="absolute -top-8 right-0 left-0 h-9 bg-gradient-to-b from-transparent to-[#fefefe] dark:to-[#131516]" />
+								)}
+								{!readOnly && (
+									<PromptInput
+										handleSubmit={handleSubmit}
+										promptInputRef={promptInputRef}
+										isPending={isPending}
+										handleStopRequest={handleStopRequest}
+										isStreaming={isStreaming}
+									/>
+								)}
+							</div>
+						</>
 					)}
 				</div>
 			</div>
 		</Layout>
 	)
 }
-
-const recommendedPrompts = ['Top 5 protocols by tvl', 'Recent hacks', 'Total amount raised by category']
 
 const PromptInput = ({
 	handleSubmit,
@@ -993,7 +1090,7 @@ const PromptInput = ({
 					onChange={onChange}
 					onKeyDown={onKeyDown}
 					name="prompt"
-					className="w-full rounded-lg border border-[#e6e6e6] bg-(--app-bg) p-4 caret-black max-sm:text-base dark:border-[#222324] dark:caret-white"
+					className="block w-full rounded-lg border border-[#e6e6e6] bg-(--app-bg) p-4 caret-black max-sm:text-base dark:border-[#222324] dark:caret-white"
 					autoCorrect="off"
 					autoComplete="off"
 					spellCheck="false"
@@ -1040,7 +1137,8 @@ const PromptResponse = ({
 	isAnalyzingForCharts = false,
 	hasChartError = false,
 	expectedChartInfo,
-	resizeTrigger = 0
+	resizeTrigger = 0,
+	showMetadata = false
 }: {
 	response?: { answer: string; metadata?: any; suggestions?: any[]; charts?: any[]; chartData?: any[] }
 	error?: string
@@ -1056,6 +1154,7 @@ const PromptResponse = ({
 	hasChartError?: boolean
 	expectedChartInfo?: { count?: number; types?: string[] } | null
 	resizeTrigger?: number
+	showMetadata?: boolean
 }) => {
 	if (error) {
 		return <p className="text-(--error)">{error}</p>
@@ -1066,7 +1165,7 @@ const PromptResponse = ({
 				{streamingError ? (
 					<div className="text-(--error)">{streamingError}</div>
 				) : isStreaming && streamingResponse ? (
-					<Answer content={streamingResponse} />
+					<MarkdownRenderer content={streamingResponse} />
 				) : isStreaming && progressMessage ? (
 					<p
 						className={`flex items-center justify-start gap-2 py-2 ${
@@ -1126,7 +1225,7 @@ const PromptResponse = ({
 					isStreaming={isStreaming}
 				/>
 			)}
-			{response?.metadata && <QueryMetadata metadata={response.metadata} />}
+			{showMetadata && response?.metadata && <QueryMetadata metadata={response.metadata} />}
 		</>
 	)
 }
@@ -1292,16 +1391,20 @@ const QueryMetadata = ({ metadata }: { metadata: any }) => {
 			setCopied(true)
 			setTimeout(() => setCopied(false), 2000)
 		} catch (error) {
-			console.error('Failed to copy content:', error)
+			console.log('Failed to copy content:', error)
 		}
 	}
 
 	return (
-		<details className="group rounded-lg border border-[#e6e6e6] p-2 dark:border-[#222324]">
-			<summary className="flex flex-wrap items-center justify-end gap-2 text-[#666] group-open:text-black group-hover:text-black dark:text-[#919296] dark:group-open:text-white dark:group-hover:text-white">
+		<details className="group rounded-lg border border-[#e6e6e6] dark:border-[#222324]">
+			<summary className="flex flex-wrap items-center justify-end gap-2 p-2 text-[#666] group-open:text-black group-hover:bg-[#f7f7f7] group-hover:text-black dark:text-[#919296] dark:group-open:text-white dark:group-hover:bg-[#222324] dark:group-hover:text-white">
 				<span className="mr-auto">Query Metadata</span>
 				<Tooltip content="Copy" render={<button onClick={handleCopy} />} className="hidden group-open:block">
-					{copied ? <Icon name="check-circle" height={14} width={14} /> : <Icon name="copy" height={14} width={14} />}
+					{copied ? (
+						<Icon name="check-circle" height={14} width={14} />
+					) : (
+						<Icon name="clipboard" height={14} width={14} />
+					)}
 					<span className="sr-only">Copy</span>
 				</Tooltip>
 				<span className="flex items-center gap-1">
@@ -1310,7 +1413,9 @@ const QueryMetadata = ({ metadata }: { metadata: any }) => {
 					<span className="hidden group-open:block">Hide</span>
 				</span>
 			</summary>
-			<pre className="mt-2 overflow-auto text-xs select-text">{JSON.stringify(metadata, null, 2)}</pre>
+			<pre className="overflow-auto border-t border-[#e6e6e6] p-2 text-xs select-text dark:border-[#222324]">
+				{JSON.stringify(metadata, null, 2)}
+			</pre>
 		</details>
 	)
 }
@@ -1323,8 +1428,17 @@ const SentPrompt = ({ prompt }: { prompt: string }) => {
 	)
 }
 
-const MessageRating = ({ messageId, content }: { messageId?: string; content?: string }) => {
+const MessageRating = ({
+	messageId,
+	content,
+	initialRating
+}: {
+	messageId?: string
+	content?: string
+	initialRating?: 'good' | 'bad' | null
+}) => {
 	const [copied, setCopied] = useState(false)
+	const [showFeedback, setShowFeedback] = useState(false)
 	const { authorizedFetch } = useAuthContext()
 
 	const {
@@ -1342,6 +1456,9 @@ const MessageRating = ({ messageId, content }: { messageId?: string; content?: s
 				.then((res) => res.json())
 
 			return res
+		},
+		onSuccess: () => {
+			setShowFeedback(true)
 		}
 	})
 
@@ -1360,8 +1477,15 @@ const MessageRating = ({ messageId, content }: { messageId?: string; content?: s
 				.then((res) => res.json())
 
 			return res
+		},
+		onSuccess: () => {
+			setShowFeedback(true)
 		}
 	})
+
+	const isRatedAsGood = initialRating === 'good' || sessionRatingAsGood?.rating === 'good'
+	const isRatedAsBad = initialRating === 'bad' || sessionRatingAsBad?.rating === 'bad'
+	const lastRating = isRatedAsGood ? 'good' : isRatedAsBad ? 'bad' : null
 
 	const handleCopy = async () => {
 		if (!content) return
@@ -1370,53 +1494,147 @@ const MessageRating = ({ messageId, content }: { messageId?: string; content?: s
 			setCopied(true)
 			setTimeout(() => setCopied(false), 2000)
 		} catch (error) {
-			console.error('Failed to copy content:', error)
+			console.log('Failed to copy content:', error)
 		}
 	}
-
-	const isRatedAsGood = sessionRatingAsGood?.rating === 'good'
-	const isRatedAsBad = sessionRatingAsBad?.rating === 'bad'
 
 	if (!messageId) return null
 
 	return (
-		<div className="-mx-1.5 flex items-center gap-1">
-			<Tooltip
-				content={isRatedAsGood ? 'Rated as good' : 'Rate as good'}
-				render={<button onClick={() => rateAsGood()} disabled={isRatingAsGood} />}
-				className={`rounded p-1.5 hover:bg-[#e6e6e6] dark:hover:bg-[#222324] ${isRatedAsGood ? 'text-(--success)' : 'text-[#666] dark:text-[#919296]'}`}
-			>
-				{isRatingAsGood ? <LoadingSpinner size={14} /> : <Icon name="thumbs-up" height={14} width={14} />}
-				<span className="sr-only">Thumbs Up</span>
-			</Tooltip>
-			<Tooltip
-				content={isRatedAsBad ? 'Rated as bad' : 'Rate as bad'}
-				render={<button onClick={() => rateAsBad()} disabled={isRatingAsBad} />}
-				className={`rounded p-1.5 hover:bg-[#e6e6e6] dark:hover:bg-[#222324] ${isRatedAsBad ? 'text-(--error)' : 'text-[#666] dark:text-[#919296]'}`}
-			>
-				{isRatingAsBad ? <LoadingSpinner size={14} /> : <Icon name="thumbs-down" height={14} width={14} />}
-				<span className="sr-only">Thumbs Down</span>
-			</Tooltip>
-			{content && (
-				<button
-					onClick={handleCopy}
-					className="rounded p-1.5 text-[#666] hover:bg-[#e6e6e6] dark:text-[#919296] dark:hover:bg-[#222324]"
+		<>
+			<div className="-my-0.5 flex items-center justify-end gap-1">
+				{content && (
+					<Tooltip
+						content={copied ? 'Copied' : 'Copy'}
+						render={<button onClick={handleCopy} />}
+						className="rounded p-1.5 text-[#666] hover:bg-[#f7f7f7] hover:text-black dark:text-[#919296] dark:hover:bg-[#222324] dark:hover:text-white"
+					>
+						{copied ? (
+							<Icon name="check-circle" height={14} width={14} />
+						) : (
+							<Icon name="clipboard" height={14} width={14} />
+						)}
+					</Tooltip>
+				)}
+				<Tooltip
+					content={isRatedAsGood ? 'Rated as good' : 'Rate as good'}
+					render={
+						<button onClick={() => rateAsGood(undefined)} disabled={isRatingAsGood || showFeedback || !!lastRating} />
+					}
+					className={`rounded p-1.5 hover:bg-[#f7f7f7] hover:text-black dark:hover:bg-[#222324] dark:hover:text-white ${isRatedAsGood ? 'text-(--success)' : 'text-[#666] dark:text-[#919296]'}`}
 				>
-					{copied ? <Icon name="check-circle" height={14} width={14} /> : <Icon name="copy" height={14} width={14} />}
-				</button>
-			)}
-		</div>
+					{isRatingAsGood ? <LoadingSpinner size={14} /> : <Icon name="thumbs-up" height={14} width={14} />}
+					<span className="sr-only">Thumbs Up</span>
+				</Tooltip>
+				<Tooltip
+					content={isRatedAsBad ? 'Rated as bad' : 'Rate as bad'}
+					render={
+						<button onClick={() => rateAsBad(undefined)} disabled={isRatingAsBad || showFeedback || !!lastRating} />
+					}
+					className={`rounded p-1.5 hover:bg-[#f7f7f7] hover:text-black dark:hover:bg-[#222324] dark:hover:text-white ${isRatedAsBad ? 'text-(--error)' : 'text-[#666] dark:text-[#919296]'}`}
+				>
+					{isRatingAsBad ? <LoadingSpinner size={14} /> : <Icon name="thumbs-down" height={14} width={14} />}
+					<span className="sr-only">Thumbs Down</span>
+				</Tooltip>
+				<Tooltip
+					content="Provide Feedback"
+					render={<button onClick={() => setShowFeedback(true)} disabled={showFeedback} />}
+					className={`rounded p-1.5 text-[#666] hover:bg-[#f7f7f7] hover:text-black dark:text-[#919296] dark:hover:bg-[#222324] dark:hover:text-white`}
+				>
+					<Icon name="message-square-warning" height={14} width={14} />
+					<span className="sr-only">Provide Feedback</span>
+				</Tooltip>
+			</div>
+			<Ariakit.DialogProvider open={showFeedback} setOpen={setShowFeedback}>
+				<Ariakit.Dialog
+					className="max-sm:drawer dialog w-full gap-0 border border-(--cards-border) bg-(--cards-bg) p-4 shadow-2xl sm:max-w-md"
+					unmountOnHide
+					portal
+					hideOnInteractOutside
+				>
+					<div className="mb-4 flex items-center justify-between">
+						<h2 className="text-lg font-semibold">Provide Feedback</h2>
+						<Ariakit.DialogDismiss className="-m-2 rounded p-2 hover:bg-[#e6e6e6] dark:hover:bg-[#222324]">
+							<Icon name="x" height={16} width={16} />
+						</Ariakit.DialogDismiss>
+					</div>
+					<FeedbackForm messageId={messageId} initialRating={lastRating} setShowFeedback={setShowFeedback} />
+				</Ariakit.Dialog>
+			</Ariakit.DialogProvider>
+		</>
 	)
 }
 
-const Answer = ({ content, messageId }: { content: string; messageId?: string }) => {
+const FeedbackForm = ({
+	messageId,
+	initialRating,
+	setShowFeedback
+}: {
+	messageId?: string
+	initialRating?: 'good' | 'bad' | null
+	setShowFeedback: (show: boolean) => void
+}) => {
+	const { authorizedFetch } = useAuthContext()
+	const { mutate: submitFeedback, isPending: isSubmittingFeedback } = useMutation({
+		mutationFn: async (feedback?: string) => {
+			const res = await authorizedFetch(`${MCP_SERVER}/user/messages/${messageId}/rate`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ rating: initialRating, feedback })
+			})
+				.then(handleSimpleFetchResponse)
+				.then((res) => res.json())
+
+			return res
+		},
+		onSuccess: () => {
+			setShowFeedback(false)
+		}
+	})
+
+	const [feedbackText, setFeedbackText] = useState('')
+	const finalFeedbackText = useDeferredValue(feedbackText)
+
 	return (
-		<>
-			<div className="prose prose-sm dark:prose-invert prose-table:table-auto prose-table:border-collapse prose-th:border prose-th:border-[#e6e6e6] dark:prose-th:border-[#222324] prose-th:px-3 prose-th:py-2 prose-th:whitespace-nowrap prose-td:whitespace-nowrap prose-th:bg-(--app-bg) prose-td:border prose-td:border-[#e6e6e6] dark:prose-td:border-[#222324] prose-td:bg-white dark:prose-td:bg-[#181A1C] prose-td:px-3 prose-td:py-2 max-w-none overflow-x-auto">
-				<ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+		<form
+			onSubmit={(e) => {
+				e.preventDefault()
+				const form = e.target as HTMLFormElement
+				submitFeedback(form.feedback?.value?.trim())
+			}}
+			className="flex flex-col gap-4"
+		>
+			<label className="flex flex-col gap-2">
+				<span className="text-[#666] dark:text-[#919296]">Help us improve! Any additional feedback? (optional)</span>
+				<textarea
+					name="feedback"
+					placeholder="Share your thoughts..."
+					className="w-full rounded border border-[#e6e6e6] bg-(--app-bg) p-3 dark:border-[#222324]"
+					rows={3}
+					maxLength={500}
+					disabled={isSubmittingFeedback}
+					onChange={(e) => setFeedbackText(e.target.value)}
+				/>
+			</label>
+			<div className="flex items-center justify-between">
+				<span className="text-xs text-[#666] dark:text-[#919296]">{finalFeedbackText.length}/500</span>
+				<div className="flex gap-3">
+					<Ariakit.DialogDismiss
+						disabled={isSubmittingFeedback}
+						className="rounded px-3 py-2 text-xs text-[#666] hover:bg-[#e6e6e6] disabled:opacity-50 dark:text-[#919296] dark:hover:bg-[#222324]"
+					>
+						Skip
+					</Ariakit.DialogDismiss>
+					<button
+						type="submit"
+						disabled={isSubmittingFeedback}
+						className="rounded bg-(--old-blue) px-3 py-2 text-xs text-white hover:opacity-90 disabled:opacity-50"
+					>
+						{isSubmittingFeedback ? 'Submitting...' : 'Submit'}
+					</button>
+				</div>
 			</div>
-			<MessageRating messageId={messageId} content={content} />
-		</>
+		</form>
 	)
 }
 

@@ -2,7 +2,7 @@ import type { IBarChartProps, IChartProps, IMultiSeriesChartProps, IPieChartProp
 import { formatTooltipValue } from '~/components/ECharts/useDefaults'
 import { generateChartColor } from '~/containers/ProDashboard/utils'
 import { colorManager } from '~/containers/ProDashboard/utils/colorManager'
-import { formattedNum } from '~/utils'
+import { formattedNum, getNDistinctColors } from '~/utils'
 import type { ChartConfiguration } from '../types'
 
 interface AdaptedChartData {
@@ -65,7 +65,7 @@ const formatChartValue = (value: number, valueSymbol?: string): string => {
 	}
 }
 
-const validateChartData = (data: [any, number | null][], chartType: string): [any, number | null][] => {
+const validateChartData = (data: [number, number | null][], chartType: string): [number, number | null][] => {
 	if (!data || data.length === 0) {
 		return []
 	}
@@ -82,7 +82,7 @@ const validateChartData = (data: [any, number | null][], chartType: string): [an
 		}
 
 		return typeof y === 'number' && !isNaN(y)
-	})
+	}) as [number, number | null][]
 
 	return validData
 }
@@ -176,7 +176,7 @@ function adaptPieChartData(config: ChartConfiguration, rawData: any[]): AdaptedC
 			description: config.description
 		}
 	} catch (error) {
-		console.error('PieChart adapter error:', error)
+		console.log('PieChart adapter error:', error)
 		return {
 			chartType: 'pie',
 			data: [],
@@ -217,7 +217,7 @@ function adaptScatterChartData(config: ChartConfiguration, rawData: any[]): Adap
 			description: config.description
 		}
 	} catch (error) {
-		console.error('ScatterChart adapter error:', error)
+		console.log('ScatterChart adapter error:', error)
 		return {
 			chartType: 'scatter',
 			data: [],
@@ -250,7 +250,8 @@ export function adaptChartData(config: ChartConfiguration, rawData: any[]): Adap
 			throw new Error('No series configuration found')
 		}
 
-		let chartData: [number, number | null][] = []
+		let chartData: [number, number | null][] | [string, number, string][] = []
+		let stackColors: Record<string, string> = {}
 
 		if (config.axes.x.type === 'time') {
 			chartData = rawData.map((row) => {
@@ -264,18 +265,16 @@ export function adaptChartData(config: ChartConfiguration, rawData: any[]): Adap
 
 			chartData.sort((a, b) => a[0] - b[0])
 		} else {
-			chartData = rawData.map((row) => {
+			const allColors = getNDistinctColors(rawData.length)
+			chartData = rawData.map((row, index) => {
 				const category = row[primarySeries.dataMapping.xField] || 'Unknown'
 				const value = row[primarySeries.dataMapping.yField] || 0
-
-				return [category, parseStringNumber(value)] as [any, number]
+				stackColors[category] = allColors[index]
+				return [category, parseStringNumber(value)]
 			})
 		}
 
-		const formattedData =
-			config.axes.x.type === 'time' ? chartData : chartData.map(([cat, val]) => [cat, val] as [any, number])
-
-		const validatedData = validateChartData(formattedData, config.type)
+		const validatedData = validateChartData(chartData, config.type)
 
 		const color = primarySeries.styling?.color || getChartColor(undefined, 0, '#2196F3')
 
@@ -291,6 +290,7 @@ export function adaptChartData(config: ChartConfiguration, rawData: any[]): Adap
 			customLegendName: undefined,
 			customLegendOptions: undefined,
 			hideDefaultLegend: true,
+			stackColors,
 
 			chartOptions: {
 				grid: {
@@ -342,7 +342,7 @@ export function adaptChartData(config: ChartConfiguration, rawData: any[]): Adap
 			description: config.description
 		}
 	} catch (error) {
-		console.error('Chart adapter error:', error)
+		console.log('Chart adapter error:', error)
 
 		return {
 			chartType: 'area',
@@ -396,8 +396,8 @@ export function adaptMultiSeriesData(config: ChartConfiguration, rawData: any[])
 			} else {
 				seriesData = filteredData.map((row) => {
 					const category = row[seriesConfig.dataMapping.xField] || 'Unknown'
-					const value = row[seriesConfig.dataMapping.yField] || 0
-					return [category as any, parseStringNumber(value)]
+					const value = row[seriesConfig.dataMapping.yField]
+					return [category as any, value == null ? null : parseStringNumber(value)]
 				})
 			}
 
@@ -425,6 +425,7 @@ export function adaptMultiSeriesData(config: ChartConfiguration, rawData: any[])
 			hideDataZoom: true,
 			hideDownloadButton: false,
 			valueSymbol: config.valueSymbol ?? '',
+			xAxisType: config.axes.x.type,
 
 			chartOptions: {
 				grid: {
@@ -435,30 +436,27 @@ export function adaptMultiSeriesData(config: ChartConfiguration, rawData: any[])
 				},
 				tooltip: {
 					confine: false,
-					appendToBody: true
-				}
-			},
+					appendToBody: true,
+					formatter: (params: any) => {
+						if (!Array.isArray(params)) return ''
+						const xValue = params[0]?.value?.[0]
+						const header = config.axes.x.type === 'time' ? new Date(xValue).toLocaleDateString() : String(xValue)
 
-			...(config.valueSymbol === '%' && {
-				tooltipFormatter: (params: any) => {
-					if (Array.isArray(params)) {
-						const timestamp = params[0]?.value?.[0]
-						const date = new Date(timestamp).toLocaleDateString()
-
-						let content = `<div style="margin-bottom: 8px; font-weight: 600;">${date}</div>`
-
+						let content = `<div style="margin-bottom: 8px; font-weight: 600;">${header}</div>`
 						params.forEach((param: any) => {
 							const value = param.value?.[1]
-							if (value !== null && value !== undefined) {
-								content += `<div>${param.marker} ${param.seriesName}: ${formatPrecisionPercentage(value)}</div>`
+							if (value != null) {
+								const formattedValue =
+									config.valueSymbol === '%'
+										? formatPrecisionPercentage(value)
+										: formatTooltipValue(value, config.valueSymbol ?? '')
+								content += `<div>${param.marker} ${param.seriesName}: ${formattedValue}</div>`
 							}
 						})
-
 						return content
 					}
-					return ''
 				}
-			})
+			}
 		}
 
 		return {
@@ -469,7 +467,7 @@ export function adaptMultiSeriesData(config: ChartConfiguration, rawData: any[])
 			description: config.description
 		}
 	} catch (error) {
-		console.error('Multi-series chart adapter error:', error)
+		console.log('Multi-series chart adapter error:', error)
 
 		return {
 			chartType: 'multi-series',

@@ -1,12 +1,13 @@
+import { useMemo } from 'react'
 import { Icon } from '~/components/Icon'
+import { Switch } from '~/components/Switch'
 import { useAppMetadata } from '../../AppMetadataContext'
 import { useProDashboard } from '../../ProDashboardAPIContext'
 import { CHART_TYPES, ChartConfig, getChainChartTypes, getProtocolChartTypes } from '../../types'
-import { ItemSelect } from '../ItemSelect'
-import { ProtocolSelect } from '../ProtocolSelect'
-import { ChartTypeMultiSelector } from './ChartTypeMultiSelector'
+import { AriakitSelect } from '../AriakitSelect'
 import { CombinedChartPreview } from './CombinedChartPreview'
 import { ComposerItemsCarousel } from './ComposerItemsCarousel'
+import { SubjectMultiPanel } from './SubjectMultiPanel'
 import { ChartTabType } from './types'
 
 interface UnifiedChartTabProps {
@@ -32,6 +33,13 @@ interface UnifiedChartTabProps {
 	onRemoveFromComposer: (id: string) => void
 }
 
+interface UnifiedChartTabPropsExtended extends UnifiedChartTabProps {
+	selectedChains?: string[]
+	selectedProtocols?: string[]
+	onSelectedChainsChange?: (values: string[]) => void
+	onSelectedProtocolsChange?: (values: string[]) => void
+}
+
 export function UnifiedChartTab({
 	selectedChartTab,
 	selectedChain,
@@ -52,10 +60,14 @@ export function UnifiedChartTab({
 	onUnifiedChartNameChange,
 	onChartCreationModeChange,
 	onAddToComposer,
-	onRemoveFromComposer
-}: UnifiedChartTabProps) {
-	const protocolChartTypes = getProtocolChartTypes()
-	const chainChartTypes = getChainChartTypes()
+	onRemoveFromComposer,
+	selectedChains = [],
+	selectedProtocols = [],
+	onSelectedChainsChange,
+	onSelectedProtocolsChange
+}: UnifiedChartTabPropsExtended) {
+	const protocolChartTypes = useMemo(() => getProtocolChartTypes(), [])
+	const chainChartTypes = useMemo(() => getChainChartTypes(), [])
 	const { loading: metaLoading, availableProtocolChartTypes, availableChainChartTypes } = useAppMetadata()
 	const { protocols, chains } = useProDashboard()
 
@@ -64,30 +76,76 @@ export function UnifiedChartTab({
 	}
 
 	const handleAddToSelection = () => {
-		if (selectedChartTypes.length > 0 && (selectedChain || selectedProtocol)) {
+		if (selectedChartTypes.length > 0) {
 			onAddToComposer(selectedChartTypes)
 			onChartTypesChange([])
+			onSelectedChainsChange?.([])
+			onSelectedProtocolsChange?.([])
 		}
 	}
 
-	const instantAvailableChartTypes = (() => {
+	const instantAvailableChartTypes = useMemo(() => {
+		let available: string[] = []
 		if (selectedChartTab === 'protocol' && selectedProtocol) {
 			const geckoId = protocols.find((p: any) => p.slug === selectedProtocol)?.geckoId
-			return availableProtocolChartTypes(selectedProtocol, { hasGeckoId: !!geckoId })
-		}
-		if (selectedChartTab === 'chain' && selectedChain) {
+			available = availableProtocolChartTypes(selectedProtocol, { hasGeckoId: !!geckoId })
+		} else if (selectedChartTab === 'chain' && selectedChain) {
 			const geckoId = chains.find((c: any) => c.name === selectedChain)?.gecko_id
-			return availableChainChartTypes(selectedChain, { hasGeckoId: !!geckoId })
+			available = availableChainChartTypes(selectedChain, { hasGeckoId: !!geckoId })
 		}
-		return []
-	})()
+
+		if (!available || available.length === 0) {
+			return []
+		}
+
+		const order = selectedChartTab === 'protocol' ? protocolChartTypes : chainChartTypes
+		const availableSet = new Set(available)
+		return order.filter((type) => availableSet.has(type))
+	}, [
+		selectedChartTab,
+		selectedProtocol,
+		selectedChain,
+		protocols,
+		chains,
+		availableProtocolChartTypes,
+		availableChainChartTypes,
+		protocolChartTypes,
+		chainChartTypes
+	])
+
+	const globalAvailableChartTypes = useMemo(() => {
+		const set = new Set<string>()
+		for (const c of chains) {
+			const geckoId = (c as any).gecko_id
+			for (const t of availableChainChartTypes(c.name, { hasGeckoId: !!geckoId })) set.add(t)
+		}
+		for (const p of protocols) {
+			if (!p.slug) continue
+			const geckoId = (p as any).geckoId
+			for (const t of availableProtocolChartTypes(p.slug, { hasGeckoId: !!geckoId })) set.add(t)
+		}
+		return Array.from(set)
+	}, [chains, protocols, availableChainChartTypes, availableProtocolChartTypes])
+
+	const selectedChartTypeSingle = useMemo(() => selectedChartTypes[0] || null, [selectedChartTypes])
+
+	const chartTypeOptions = useMemo(() => {
+		const availableTypes = instantAvailableChartTypes.length > 0 ? instantAvailableChartTypes : globalAvailableChartTypes
+		const chartTypesOrder = selectedChartTab === 'chain' ? chainChartTypes : protocolChartTypes
+		return chartTypesOrder
+			.filter((type) => availableTypes.includes(type))
+			.map((type) => ({
+				value: type,
+				label: CHART_TYPES[type as keyof typeof CHART_TYPES]?.title || type
+			}))
+	}, [instantAvailableChartTypes, globalAvailableChartTypes, selectedChartTab, chainChartTypes, protocolChartTypes])
 
 	return (
 		<div className="flex h-full min-h-[400px] gap-3 overflow-hidden">
-			<div className="pro-border flex w-[380px] flex-col overflow-hidden border lg:w-[420px]">
-				<div className="flex h-full min-h-0 flex-col p-3">
+			<div className="pro-border flex w-[380px] flex-col border lg:w-[420px]">
+				<div className="flex h-full flex-col p-3">
 					{chartCreationMode === 'combined' && (
-						<div className="mb-2">
+						<div className="mb-2 flex-shrink-0">
 							<label className="pro-text2 mb-1 block text-xs font-medium">Chart Name</label>
 							<input
 								type="text"
@@ -99,73 +157,43 @@ export function UnifiedChartTab({
 						</div>
 					)}
 
-					<div className="mb-2">
-						<div className="mb-2 grid grid-cols-2 gap-0">
-							<button
-								className={`-ml-px rounded-none border px-2 py-1 text-xs font-medium transition-colors duration-200 first:ml-0 first:rounded-l-md last:rounded-r-md ${
-									selectedChartTab === 'chain'
-										? 'pro-border pro-btn-blue'
-										: 'pro-border pro-hover-bg pro-text2 hover:pro-text1'
-								}`}
-								onClick={() => onChartTabChange('chain')}
-							>
-								Chain
-							</button>
-							<button
-								className={`-ml-px rounded-none border px-2 py-1 text-xs font-medium transition-colors duration-200 first:ml-0 first:rounded-l-md last:rounded-r-md ${
-									selectedChartTab === 'protocol'
-										? 'pro-border pro-btn-blue'
-										: 'pro-border pro-hover-bg pro-text2 hover:pro-text1'
-								}`}
-								onClick={() => onChartTabChange('protocol')}
-							>
-								Protocol
-							</button>
-						</div>
-
-						{selectedChartTab === 'chain' && (
-							<ItemSelect
-								label="Select Chain"
-								options={chainOptions}
-								selectedValue={selectedChain}
-								onChange={onChainChange}
-								isLoading={protocolsLoading}
-								placeholder="Select a chain..."
-								itemType="chain"
-							/>
-						)}
-
-						{selectedChartTab === 'protocol' && (
-							<ProtocolSelect
-								label="Select Protocol"
-								options={protocolOptions}
-								selectedValue={selectedProtocol}
-								onChange={onProtocolChange}
-								isLoading={protocolsLoading}
-								placeholder="Select a protocol..."
-							/>
-						)}
+					<div className="mb-2 flex-shrink-0">
+						<AriakitSelect
+							label="Select Chart Type"
+							options={chartTypeOptions}
+							selectedValue={selectedChartTypeSingle}
+							onChange={(option) => onChartTypesChange([option.value])}
+							placeholder="Select chart type..."
+							isLoading={metaLoading}
+						/>
 					</div>
 
-					{(selectedChain || selectedProtocol) && (
-						<div className="mb-2 min-h-0 flex-1">
-							<ChartTypeMultiSelector
-								selectedChartTypes={selectedChartTypes}
-								availableChartTypes={
-									instantAvailableChartTypes.length > 0 ? instantAvailableChartTypes : availableChartTypes
-								}
-								chartTypes={selectedChartTab === 'chain' ? chainChartTypes : protocolChartTypes}
-								isLoading={metaLoading}
-								onChange={handleChartTypesChange}
-							/>
-						</div>
-					)}
+					<div className="mb-2">
+						<SubjectMultiPanel
+							activeTab={selectedChartTab}
+							onTabChange={onChartTabChange}
+							selectedChartType={selectedChartTypeSingle}
+							chainOptions={chainOptions}
+							protocolOptions={protocolOptions as any}
+							selectedChains={selectedChains}
+							onSelectedChainsChange={onSelectedChainsChange || (() => {})}
+							selectedProtocols={selectedProtocols}
+							onSelectedProtocolsChange={onSelectedProtocolsChange || (() => {})}
+							isLoading={protocolsLoading}
+						/>
+					</div>
 
 					<button
 						onClick={handleAddToSelection}
-						disabled={selectedChartTypes.length === 0 || (!selectedChain && !selectedProtocol)}
-						className={`mb-2 w-full rounded-md px-3 py-2 text-xs font-medium transition-colors duration-200 ${
-							selectedChartTypes.length === 0 || (!selectedChain && !selectedProtocol)
+						disabled={
+						selectedChartTypes.length === 0 ||
+						(selectedChartTab === 'chain' && selectedChains.length === 0) ||
+						(selectedChartTab === 'protocol' && selectedProtocols.length === 0)
+					}
+						className={`mb-2 w-full flex-shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${
+							selectedChartTypes.length === 0 ||
+							(selectedChartTab === 'chain' && selectedChains.length === 0) ||
+							(selectedChartTab === 'protocol' && selectedProtocols.length === 0)
 								? 'pro-border pro-text3 cursor-not-allowed border opacity-50'
 								: 'pro-btn-blue'
 						}`}
@@ -175,32 +203,19 @@ export function UnifiedChartTab({
 							`(${selectedChartTypes.length} chart${selectedChartTypes.length > 1 ? 's' : ''})`}
 					</button>
 
-					<div className="pro-border border-t pt-2">
-						<label className="pro-text2 mb-1 block text-xs font-medium">Create as</label>
-						<div className="space-y-1">
-							<label className="flex cursor-pointer items-center gap-2">
-								<input
-									type="radio"
-									name="chartCreationMode"
-									value="separate"
-									checked={chartCreationMode === 'separate'}
-									onChange={(e) => onChartCreationModeChange(e.target.value as 'separate' | 'combined')}
-									className="h-3 w-3 text-(--primary)"
-								/>
-								<span className="pro-text1 text-xs">Separate Charts ({composerItems.length})</span>
-							</label>
-							<label className="flex cursor-pointer items-center gap-2">
-								<input
-									type="radio"
-									name="chartCreationMode"
-									value="combined"
-									checked={chartCreationMode === 'combined'}
-									onChange={(e) => onChartCreationModeChange(e.target.value as 'separate' | 'combined')}
-									className="h-3 w-3 text-(--primary)"
-								/>
-								<span className="pro-text1 text-xs">Combined Chart (1 multi-chart)</span>
-							</label>
-						</div>
+					<div className="pro-border flex-shrink-0 border-t pt-2">
+						<Switch
+							label="Combined Chart"
+							checked={chartCreationMode === 'combined'}
+							onChange={() => onChartCreationModeChange(chartCreationMode === 'combined' ? 'separate' : 'combined')}
+							value="combined"
+							help={
+								chartCreationMode === 'combined'
+									? `Create 1 multi-chart with ${composerItems.length} chart${composerItems.length !== 1 ? 's' : ''}`
+									: `Create ${composerItems.length} separate chart${composerItems.length !== 1 ? 's' : ''}`
+							}
+							className="text-xs"
+						/>
 					</div>
 				</div>
 			</div>

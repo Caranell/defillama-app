@@ -3,12 +3,16 @@ import * as Ariakit from '@ariakit/react'
 import { useQuery } from '@tanstack/react-query'
 import { Icon } from '~/components/Icon'
 import { CHAINS_API_V2, PROTOCOLS_API } from '~/constants'
+import { TimePeriod } from '~/containers/ProDashboard/ProDashboardAPIContext'
+import { filterDataByTimePeriod } from '~/containers/ProDashboard/queries'
 import { useAppMetadata } from '../../AppMetadataContext'
 import { useProDashboard } from '../../ProDashboardAPIContext'
 import ProtocolSplitCharts from '../../services/ProtocolSplitCharts'
-import { ItemMultiSelect } from '../ItemMultiSelect'
-import { ItemSelect } from '../ItemSelect'
-import { ProtocolSelect } from '../ProtocolSelect'
+import { getItemIconUrl } from '../../utils'
+import { AriakitSelect } from '../AriakitSelect'
+import { AriakitMultiSelect } from '../AriakitMultiSelect'
+import { AriakitVirtualizedSelect } from '../AriakitVirtualizedSelect'
+import { AriakitVirtualizedMultiSelect } from '../AriakitVirtualizedMultiSelect'
 import { ChartBuilderConfig } from './types'
 
 const MultiSeriesChart = lazy(() => import('~/components/ECharts/MultiSeriesChart'))
@@ -21,6 +25,7 @@ interface ChartBuilderTabProps {
 	protocolsLoading: boolean
 	onChartBuilderChange: (updates: Partial<ChartBuilderConfig>) => void
 	onChartBuilderNameChange: (name: string) => void
+	timePeriod: TimePeriod
 }
 
 const METRIC_OPTIONS = [
@@ -69,7 +74,8 @@ export function ChartBuilderTab({
 	protocolOptions,
 	protocolsLoading,
 	onChartBuilderChange,
-	onChartBuilderNameChange
+	onChartBuilderNameChange,
+	timePeriod
 }: ChartBuilderTabProps) {
 	const { loading: metaLoading, error: metaError, hasProtocolBuilderMetric } = useAppMetadata()
 	const { getProtocolInfo } = useProDashboard()
@@ -120,7 +126,8 @@ export function ChartBuilderTab({
 			chartBuilder.categories,
 			chartBuilder.chainCategories,
 			chartBuilder.groupByParent,
-			chartBuilder.filterMode || 'include'
+			chartBuilder.filterMode || 'include',
+			timePeriod
 		],
 		queryFn: async () => {
 			if (chartBuilder.mode === 'protocol') {
@@ -138,7 +145,7 @@ export function ChartBuilderTab({
 				if (data && data.series.length > 0) {
 					data.series = data.series.map((serie) => ({
 						...serie,
-						data: serie.data.slice(-365)
+						data: filterDataByTimePeriod(serie.data, timePeriod)
 					}))
 				}
 
@@ -157,7 +164,7 @@ export function ChartBuilderTab({
 			if (data && data.series.length > 0) {
 				data.series = data.series.map((serie) => ({
 					...serie,
-					data: serie.data.slice(-365)
+					data: filterDataByTimePeriod(serie.data, timePeriod)
 				}))
 			}
 
@@ -181,18 +188,15 @@ export function ChartBuilderTab({
 		onChartBuilderChange({ metric: newMetric, chartType: newChartType })
 	}
 
-	const handleChainsChange = (options: any[]) => {
-		const chains = options.map((opt) => opt.value)
+	const handleChainsChange = (chains: string[]) => {
 		onChartBuilderChange({ chains })
 	}
 
-	const handleCategoriesChange = (options: any[]) => {
-		const categories = options.map((opt) => opt.value)
+	const handleCategoriesChange = (categories: string[]) => {
 		onChartBuilderChange({ categories })
 	}
 
-	const handleChainCategoriesChange = (options: any[]) => {
-		const chainCategories = options.map((opt) => opt.value)
+	const handleChainCategoriesChange = (chainCategories: string[]) => {
 		onChartBuilderChange({ chainCategories })
 	}
 
@@ -232,7 +236,6 @@ export function ChartBuilderTab({
 	return (
 		<div className="flex h-full flex-col">
 			<div className="mb-1">
-				<label className="pro-text2 mb-1 block text-xs font-medium">Chart Name</label>
 				<input
 					type="text"
 					value={chartBuilderName}
@@ -247,7 +250,7 @@ export function ChartBuilderTab({
 					<h3 className="pro-text1 text-[11px] font-semibold">Chart Configuration</h3>
 
 					<div>
-						<ItemSelect
+						<AriakitSelect
 							label="Metric"
 							options={METRIC_OPTIONS}
 							selectedValue={chartBuilder.metric}
@@ -304,9 +307,9 @@ export function ChartBuilderTab({
 						{chartBuilder.mode === 'chains' ? (
 							<>
 								<div className="mb-1.5">
-									<ItemMultiSelect
+									<AriakitVirtualizedMultiSelect
 										label="Chains"
-										options={chainOptions}
+										options={chainOptions.length > 0 ? chainOptions.map((c) => ({ value: c.value, label: c.label })) : []}
 										selectedValues={chartBuilder.chains}
 										onChange={handleChainsChange}
 										placeholder={
@@ -314,14 +317,14 @@ export function ChartBuilderTab({
 												? 'Select chains to exclude...'
 												: 'Select chains...'
 										}
-										isLoading={protocolsLoading}
-										itemType="chain"
+										isLoading={protocolsLoading || chainOptions.length === 0}
 										maxSelections={10}
+										renderIcon={(option) => getItemIconUrl('chain', null, option.value)}
 									/>
 								</div>
 
 								<div className="mb-1.5">
-									<ItemMultiSelect
+									<AriakitMultiSelect
 										label="Categories"
 										options={categoryOptions}
 										selectedValues={chartBuilder.categories}
@@ -332,13 +335,12 @@ export function ChartBuilderTab({
 												: 'Select categories...'
 										}
 										isLoading={false}
-										itemType="text"
 										maxSelections={5}
 									/>
 								</div>
 
 								<div className="mb-1.5">
-									<ItemSelect
+									<AriakitSelect
 										label="Number of Protocols"
 										options={LIMIT_OPTIONS}
 										selectedValue={chartBuilder.limit.toString()}
@@ -375,20 +377,21 @@ export function ChartBuilderTab({
 						) : (
 							<>
 								<div className="mb-1.5">
-									<ProtocolSelect
+									<AriakitVirtualizedSelect
 										label="Protocol"
 										options={protocolOptionsFiltered}
-										selectedValue={chartBuilder.protocol}
+										selectedValue={chartBuilder.protocol || null}
 										onChange={handleProtocolChange}
 										placeholder="Select protocol..."
 										isLoading={protocolsLoading}
+										renderIcon={(option) => option.logo || getItemIconUrl('protocol', option, option.value)}
 									/>
 								</div>
 
 								<div className="mb-1.5">
-									<ItemMultiSelect
+									<AriakitVirtualizedMultiSelect
 										label="Chains"
-										options={chainOptions}
+										options={chainOptions.length > 0 ? chainOptions.map((c) => ({ value: c.value, label: c.label })) : []}
 										selectedValues={chartBuilder.chains}
 										onChange={handleChainsChange}
 										placeholder={
@@ -396,13 +399,13 @@ export function ChartBuilderTab({
 												? 'Select chains to exclude...'
 												: 'Select chains...'
 										}
-										isLoading={protocolsLoading}
-										itemType="chain"
+										isLoading={protocolsLoading || chainOptions.length === 0}
 										maxSelections={10}
+										renderIcon={(option) => getItemIconUrl('chain', null, option.value)}
 									/>
 								</div>
 								<div className="mb-1.5">
-									<ItemMultiSelect
+									<AriakitMultiSelect
 										label="Chain Categories"
 										options={(chainCategoriesList || []).map((c) => ({ value: c, label: c }))}
 										selectedValues={chartBuilder.chainCategories || []}
@@ -413,12 +416,11 @@ export function ChartBuilderTab({
 												: 'Select chain categories...'
 										}
 										isLoading={false}
-										itemType="text"
 										maxSelections={5}
 									/>
 								</div>
 								<div className="mb-1.5">
-									<ItemSelect
+									<AriakitSelect
 										label="Number of Chains"
 										options={LIMIT_OPTIONS}
 										selectedValue={chartBuilder.limit.toString()}

@@ -1,12 +1,12 @@
 import * as Ariakit from '@ariakit/react'
-import { ChartBuilderTab } from './ChartBuilderTab'
+import { ChartTab } from './ChartTab'
+import { MetricTab } from './MetricTab'
 import { ModalHeader } from './ModalHeader'
 import { SubmitButton } from './SubmitButton'
 import { TableTab } from './TableTab'
 import { TabNavigation } from './TabNavigation'
 import { TextTab } from './TextTab'
 import { AddChartModalProps } from './types'
-import { UnifiedChartTab } from './UnifiedChartTab'
 import { useComposerItemsData } from './useComposerItemsData'
 import { useModalActions } from './useModalActions'
 
@@ -19,24 +19,6 @@ export function AddChartModal({ isOpen, onClose, editItem }: AddChartModalProps)
 		} else {
 			return 'chain'
 		}
-	}
-
-	const getCurrentSelectedItem = () => {
-		if (state.selectedMainTab === 'charts') {
-			return state.selectedChartTab === 'chain' ? state.selectedChain : state.selectedProtocol
-		} else {
-			return state.selectedChain
-		}
-	}
-
-	const getCurrentGeckoId = () => {
-		const itemType = getCurrentItemType()
-		if (itemType === 'protocol') {
-			return computed.selectedProtocolData?.geckoId
-		} else if (itemType === 'chain') {
-			return computed.selectedChainData?.gecko_id
-		}
-		return undefined
 	}
 
 	const availableChartTypes: string[] = []
@@ -53,11 +35,9 @@ export function AddChartModal({ isOpen, onClose, editItem }: AddChartModalProps)
 		>
 			<Ariakit.Dialog
 				className={`pro-dashboard dialog add-chart-dialog max-sm:drawer thin-scrollbar flex w-[90%] flex-col overflow-hidden rounded-md border border-(--cards-border) bg-(--cards-bg) p-3 shadow-xl md:p-4 ${
-					state.selectedMainTab === 'builder'
+					state.selectedMainTab === 'charts'
 						? 'max-h-[90dvh] md:max-h-[85dvh] md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl'
-						: state.selectedMainTab === 'charts'
-							? 'max-h-[90dvh] md:max-h-[85dvh] md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl'
-							: 'max-h-[85dvh] md:max-h-[80dvh] md:max-w-2xl lg:max-w-3xl xl:max-w-4xl'
+						: 'max-h-[85dvh] md:max-h-[80dvh] md:max-w-2xl lg:max-w-3xl xl:max-w-4xl'
 				}`}
 				unmountOnHide
 				portal
@@ -73,11 +53,15 @@ export function AddChartModal({ isOpen, onClose, editItem }: AddChartModalProps)
 
 				<div className="-mx-4 flex flex-1 flex-col overflow-y-auto px-4 md:mx-0 md:px-0">
 					{state.selectedMainTab === 'charts' && (
-						<UnifiedChartTab
+						<ChartTab
+							chartMode={state.chartMode}
+							onChartModeChange={actions.setChartMode}
 							selectedChartTab={state.selectedChartTab}
 							selectedChain={state.selectedChain}
 							selectedProtocol={state.selectedProtocol}
 							selectedChartTypes={state.selectedChartTypes}
+							selectedChains={state.selectedChains}
+							selectedProtocols={state.selectedProtocols}
 							chainOptions={computed.chainOptions}
 							protocolOptions={computed.protocolOptions}
 							availableChartTypes={availableChartTypes}
@@ -90,22 +74,38 @@ export function AddChartModal({ isOpen, onClose, editItem }: AddChartModalProps)
 							onChainChange={actions.handleChainChange}
 							onProtocolChange={actions.handleProtocolChange}
 							onChartTypesChange={actions.setSelectedChartTypes}
+							onSelectedChainsChange={actions.setSelectedChains}
+							onSelectedProtocolsChange={actions.setSelectedProtocols}
 							onUnifiedChartNameChange={actions.setUnifiedChartName}
 							onChartCreationModeChange={actions.setChartCreationMode}
 							onAddToComposer={actions.handleAddToComposer}
 							onRemoveFromComposer={actions.handleRemoveFromComposer}
+							chartBuilder={state.chartBuilder}
+							chartBuilderName={state.chartBuilderName}
+							onChartBuilderChange={actions.updateChartBuilder}
+							onChartBuilderNameChange={actions.setChartBuilderName}
+							timePeriod={computed.timePeriod}
 						/>
 					)}
 
-					{state.selectedMainTab === 'builder' && (
-						<ChartBuilderTab
-							chartBuilder={state.chartBuilder}
-							chartBuilderName={state.chartBuilderName}
-							chainOptions={computed.chainOptions}
-							protocolOptions={computed.protocolOptions}
-							protocolsLoading={computed.protocolsLoading}
-							onChartBuilderChange={actions.updateChartBuilder}
-							onChartBuilderNameChange={actions.setChartBuilderName}
+					{state.selectedMainTab === 'metric' && (
+						<MetricTab
+							metricSubjectType={state.metricSubjectType}
+							metricChain={state.metricChain}
+							metricProtocol={state.metricProtocol}
+							metricType={state.metricType}
+							metricAggregator={state.metricAggregator}
+							metricWindow={state.metricWindow}
+							metricLabel={state.metricLabel}
+							metricShowSparkline={state.metricShowSparkline}
+							onSubjectTypeChange={actions.setMetricSubjectType}
+							onChainChange={(opt) => actions.setMetricChain(opt?.value ?? null)}
+							onProtocolChange={(opt) => actions.setMetricProtocol(opt?.value ?? null)}
+							onTypeChange={actions.setMetricType}
+							onAggregatorChange={actions.setMetricAggregator}
+							onWindowChange={actions.setMetricWindow}
+							onLabelChange={actions.setMetricLabel}
+							onShowSparklineChange={actions.setMetricShowSparkline}
 						/>
 					)}
 
@@ -155,6 +155,11 @@ export function AddChartModal({ isOpen, onClose, editItem }: AddChartModalProps)
 						selectedTokens={state.selectedTokens}
 						chartBuilder={state.chartBuilder}
 						chartCreationMode={state.chartCreationMode}
+						chartMode={state.chartMode}
+						metricSubjectType={state.metricSubjectType}
+						metricChain={state.metricChain}
+						metricProtocol={state.metricProtocol}
+						metricType={state.metricType}
 						onSubmit={actions.handleSubmit}
 					/>
 				</div>

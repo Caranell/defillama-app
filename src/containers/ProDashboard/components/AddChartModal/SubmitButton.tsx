@@ -1,5 +1,5 @@
 import { ChartConfig, DashboardItemConfig } from '../../types'
-import { ChartBuilderConfig, ChartTabType, CombinedTableType, MainTabType } from './types'
+import { ChartBuilderConfig, ChartModeType, ChartTabType, CombinedTableType, MainTabType } from './types'
 
 interface SubmitButtonProps {
 	editItem?: DashboardItemConfig | null
@@ -17,6 +17,11 @@ interface SubmitButtonProps {
 	selectedTokens?: string[]
 	chartBuilder?: ChartBuilderConfig
 	chartCreationMode?: 'separate' | 'combined'
+	chartMode?: ChartModeType
+	metricSubjectType?: 'chain' | 'protocol'
+	metricChain?: string | null
+	metricProtocol?: string | null
+	metricType?: string
 	onSubmit: () => void
 }
 
@@ -36,11 +41,17 @@ export function SubmitButton({
 	selectedTokens = [],
 	chartBuilder,
 	chartCreationMode = 'separate',
+	chartMode = 'manual',
+	metricSubjectType,
+	metricChain,
+	metricProtocol,
+	metricType,
 	onSubmit
 }: SubmitButtonProps) {
 	const isDisabled =
 		chartTypesLoading ||
-		(selectedMainTab === 'charts' && composerItems.length === 0) ||
+		(selectedMainTab === 'charts' && chartMode === 'manual' && composerItems.length === 0) ||
+		(selectedMainTab === 'charts' && chartMode === 'builder' && !chartBuilder?.metric) ||
 		(selectedMainTab === 'table' &&
 			selectedTableType === 'protocols' &&
 			(!selectedChains || selectedChains.length === 0)) ||
@@ -49,7 +60,11 @@ export function SubmitButton({
 		(selectedMainTab === 'table' &&
 			selectedTableType === 'token-usage' &&
 			(!selectedTokens || selectedTokens.length === 0)) ||
-		(selectedMainTab === 'text' && !textContent.trim())
+		(selectedMainTab === 'text' && !textContent.trim()) ||
+		(selectedMainTab === 'metric' &&
+			(!metricType ||
+				(metricSubjectType === 'chain' && !metricChain) ||
+				(metricSubjectType === 'protocol' && !metricProtocol)))
 
 	const getButtonText = () => {
 		if (editItem) return 'Save Changes'
@@ -57,7 +72,12 @@ export function SubmitButton({
 		switch (selectedMainTab) {
 			case 'table':
 				return 'Add Table'
+			case 'metric':
+				return 'Add Metric'
 			case 'charts':
+				if (chartMode === 'builder') {
+					return 'Add Chart'
+				}
 				if (chartCreationMode === 'combined') {
 					return 'Add Multi-Chart'
 				} else if (composerItems.length > 1) {
@@ -70,8 +90,6 @@ export function SubmitButton({
 				return 'Add Chart'
 			case 'text':
 				return 'Add Text'
-			case 'builder':
-				return 'Add Chart'
 			default:
 				return 'Add Chart'
 		}

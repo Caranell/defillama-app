@@ -269,6 +269,7 @@ export function AdapterByChain(props: IProps) {
 				protocol.category,
 				protocol.chains.join(', '),
 				protocol.total24h,
+				protocol.total7d,
 				protocol.total30d,
 				protocol.total1y,
 				protocol.totalAllTime,
@@ -333,7 +334,7 @@ export function AdapterByChain(props: IProps) {
 		)
 	}
 
-	const metricName = ['Fees', 'Revenue', 'Holders Revenue'].includes(props.type)
+	const metricName = ['Fees', 'Revenue', 'Holders Revenue', 'Open Interest'].includes(props.type)
 		? props.type
 		: props.type.includes('Volume')
 			? props.type

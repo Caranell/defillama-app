@@ -84,7 +84,8 @@ export default class SProtocolSplitCharts {
 			| 'user-fees'
 			| 'holders-revenue'
 			| 'protocol-revenue'
-			| 'supply-side-revenue',
+			| 'supply-side-revenue'
+			| 'open-interest',
 		chains: string[],
 		limit: number = 10,
 		categories: string[] = [],
@@ -110,7 +111,7 @@ export default class SProtocolSplitCharts {
 
 			return data
 		} catch (error) {
-			console.error(`Error fetching ${metric} split data:`, error)
+			console.log(`Error fetching ${metric} split data:`, error)
 
 			return {
 				series: [],
@@ -201,7 +202,7 @@ export default class SProtocolSplitCharts {
 
 			return response.json()
 		} catch (error) {
-			console.error(`Error fetching protocol chain data for ${protocol}:`, error)
+			console.log(`Error fetching protocol chain data for ${protocol}:`, error)
 			return {
 				series: [],
 				metadata: {

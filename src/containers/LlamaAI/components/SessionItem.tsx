@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Icon } from '~/components/Icon'
 import { LoadingSpinner } from '~/components/Loaders'
+import { Tooltip } from '~/components/Tooltip'
 import { MCP_SERVER } from '~/constants'
 import { useAuthContext } from '~/containers/Subscribtion/auth'
 import { useChatHistory, type ChatSession } from '../hooks/useChatHistory'
@@ -88,7 +89,7 @@ export function SessionItem({ session, isActive, onSessionSelect }: SessionItemP
 			<form
 				ref={formRef}
 				onSubmit={handleSave}
-				className="group relative -mx-1.5 flex items-center gap-0.5 rounded-sm text-xs hover:bg-[#666]/12 data-[active=true]:bg-(--old-blue) data-[active=true]:text-white dark:hover:bg-[#919296]/12"
+				className="group relative -mx-1.5 flex items-center gap-0.5 rounded-sm text-xs hover:bg-[#f7f7f7] data-[active=true]:bg-(--old-blue) data-[active=true]:text-white dark:hover:bg-[#222324]"
 			>
 				<input
 					type="text"
@@ -101,7 +102,7 @@ export function SessionItem({ session, isActive, onSessionSelect }: SessionItemP
 				<div className="flex items-center justify-center gap-0.5">
 					<button
 						type="submit"
-						className="flex aspect-square items-center justify-center rounded-sm bg-[#666]/12 p-1.5 hover:bg-(--old-blue) hover:text-white focus-visible:bg-(--old-blue) focus-visible:text-white dark:bg-[#919296]/12"
+						className="flex aspect-square items-center justify-center rounded-sm bg-(--old-blue) p-1.5 text-white"
 						disabled={isUpdatingTitle}
 					>
 						{isUpdatingTitle ? (
@@ -115,7 +116,7 @@ export function SessionItem({ session, isActive, onSessionSelect }: SessionItemP
 						onClick={() => {
 							setIsEditing(false)
 						}}
-						className="flex aspect-square items-center justify-center rounded-sm bg-red-500/10 p-1.5 text-(--error)"
+						className="flex aspect-square items-center justify-center rounded-sm bg-red-500/20 p-1.5 text-(--error)"
 						disabled={isUpdatingTitle}
 					>
 						<Icon name="x" height={12} width={12} className="shrink-0" />
@@ -128,7 +129,7 @@ export function SessionItem({ session, isActive, onSessionSelect }: SessionItemP
 	return (
 		<div
 			data-active={isActive}
-			className="group relative -mx-1.5 flex items-center rounded-sm text-xs focus-within:bg-[#666]/12 hover:bg-[#666]/12 data-[active=true]:bg-(--old-blue) data-[active=true]:text-white dark:focus-within:bg-[#919296]/12 dark:hover:bg-[#919296]/12"
+			className="group relative -mx-1.5 flex items-center rounded-sm text-xs focus-within:bg-[#f7f7f7] hover:bg-[#f7f7f7] data-[active=true]:bg-(--old-blue) data-[active=true]:text-white dark:focus-within:bg-[#222324] dark:hover:bg-[#222324]"
 		>
 			<button
 				onClick={() => handleSessionClick(session.sessionId)}
@@ -138,15 +139,18 @@ export function SessionItem({ session, isActive, onSessionSelect }: SessionItemP
 				{session.title}
 			</button>
 			<div className="flex items-center justify-center opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
-				<button
-					onClick={() => {
-						setIsEditing(true)
-					}}
+				<Tooltip
+					content="Edit Session Title"
+					render={
+						<button
+							onClick={() => setIsEditing(true)}
+							disabled={isUpdatingTitle || isDeletingSession || isRestoringSession}
+						/>
+					}
 					className="flex aspect-square items-center justify-center rounded-sm p-1.5 hover:bg-(--old-blue) hover:text-white focus-visible:bg-(--old-blue) focus-visible:text-white"
-					disabled={isUpdatingTitle || isDeletingSession || isRestoringSession}
 				>
 					<Icon name="pencil" height={12} width={12} className="shrink-0" />
-				</button>
+				</Tooltip>
 				<Ariakit.MenuProvider>
 					<Ariakit.MenuButton className="flex aspect-square items-center justify-center rounded-sm p-1.5 hover:bg-(--old-blue) hover:text-white focus-visible:bg-(--old-blue) focus-visible:text-white">
 						<Icon name="ellipsis" height={12} width={12} className="shrink-0" />
@@ -159,7 +163,7 @@ export function SessionItem({ session, isActive, onSessionSelect }: SessionItemP
 						wrapperProps={{
 							className: 'max-sm:fixed! max-sm:bottom-0! max-sm:top-[unset]! max-sm:transform-none! max-sm:w-full!'
 						}}
-						className="max-sm:drawer z-10 flex h-[calc(100dvh-80px)] min-w-[180px] flex-col overflow-auto overscroll-contain rounded-md border border-[hsl(204,20%,88%)] bg-(--bg-main) max-sm:rounded-b-none sm:max-h-[60dvh] sm:max-w-md lg:h-full lg:max-h-(--popover-available-height) dark:border-[hsl(204,3%,32%)]"
+						className="max-sm:drawer z-10 flex h-[calc(100dvh-80px)] min-w-[180px] flex-col overflow-auto overscroll-contain rounded-md border border-[hsl(204,20%,88%)] bg-(--bg-main) text-(--text-primary) max-sm:rounded-b-none sm:max-h-[60dvh] sm:max-w-md lg:h-full lg:max-h-(--popover-available-height) dark:border-[hsl(204,3%,32%)]"
 					>
 						<Ariakit.PopoverDismiss className="ml-auto p-2 opacity-50 sm:hidden">
 							<Icon name="x" className="h-5 w-5" />
@@ -171,7 +175,7 @@ export function SessionItem({ session, isActive, onSessionSelect }: SessionItemP
 										navigator.clipboard.writeText(`${window.location.origin}/ai/shared/${session.shareToken}`)
 									}
 								} catch (error) {
-									console.error('Failed to copy link:', error)
+									console.log('Failed to copy link:', error)
 								} finally {
 									setIsCopyingLink(true)
 									setTimeout(() => {

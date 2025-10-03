@@ -8,6 +8,7 @@ import {
 	MultiChartConfig,
 	Protocol,
 	ProtocolsTableConfig,
+	StoredColSpan,
 	TextConfig
 } from '../../types'
 import { ChartTabType, MainTabType } from './types'
@@ -27,6 +28,7 @@ export function useModalActions(
 		handleAddTable,
 		handleAddMultiChart,
 		handleAddText,
+		handleAddMetric,
 		handleAddChartBuilder,
 		handleEditItem
 	} = useProDashboard()
@@ -90,15 +92,15 @@ export function useModalActions(
 		(option: any) => {
 			actions.setSelectedChain(option.value)
 			actions.setSelectedProtocol(null)
+			actions.setSelectedProtocols([])
 			actions.setSelectedChartType('tvl')
 		},
 		[actions]
 	)
 
 	const handleChainsChange = useCallback(
-		(options: any[]) => {
-			const selectedValues = options ? options.map((option) => option.value) : []
-			actions.setSelectedChains(selectedValues)
+		(values: string[]) => {
+			actions.setSelectedChains(values)
 		},
 		[actions]
 	)
@@ -107,14 +109,15 @@ export function useModalActions(
 		(option: any) => {
 			actions.setSelectedProtocol(option.value)
 			actions.setSelectedChain(null)
+			actions.setSelectedProtocols([])
 			actions.setSelectedChartType('tvl')
 		},
 		[actions]
 	)
 
 	const handleDatasetChainChange = useCallback(
-		(option: any) => {
-			actions.setSelectedDatasetChain(option.value)
+		(value: string | null) => {
+			actions.setSelectedDatasetChain(value)
 		},
 		[actions]
 	)
@@ -155,46 +158,52 @@ export function useModalActions(
 
 			const targetGrouping = resolveTargetGrouping()
 
-			if (state.selectedChartTab === 'chain' && state.selectedChain && chartTypesToAdd.length > 0) {
-				const chain = chains.find((c: Chain) => c.name === state.selectedChain)
-
-				const filteredTypes = chartTypesToAdd.filter((chartType) => {
-					return !state.composerItems.some((item) => item.chain === state.selectedChain && item.type === chartType)
-				})
-
-				if (filteredTypes.length > 0) {
-					const newCharts = filteredTypes.map((chartType) => ({
-						id: `${state.selectedChain}-${chartType}-${Date.now()}-${Math.random()}`,
-						kind: 'chart' as const,
-						chain: state.selectedChain,
-						type: chartType,
-						grouping: targetGrouping,
-						geckoId: ['chainMcap', 'chainPrice'].includes(chartType) ? chain?.gecko_id : undefined
-					}))
-					actions.setComposerItems((prev) => [...prev, ...newCharts])
-					addedCount = filteredTypes.length
+			if (state.selectedChartTab === 'chain' && chartTypesToAdd.length > 0) {
+				const chainsToUse =
+					state.selectedChains.length > 0 ? state.selectedChains : state.selectedChain ? [state.selectedChain] : []
+				for (const chainName of chainsToUse) {
+					const chain = chains.find((c: Chain) => c.name === chainName)
+					const filteredTypes = chartTypesToAdd.filter((chartType) => {
+						return !state.composerItems.some((item) => item.chain === chainName && item.type === chartType)
+					})
+					if (filteredTypes.length > 0) {
+						const newCharts = filteredTypes.map((chartType) => ({
+							id: `${chainName}-${chartType}-${Date.now()}-${Math.random()}`,
+							kind: 'chart' as const,
+							chain: chainName,
+							type: chartType,
+							grouping: targetGrouping,
+							geckoId: ['chainMcap', 'chainPrice'].includes(chartType) ? chain?.gecko_id : undefined
+						}))
+						actions.setComposerItems((prev) => [...prev, ...newCharts])
+						addedCount += filteredTypes.length
+					}
 				}
-			} else if (state.selectedChartTab === 'protocol' && state.selectedProtocol && chartTypesToAdd.length > 0) {
-				const protocol = protocols.find((p: Protocol) => p.slug === state.selectedProtocol)
-
-				const filteredTypes = chartTypesToAdd.filter((chartType) => {
-					return !state.composerItems.some(
-						(item) => item.protocol === state.selectedProtocol && item.type === chartType
-					)
-				})
-
-				if (filteredTypes.length > 0) {
-					const newCharts = filteredTypes.map((chartType) => ({
-						id: `${state.selectedProtocol}-${chartType}-${Date.now()}-${Math.random()}`,
-						kind: 'chart' as const,
-						protocol: state.selectedProtocol,
-						chain: '',
-						type: chartType,
-						grouping: targetGrouping,
-						geckoId: protocol?.geckoId
-					}))
-					actions.setComposerItems((prev) => [...prev, ...newCharts])
-					addedCount = filteredTypes.length
+			} else if (state.selectedChartTab === 'protocol' && chartTypesToAdd.length > 0) {
+				const protocolsToUse =
+					state.selectedProtocols && state.selectedProtocols.length > 0
+						? state.selectedProtocols
+						: state.selectedProtocol
+							? [state.selectedProtocol]
+							: []
+				for (const slug of protocolsToUse) {
+					const protocol = protocols.find((p: Protocol) => p.slug === slug)
+					const filteredTypes = chartTypesToAdd.filter((chartType) => {
+						return !state.composerItems.some((item) => item.protocol === slug && item.type === chartType)
+					})
+					if (filteredTypes.length > 0) {
+						const newCharts = filteredTypes.map((chartType) => ({
+							id: `${slug}-${chartType}-${Date.now()}-${Math.random()}`,
+							kind: 'chart' as const,
+							protocol: slug,
+							chain: '',
+							type: chartType,
+							grouping: targetGrouping,
+							geckoId: protocol?.geckoId
+						}))
+						actions.setComposerItems((prev) => [...prev, ...newCharts])
+						addedCount += filteredTypes.length
+					}
 				}
 			}
 		},
@@ -204,9 +213,11 @@ export function useModalActions(
 			protocols,
 			state.composerItems,
 			state.selectedChain,
+			state.selectedChains,
 			state.selectedChartTab,
 			state.selectedChartTypes,
-			state.selectedProtocol
+			state.selectedProtocol,
+			state.selectedProtocols
 		]
 	)
 
@@ -224,12 +235,12 @@ export function useModalActions(
 			actions.setSelectedProtocol(null)
 			actions.setSelectedChartType('tvl')
 			actions.setSelectedChartTypes([])
-			if (tab === 'charts') {
+			if (tab === 'charts' && state.chartMode === 'manual') {
 				actions.setUnifiedChartName('')
 				actions.setChartCreationMode('separate')
 			}
 		},
-		[actions]
+		[actions, state.chartMode]
 	)
 
 	const handleChartTabChange = useCallback(
@@ -252,8 +263,6 @@ export function useModalActions(
 	const handleSubmit = useCallback(() => {
 		if (editItem) {
 			let newItem: DashboardItemConfig | null = null
-			console.log('state.chartBuilder', state.chartBuilder)
-			console.log('editItem', editItem)
 			if (
 				state.selectedMainTab === 'charts' &&
 				state.chartCreationMode === 'combined' &&
@@ -437,12 +446,36 @@ export function useModalActions(
 					title: state.textTitle.trim() || undefined,
 					content: state.textContent.trim()
 				} as TextConfig
-			} else if (state.selectedMainTab === 'builder') {
+			} else if (state.chartMode === 'builder') {
 				newItem = {
 					...editItem,
 					kind: 'builder',
 					name: state.chartBuilderName.trim() || undefined,
 					config: state.chartBuilder
+				}
+			} else if (state.selectedMainTab === 'metric') {
+				if (
+					(state.metricSubjectType === 'chain' && state.metricChain) ||
+					(state.metricSubjectType === 'protocol' && state.metricProtocol)
+				) {
+					const subject =
+						state.metricSubjectType === 'protocol'
+							? {
+									itemType: 'protocol' as const,
+									protocol: state.metricProtocol || undefined
+								}
+							: { itemType: 'chain' as const, chain: state.metricChain || undefined }
+					newItem = {
+						...editItem,
+						kind: 'metric',
+						subject: subject as any,
+						type: state.metricType,
+						aggregator: state.metricAggregator,
+						window: state.metricWindow,
+						compare: { mode: 'previous_value', format: 'percent' },
+						showSparkline: state.metricShowSparkline,
+						label: state.metricLabel
+					} as any
 				}
 			}
 
@@ -450,7 +483,7 @@ export function useModalActions(
 				handleEditItem(editItem.id, newItem)
 			}
 		} else {
-			if (state.selectedMainTab === 'charts') {
+			if (state.selectedMainTab === 'charts' && state.chartMode === 'manual') {
 				if (state.composerItems.length > 0) {
 					if (state.chartCreationMode === 'combined') {
 						handleAddMultiChart(state.composerItems, state.unifiedChartName.trim() || undefined)
@@ -521,7 +554,32 @@ export function useModalActions(
 				}
 			} else if (state.selectedMainTab === 'text' && state.textContent.trim()) {
 				handleAddText(state.textTitle.trim() || undefined, state.textContent.trim())
-			} else if (state.selectedMainTab === 'builder') {
+			} else if (state.selectedMainTab === 'metric') {
+				if (
+					(state.metricSubjectType === 'chain' && state.metricChain) ||
+					(state.metricSubjectType === 'protocol' && state.metricProtocol)
+				) {
+					const subject =
+						state.metricSubjectType === 'protocol'
+							? {
+									itemType: 'protocol' as const,
+									protocol: state.metricProtocol || undefined
+								}
+							: { itemType: 'chain' as const, chain: state.metricChain || undefined }
+					handleAddMetric({
+						id: '',
+						kind: 'metric',
+						subject: subject as any,
+						type: state.metricType,
+						aggregator: state.metricAggregator,
+						window: state.metricWindow,
+						compare: { mode: 'previous_value', format: 'percent' },
+						showSparkline: state.metricShowSparkline,
+						label: state.metricLabel,
+						colSpan: 0.5 as StoredColSpan
+					} as any)
+				}
+			} else if (state.chartMode === 'builder') {
 				handleAddChartBuilder(state.chartBuilderName.trim() || undefined, state.chartBuilder)
 			}
 		}
@@ -539,6 +597,7 @@ export function useModalActions(
 		handleAddChart,
 		handleAddTable,
 		handleAddText,
+		handleAddMetric,
 		handleAddChartBuilder,
 		resetState,
 		onClose

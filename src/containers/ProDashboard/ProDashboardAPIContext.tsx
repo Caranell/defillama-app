@@ -12,9 +12,11 @@ import {
 	ChartBuilderConfig,
 	ChartConfig,
 	DashboardItemConfig,
+	MetricConfig,
 	MultiChartConfig,
 	Protocol,
 	ProtocolsTableConfig,
+	StoredColSpan,
 	TableFilters,
 	TextConfig
 } from './types'
@@ -102,6 +104,7 @@ interface ProDashboardContextType {
 	) => void
 	handleAddMultiChart: (chartItems: ChartConfig[], name?: string) => void
 	handleAddText: (title: string | undefined, content: string) => void
+	handleAddMetric: (config: MetricConfig) => void
 	handleAddChartBuilder: (
 		name: string | undefined,
 		config: {
@@ -133,7 +136,7 @@ interface ProDashboardContextType {
 	handleRemoveItem: (itemId: string) => void
 	handleChartsReordered: (newCharts: DashboardItemConfig[]) => void
 	handleGroupingChange: (chartId: string, newGrouping: 'day' | 'week' | 'month' | 'quarter') => void
-	handleColSpanChange: (chartId: string, newColSpan: 1 | 2) => void
+	handleColSpanChange: (chartId: string, newColSpan: StoredColSpan) => void
 	handleCumulativeChange: (itemId: string, showCumulative: boolean) => void
 	handlePercentageChange: (itemId: string, showPercentage: boolean) => void
 	handleStackedChange: (itemId: string, showStacked: boolean) => void
@@ -418,7 +421,7 @@ export function ProDashboardAPIProvider({
 					: null
 			)
 		} catch (error) {
-			console.error('Failed to auto-skip older sessions:', error)
+			console.log('Failed to auto-skip older sessions:', error)
 		}
 	}, [isAuthenticated, currentDashboard?.aiGenerated, user?.id, dashboardId, saveDashboard])
 
@@ -438,7 +441,7 @@ export function ProDashboardAPIProvider({
 			try {
 				await updateDashboard({ id: dashboardId, data })
 			} catch (error) {
-				console.error('Failed to save dashboard name:', error)
+				console.log('Failed to save dashboard name:', error)
 			}
 		}
 	}, [
@@ -473,7 +476,7 @@ export function ProDashboardAPIProvider({
 		try {
 			await createDashboard(data)
 		} catch (error) {
-			console.error('Failed to copy dashboard:', error)
+			console.log('Failed to copy dashboard:', error)
 		}
 	}, [items, dashboardName, timePeriod, isAuthenticated, createDashboard])
 
@@ -508,7 +511,7 @@ export function ProDashboardAPIProvider({
 
 				await createDashboard(dashboardData)
 			} catch (error) {
-				console.error('Failed to create new dashboard:', error)
+				console.log('Failed to create new dashboard:', error)
 				toast.error('Failed to create new dashboard')
 			}
 		},
@@ -661,7 +664,7 @@ export function ProDashboardAPIProvider({
 
 				toast.success('Thank you for your feedback!')
 			} catch (error) {
-				console.error('Failed to submit rating:', error)
+				console.log('Failed to submit rating:', error)
 				toast.error('Failed to submit rating. Please try again.')
 			}
 		},
@@ -702,7 +705,7 @@ export function ProDashboardAPIProvider({
 						: null
 				)
 			} catch (error) {
-				console.error('Failed to skip rating:', error)
+				console.log('Failed to skip rating:', error)
 			}
 		},
 		[isAuthenticated, user?.id, dashboardId, currentDashboard?.aiGenerated, saveDashboard]
@@ -1051,6 +1054,33 @@ export function ProDashboardAPIProvider({
 		[autoSave, isReadOnly]
 	)
 
+	const handleAddMetric = useCallback(
+		(config: MetricConfig) => {
+			if (isReadOnly) {
+				return
+			}
+			const metric: MetricConfig = {
+				id: generateItemId('metric', ''),
+				kind: 'metric',
+				subject: config.subject,
+				type: config.type,
+				aggregator: config.aggregator,
+				window: config.window,
+				compare: config.compare,
+				label: config.label,
+				format: config.format,
+				showSparkline: config.showSparkline !== false,
+				colSpan: (config.colSpan ?? 0.5) as StoredColSpan
+			}
+			setItems((prev) => {
+				const newItems = [...prev, metric]
+				autoSave(newItems)
+				return newItems
+			})
+		},
+		[isReadOnly, autoSave]
+	)
+
 	const setTimePeriod = useCallback(
 		(period: TimePeriod) => {
 			if (isReadOnly) {
@@ -1108,14 +1138,21 @@ export function ProDashboardAPIProvider({
 	)
 
 	const handleColSpanChange = useCallback(
-		(chartId: string, newColSpan: 1 | 2) => {
+		(chartId: string, newColSpan: StoredColSpan) => {
 			if (isReadOnly) {
 				return
 			}
+
 			setItems((prev) => {
 				const newItems = prev.map((item) => {
 					if (item.id === chartId) {
-						return { ...item, colSpan: newColSpan }
+						if (item.kind === 'metric') {
+							const clampedMetric = Math.min(1, Math.max(0.5, newColSpan)) as StoredColSpan
+							return { ...item, colSpan: clampedMetric }
+						}
+
+						const clamped = Math.min(2, Math.max(0.5, newColSpan)) as StoredColSpan
+						return { ...item, colSpan: clamped }
 					}
 					return item
 				})
@@ -1328,6 +1365,7 @@ export function ProDashboardAPIProvider({
 			handleAddTable,
 			handleAddMultiChart,
 			handleAddText,
+			handleAddMetric,
 			handleAddChartBuilder,
 			handleEditItem,
 			handleRemoveItem,
@@ -1391,6 +1429,7 @@ export function ProDashboardAPIProvider({
 			handleAddTable,
 			handleAddMultiChart,
 			handleAddText,
+			handleAddMetric,
 			handleAddChartBuilder,
 			handleEditItem,
 			handleRemoveItem,
