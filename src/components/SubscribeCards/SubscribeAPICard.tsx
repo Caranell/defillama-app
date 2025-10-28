@@ -1,6 +1,8 @@
+import { useConnectModal } from '@rainbow-me/rainbowkit'
 import { Icon } from '~/components/Icon'
 import { PaymentButton } from '~/containers/Subscribtion/Crypto'
 import { SignIn } from '~/containers/Subscribtion/SignIn'
+import { useAuthContext } from '~/containers/Subscribtion/auth'
 import { useSubscribe } from '~/hooks/useSubscribe'
 
 export function SubscribeAPICard({
@@ -23,6 +25,8 @@ export function SubscribeAPICard({
 	const displayPrice = billingInterval === 'year' ? yearlyPrice : monthlyPrice
 	const displayPeriod = billingInterval === 'year' ? '/year' : '/month'
 	const { handleSubscribe, loading } = useSubscribe()
+	const { openConnectModal } = useConnectModal()
+	const { isAuthenticated } = useAuthContext()
 
 	const handleUpgradeToYearly = async () => {
 		await handleSubscribe('stripe', 'api', undefined, 'year')
@@ -30,11 +34,11 @@ export function SubscribeAPICard({
 
 	return (
 		<>
-			<h2 className="relative z-10 text-center text-[2rem] font-extrabold whitespace-nowrap text-[#5C5CF9]">API</h2>
+			<h2 className="relative z-10 text-center text-[2rem] font-extrabold whitespace-nowrap text-[#5C5CF9]">Pro API</h2>
 			<div className="relative z-10 mt-1 flex flex-col items-center justify-center">
 				<div className="flex items-center">
 					<span className="bg-linear-to-r from-[#5C5CF9] to-[#8a8aff] bg-clip-text text-center text-2xl font-medium text-transparent">
-						{displayPrice} USD
+						{displayPrice}$
 					</span>
 					<span className="ml-1 text-[#8a8c90]">{displayPeriod}</span>
 				</div>
@@ -43,7 +47,7 @@ export function SubscribeAPICard({
 				)}
 			</div>
 			{billingInterval === 'month' && (
-				<p className="relative z-10 mt-1 text-center font-medium text-[#8a8c90]">Multiple payment options</p>
+				<p className="relative z-10 mt-1 text-center font-medium text-[#8a8c90]">Pay with crypto</p>
 			)}
 			<ul className="mx-auto mb-auto flex w-full flex-col gap-3 py-6 max-sm:text-sm">
 				<li className="flex flex-nowrap items-start gap-2.5">
@@ -62,20 +66,17 @@ export function SubscribeAPICard({
 					<Icon name="check" height={16} width={16} className="relative top-1 shrink-0 text-green-400" />
 					<span>Priority support</span>
 				</li>
-				<p className="px-6.5 font-medium">
-					<a href="https://api-docs.defillama.com/" target="_blank" rel="noreferrer noopener" className="underline">
-						Pro API
-					</a>{' '}
-					limits:
-				</p>
-				<li className="flex flex-col gap-2 px-6.5">
-					<span>1000 requests/minute</span>
+				<li className="flex flex-col gap-2 px-2.5">
+					<span className="text-sm">1000 requests/minute</span>
+					<div className="h-1.5 w-full overflow-hidden rounded-full bg-[#39393E]">
+						<div className="h-full w-full rounded-full bg-linear-to-r from-[#5C5CF9] to-[#8a8aff]"></div>
+					</div>
 				</li>
-				<li className="flex flex-col gap-2 px-6.5">
-					<span>1M calls/month</span>
-				</li>
-				<li className="flex flex-col gap-2 px-6.5">
-					<span>$0.60 per 1,000 additional calls after 1M limit</span>
+				<li className="flex flex-col gap-2 px-2.5">
+					<span className="text-sm">1M calls/month</span>
+					<div className="h-1.5 w-full overflow-hidden rounded-full bg-[#39393E]">
+						<div className="h-full w-full rounded-full bg-linear-to-r from-[#5C5CF9] to-[#8a8aff]"></div>
+					</div>
 				</li>
 			</ul>
 			<div className="relative z-10 mx-auto flex w-full max-w-[408px] flex-col gap-3">
@@ -118,15 +119,42 @@ export function SubscribeAPICard({
 					<>
 						{context === 'page' && (
 							<>
-								<SignIn text="Already a subscriber? Sign In" />
-								<div
-									className={`grid gap-3 max-sm:w-full max-sm:grid-cols-1 ${billingInterval === 'year' ? 'grid-cols-1' : 'grid-cols-2'}`}
+								{!isAuthenticated ? (
+									<>
+										<button
+											onClick={openConnectModal}
+											className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#5C5CF9] px-4 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:bg-[#4A4AF0]"
+										>
+											<Icon name="wallet" height={16} width={16} />
+											Connect Wallet
+										</button>
+										<div className="flex items-center justify-center gap-2 text-sm text-[#8a8c90]">
+											<span>Or pay with</span>
+											<SignIn text="Stripe" className="inline-flex items-center gap-1 text-[#5C5CF9] underline hover:text-[#7C7CFF]" />
+											<Icon name="external-link" height={12} width={12} className="text-[#8a8c90]" />
+										</div>
+									</>
+								) : (
+									<>
+										<SignIn text="Already a subscriber? Sign In" />
+										<div
+											className={`grid gap-3 max-sm:w-full max-sm:grid-cols-1 ${billingInterval === 'year' ? 'grid-cols-1' : 'grid-cols-2'}`}
+										>
+											{billingInterval === 'month' && (
+												<PaymentButton paymentMethod="llamapay" type="api" billingInterval={billingInterval} />
+											)}
+											<PaymentButton paymentMethod="stripe" type="api" billingInterval={billingInterval} />
+										</div>
+									</>
+								)}
+								<a
+									href="https://api-docs.defillama.com/"
+									target="_blank"
+									rel="noreferrer noopener"
+									className="mt-2 text-center text-sm text-[#8a8c90] underline hover:text-white"
 								>
-									{billingInterval === 'month' && (
-										<PaymentButton paymentMethod="llamapay" type="api" billingInterval={billingInterval} />
-									)}
-									<PaymentButton paymentMethod="stripe" type="api" billingInterval={billingInterval} />
-								</div>
+									Click here a full lists of all endpoints available in Pro
+								</a>
 							</>
 						)}
 					</>

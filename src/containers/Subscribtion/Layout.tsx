@@ -1,12 +1,22 @@
 import Head from 'next/head'
+import { useState } from 'react'
+import * as Ariakit from '@ariakit/react'
+import { useAccount } from 'wagmi'
+import { Icon } from '~/components/Icon'
 import { BasicLink } from '~/components/Link'
 import { LinkPreviewCard } from '~/components/SEO'
 import { Toast } from '~/components/Toast'
 import { useAuthContext } from '~/containers/Subscribtion/auth'
+import { formatEthAddress } from '~/utils'
 import { SignIn } from './SignIn'
 
 export function SubscribeLayout({ children }) {
-	const { isAuthenticated, logout } = useAuthContext()
+	const { isAuthenticated, logout, user } = useAuthContext()
+	const { address } = useAccount()
+	const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+	const displayAddress = user?.walletAddress || address
+	const userEmail = user?.email && !user.email.includes('@defillama.com') ? user.email : null
 
 	return (
 		<>
@@ -27,17 +37,29 @@ export function SubscribeLayout({ children }) {
 							{!isAuthenticated ? (
 								<SignIn className="flex items-center gap-2 rounded-lg bg-[#5C5CF9] px-4 py-2 font-medium text-white shadow-md transition-all duration-200 hover:bg-[#4A4AF0]" />
 							) : (
-								<BasicLink href="/" className="text-sm font-medium text-[#b4b7bc] transition-colors hover:text-white">
-									Return to Main Page
-								</BasicLink>
-							)}
-							{isAuthenticated && (
-								<button
-									onClick={logout}
-									className="rounded-lg border border-[#5C5CF9] bg-[#5C5CF9] px-4 py-2 font-medium text-white hover:bg-[#4A4AF0] dark:border-[#5C5CF9] dark:bg-[#5C5CF9] dark:hover:bg-[#4A4AF0]"
-								>
-									Logout
-								</button>
+								<Ariakit.MenuProvider open={isMenuOpen} setOpen={setIsMenuOpen}>
+									<Ariakit.MenuButton className="flex items-center gap-2 rounded-lg border border-[#39393E] bg-[#1a1b1f] px-3 py-2 text-sm font-medium text-white transition-colors hover:border-[#5C5CF9]">
+										<Icon name="wallet" height={16} width={16} className="text-[#5C5CF9]" />
+										<span className="hidden sm:inline">{displayAddress ? formatEthAddress(displayAddress) : userEmail || 'Account'}</span>
+										<Icon name="chevron-down" height={14} width={14} />
+									</Ariakit.MenuButton>
+									<Ariakit.Menu className="z-50 min-w-[200px] rounded-lg border border-[#39393E] bg-[#1a1b1f] p-2 shadow-xl">
+										<Ariakit.MenuItem
+											className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-[#b4b7bc] transition-colors hover:bg-[#39393E] hover:text-white focus:outline-none"
+											render={<BasicLink href="/" />}
+										>
+											<Icon name="home" height={16} width={16} />
+											Return to Main Page
+										</Ariakit.MenuItem>
+										<Ariakit.MenuItem
+											className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-[#b4b7bc] transition-colors hover:bg-[#39393E] hover:text-white focus:outline-none"
+											onClick={logout}
+										>
+											<Icon name="log-out" height={16} width={16} />
+											Logout
+										</Ariakit.MenuItem>
+									</Ariakit.Menu>
+								</Ariakit.MenuProvider>
 							)}
 						</div>
 					</div>

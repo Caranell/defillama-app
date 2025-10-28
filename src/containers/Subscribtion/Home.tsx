@@ -123,10 +123,10 @@ export function SubscribeHome({ returnUrl, isTrial }: { returnUrl?: string; isTr
 						alt=""
 					/>
 				</div>
-				<h1 className="text-center text-[2rem] font-extrabold">DefiLlama</h1>
+				<h1 className="text-center text-[2rem] font-extrabold">DefiLlama Pro API</h1>
 				{isSubscribed ? null : (
 					<p className="text-center text-[#919296]">
-						Upgrade now for access to LlamaFeed, increased api limits and premium api endpoints.
+						Upgrade now for increased api limits and premium api endpoints. DefiLlama contributors will have free 3 month access to premium API.
 					</p>
 				)}
 
@@ -280,7 +280,8 @@ export function SubscribeHome({ returnUrl, isTrial }: { returnUrl?: string; isTr
 						</div>
 						<div
 							ref={pricingContainer}
-							className="relative z-10 grid grid-cols-1 gap-4 *:*:max-w-[408px]! *:max-w-full! *:items-center lg:grid-cols-3"
+							className="relative z-10 grid grid-cols-1 gap-4 overflow-x-auto scroll-smooth *:*:max-w-[408px]! *:max-w-full! *:items-center md:overflow-x-visible lg:grid-cols-3"
+							style={{ scrollSnapType: 'x mandatory' }}
 						>
 							<div
 								className={`relative flex w-full shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-[#4a4a50] bg-[#22242930] px-4 py-8 shadow-md backdrop-blur-md transition-all duration-300 not-first:hover:transform md:w-auto md:max-w-[400px] md:flex-1 md:shrink md:snap-none md:px-5 md:hover:scale-[1.02]`}
@@ -317,6 +318,25 @@ export function SubscribeHome({ returnUrl, isTrial }: { returnUrl?: string; isTr
 									<SubscribeEnterpriseCard />
 								</span>
 							</div>
+						</div>
+						{/* Carousel dots for mobile */}
+						<div className="flex items-center justify-center gap-2 md:hidden">
+							{[0, 1, 2, 3].map((index) => (
+								<button
+									key={index}
+									onClick={() => {
+										const container = pricingContainer.current
+										if (container && container.children[index]) {
+											const card = container.children[index] as HTMLElement
+											card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+										}
+									}}
+									className={`h-2 rounded-full transition-all duration-300 ${
+										activePriceCard === index ? 'w-8 bg-[#5C5CF9]' : 'w-2 bg-[#39393E]'
+									}`}
+									aria-label={`Go to pricing card ${index + 1}`}
+								/>
+							))}
 						</div>
 					</div>
 				)}
