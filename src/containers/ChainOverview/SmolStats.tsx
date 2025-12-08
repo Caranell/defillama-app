@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { BasicLink } from '~/components/Link'
+import { PolymarketBets } from '~/components/PolymarketBets'
 import { Tooltip } from '~/components/Tooltip'
 import { formattedNum, slug } from '~/utils'
 import { IChainOverviewData } from './types'
@@ -317,6 +318,9 @@ export const SmolStats = (props: IChainOverviewData) => {
 						/>
 					</Suspense>
 				</div>
+			) : null}
+			{props.metadata.name !== 'All' ? (
+				<PolymarketBets name={props.metadata.name} symbol={props.chainTokenInfo?.token_symbol} />
 			) : null}
 		</div>
 	)

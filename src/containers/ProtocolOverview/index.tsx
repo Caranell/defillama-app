@@ -7,6 +7,7 @@ import { feesOptionsMap, tvlOptionsMap } from '~/components/Filters/options'
 import { Icon } from '~/components/Icon'
 import { BasicLink } from '~/components/Link'
 import { Menu } from '~/components/Menu'
+import { PolymarketBets } from '~/components/PolymarketBets'
 import { QuestionHelper } from '~/components/QuestionHelper'
 import { LinkPreviewCard } from '~/components/SEO'
 import { TokenLogo } from '~/components/TokenLogo'
@@ -1658,6 +1659,7 @@ const AdditionalInfo = (props: IProtocolOverviewPageData) => {
 				{/* <Unlocks {...props} />
 		<Governance {...props} /> */}
 				<Hacks {...props} />
+				<PolymarketBets name={props.name} symbol={props.token.symbol} chains={props.chains} />
 				<Competitors {...props} />
 			</div>
 		)
@@ -1673,6 +1675,7 @@ const AdditionalInfo = (props: IProtocolOverviewPageData) => {
 			<Governance {...props} /> */}
 			<Users {...props} />
 			<Hacks {...props} />
+			<PolymarketBets name={props.name} symbol={props.token.symbol} chains={props.chains} />
 			<Competitors {...props} />
 		</div>
 	)
