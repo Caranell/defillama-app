@@ -1,23 +1,16 @@
 import * as Ariakit from '@ariakit/react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useReducer, useState } from 'react'
-import toast from 'react-hot-toast'
+import { useCallback, useReducer } from 'react'
 import { Icon } from '~/components/Icon'
-import { useAuthContext } from '~/containers/Subscription/auth'
 import { useSubscribe } from '~/containers/Subscription/useSubscribe'
 
-type Step = 'initial' | 'verifying' | 'upgraded' | 'failed'
+type Step = 'initial' | 'upgraded'
 
-type Action = { type: 'setVerifying' } | { type: 'setUpgraded' } | { type: 'setStuck' } | { type: 'reset' }
+type Action = { type: 'setUpgraded' } | { type: 'reset' }
 
 function reducer(step: Step, action: Action): Step {
 	switch (action.type) {
-		case 'setVerifying':
-			return 'verifying'
 		case 'setUpgraded':
 			return 'upgraded'
-		case 'setStuck':
-			return 'failed'
 		case 'reset':
 			return 'initial'
 		default:
@@ -33,18 +26,15 @@ const FEATURES = [
 ]
 
 export function TrialCsvLimitModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-	const { isTrial } = useAuthContext()!
-	const queryClient = useQueryClient()
-	const { endTrialSubscription, isEndTrialLoading, getPortalSessionUrl } = useSubscribe()
+	const { endTrialSubscription, isEndTrialLoading } = useSubscribe()
 	const [step, dispatch] = useReducer(reducer, 'initial')
-	const [verifyReady, setVerifyReady] = useState(false)
 
 	const handleUpgrade = useCallback(async () => {
 		try {
 			await endTrialSubscription()
-			dispatch({ type: 'setVerifying' })
-		} catch {
-			dispatch({ type: 'setStuck' })
+			dispatch({ type: 'setUpgraded' })
+		} catch (error) {
+			console.error('Failed to upgrade:', error)
 		}
 	}, [endTrialSubscription])
 
@@ -52,47 +42,6 @@ export function TrialCsvLimitModal({ isOpen, onClose }: { isOpen: boolean; onClo
 		dispatch({ type: 'reset' })
 		onClose()
 	}, [onClose])
-
-	const handleOpenBillingPortal = useCallback(async () => {
-		try {
-			const portalUrl = await getPortalSessionUrl()
-			if (portalUrl) {
-				window.location.href = portalUrl
-			}
-		} catch {
-			toast.error('Failed to open billing portal. Please try again.')
-		}
-	}, [getPortalSessionUrl])
-
-	// Wait 3 seconds after API call, then refetch auth status
-	useEffect(() => {
-		if (step !== 'verifying') {
-			setVerifyReady(false)
-			return
-		}
-
-		let cancelled = false
-		const timer = setTimeout(async () => {
-			await queryClient.refetchQueries({ queryKey: ['auth', 'status'] })
-			if (!cancelled) setVerifyReady(true)
-		}, 3000)
-
-		return () => {
-			cancelled = true
-			clearTimeout(timer)
-		}
-	}, [step, queryClient])
-
-	// Once refetch completes, check if still on trial
-	useEffect(() => {
-		if (step !== 'verifying' || !verifyReady) return
-
-		if (!isTrial) {
-			dispatch({ type: 'setUpgraded' })
-		} else {
-			dispatch({ type: 'setStuck' })
-		}
-	}, [step, verifyReady, isTrial])
 
 	return (
 		<Ariakit.Dialog
@@ -165,18 +114,6 @@ export function TrialCsvLimitModal({ isOpen, onClose }: { isOpen: boolean; onClo
 				</>
 			)}
 
-			{step === 'verifying' && (
-				<div className="flex flex-col items-center gap-4 py-4">
-					<div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-(--sub-brand-primary) dark:border-[#39393E] dark:border-t-(--sub-brand-primary)" />
-					<div className="text-center">
-						<h3 className="text-lg font-semibold">Processing Upgrade...</h3>
-						<p className="mt-1 text-sm text-gray-500 dark:text-[#8a8c90]">
-							Verifying your subscription status. This may take a moment.
-						</p>
-					</div>
-				</div>
-			)}
-
 			{step === 'upgraded' && (
 				<div className="flex flex-col items-center gap-6">
 					<div className="flex h-16 w-16 items-center justify-center rounded-full bg-(--sub-brand-primary)/10">
@@ -197,34 +134,6 @@ export function TrialCsvLimitModal({ isOpen, onClose }: { isOpen: boolean; onClo
 				</div>
 			)}
 
-			{step === 'failed' && (
-				<div className="flex flex-col items-center gap-4">
-					<div className="flex h-16 w-16 items-center justify-center rounded-full bg-yellow-500/10">
-						<Icon name="alert-triangle" height={28} width={28} className="text-yellow-500" />
-					</div>
-					<div className="flex flex-col gap-2 text-center">
-						<h3 className="text-xl font-semibold">Failed to Upgrade</h3>
-						<p className="text-sm text-gray-500 dark:text-[#c5c5c5]">
-							There was an issue with your upgrade. Please check your Stripe billing portal or contact our support team
-							for assistance (support@defillama.com).
-						</p>
-					</div>
-					<div className="flex w-full flex-col gap-2.5">
-						<button
-							onClick={() => void handleOpenBillingPortal()}
-							className="flex w-full items-center justify-center gap-2 rounded-lg bg-(--sub-brand-primary) px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-(--sub-brand-primary)/90"
-						>
-							Check Stripe Billing
-						</button>
-						<a
-							href="mailto:support@defillama.com"
-							className="flex w-full items-center justify-center rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:border-[#39393E] dark:text-[#8a8c90] dark:hover:bg-[#2a2b30] dark:hover:text-white"
-						>
-							Contact Support
-						</a>
-					</div>
-				</div>
-			)}
 		</Ariakit.Dialog>
 	)
 }
