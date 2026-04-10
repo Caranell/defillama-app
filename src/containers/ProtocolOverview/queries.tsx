@@ -78,6 +78,7 @@ export const getProtocolMetricFlags = ({
 	return {
 		tvl: !!metadata.tvl,
 		dexs: !!metadata.dexs,
+		dexsNotionalVolume: !!metadata.dexsNotionalVolume,
 		perps: !!metadata.perps,
 		openInterest: !!metadata.openInterest,
 		optionsPremiumVolume: !!metadata.optionsPremiumVolume,
@@ -144,6 +145,7 @@ export const getProtocolOverviewPageData = async ({
 		bribesData,
 		tokenTaxData,
 		dexVolumeData,
+		dexNotionalVolumeData,
 		dexAggregatorVolumeData,
 		perpVolumeData,
 		openInterestData,
@@ -173,6 +175,7 @@ export const getProtocolOverviewPageData = async ({
 	]: [
 		IProtocolDataExtended | null,
 		IProtocolValueChart,
+		Awaited<ReturnType<typeof formatAdapterData>>,
 		Awaited<ReturnType<typeof formatAdapterData>>,
 		Awaited<ReturnType<typeof formatAdapterData>>,
 		Awaited<ReturnType<typeof formatAdapterData>>,
@@ -280,6 +283,15 @@ export const getProtocolOverviewPageData = async ({
 					protocol: currentProtocolMetadata.displayName ?? ''
 				})
 					.then((data) => formatAdapterData({ data, methodologyKey: data.methodology?.['Volume'] ? 'Volume' : 'dexs' }))
+					.catch(() => null)
+			: Promise.resolve(null),
+		currentProtocolMetadata.dexsNotionalVolume
+			? fetchAdapterProtocolMetrics({
+					adapterType: 'dexs',
+					dataType: 'dailyNotionalVolume',
+					protocol: currentProtocolMetadata.displayName ?? ''
+				})
+					.then((data) => formatAdapterData({ data, methodologyKey: 'dexsNotionalVolume' }))
 					.catch(() => null)
 			: Promise.resolve(null),
 		currentProtocolMetadata.dexAggregators
@@ -559,6 +571,7 @@ export const getProtocolOverviewPageData = async ({
 		holdersRevenueData?.totalAllTime ||
 		incentives ||
 		dexVolumeData?.totalAllTime ||
+		dexNotionalVolumeData?.totalAllTime ||
 		perpVolumeData?.totalAllTime ||
 		dexAggregatorVolumeData?.totalAllTime ||
 		perpAggregatorVolumeData?.totalAllTime ||
@@ -692,6 +705,7 @@ export const getProtocolOverviewPageData = async ({
 		hasRevenue: Boolean(revenueData),
 		hasHoldersRevenue: Boolean(holdersRevenueData),
 		hasDexVolume: Boolean(dexVolumeData),
+		hasDexNotionalVolume: Boolean(dexNotionalVolumeData),
 		hasPerpVolume: Boolean(perpVolumeData),
 		hasOpenInterest: Boolean(openInterestData),
 		hasOptionsPremiumVolume: Boolean(optionsPremiumVolumeData),
@@ -927,6 +941,7 @@ export const getProtocolOverviewPageData = async ({
 		bribeRevenue: bribesData,
 		tokenTax: tokenTaxData,
 		dexVolume: dexVolumeData,
+		dexNotionalVolume: dexNotionalVolumeData,
 		dexAggregatorVolume: dexAggregatorVolumeData,
 		perpVolume: perpVolumeData,
 		openInterest: openInterestData,
@@ -1002,6 +1017,7 @@ export const getProtocolOverviewPageData = async ({
 			bribesData?.defaultChartView ??
 			tokenTaxData?.defaultChartView ??
 			dexVolumeData?.defaultChartView ??
+			dexNotionalVolumeData?.defaultChartView ??
 			dexAggregatorVolumeData?.defaultChartView ??
 			perpVolumeData?.defaultChartView ??
 			perpAggregatorVolumeData?.defaultChartView ??
@@ -1020,6 +1036,24 @@ export const getProtocolOverviewPageData = async ({
 function formatAdapterData({ data, methodologyKey }: { data: IAdapterProtocolMetrics; methodologyKey?: string }) {
 	if (!data) {
 		return null
+	}
+
+	let chainBreakdown: Record<
+		string,
+		{ total24h: number | null; total7d: number | null; total30d: number | null; totalAllTime: number | null }
+	> | null = null
+	if (data.chainBreakdown) {
+		const slim: typeof chainBreakdown & {} = {}
+		for (const chain in data.chainBreakdown) {
+			const v = data.chainBreakdown[chain]
+			slim[chain] = {
+				total24h: v.total24h ?? null,
+				total7d: v.total7d ?? null,
+				total30d: v.total30d ?? null,
+				totalAllTime: v.totalAllTime ?? null
+			}
+		}
+		chainBreakdown = Object.keys(slim).length === 0 ? null : slim
 	}
 
 	const commonMethodologyMap = commonMethodology as Record<string, string>
@@ -1061,7 +1095,8 @@ function formatAdapterData({ data, methodologyKey }: { data: IAdapterProtocolMet
 								: null,
 							methodologyURL: topChildMethodology?.[2] ?? null
 						}),
-			defaultChartView: data.defaultChartView ?? 'daily'
+			defaultChartView: data.defaultChartView ?? 'daily',
+			chainBreakdown
 		}
 	}
 
@@ -1074,7 +1109,8 @@ function formatAdapterData({ data, methodologyKey }: { data: IAdapterProtocolMet
 			? (data.methodology?.[methodologyKey] ?? commonMethodologyMap[methodologyKey] ?? null)
 			: null,
 		methodologyURL: data.methodologyURL ?? null,
-		defaultChartView: data.defaultChartView ?? 'daily'
+		defaultChartView: data.defaultChartView ?? 'daily',
+		chainBreakdown
 	}
 }
 
