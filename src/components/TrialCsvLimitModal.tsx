@@ -3,18 +3,22 @@ import { useCallback, useReducer } from 'react'
 import { Icon } from '~/components/Icon'
 import { useSubscribe } from '~/containers/Subscription/useSubscribe'
 
-type Step = 'initial' | 'upgraded'
+interface State {
+	upgraded: boolean
+}
 
-type Action = { type: 'setUpgraded' } | { type: 'reset' }
+type Action = { type: 'setUpgraded'; value: boolean } | { type: 'reset' }
 
-function reducer(step: Step, action: Action): Step {
+const initialState: State = { upgraded: false }
+
+function reducer(state: State, action: Action): State {
 	switch (action.type) {
 		case 'setUpgraded':
-			return 'upgraded'
+			return { upgraded: action.value }
 		case 'reset':
-			return 'initial'
+			return initialState
 		default:
-			return step
+			return state
 	}
 }
 
@@ -27,12 +31,13 @@ const FEATURES = [
 
 export function TrialCsvLimitModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
 	const { endTrialSubscription, isEndTrialLoading } = useSubscribe()
-	const [step, dispatch] = useReducer(reducer, 'initial')
+	const [state, dispatch] = useReducer(reducer, initialState)
+	const { upgraded } = state
 
 	const handleUpgrade = useCallback(async () => {
 		try {
 			await endTrialSubscription()
-			dispatch({ type: 'setUpgraded' })
+			dispatch({ type: 'setUpgraded', value: true })
 		} catch (error) {
 			console.error('Failed to upgrade:', error)
 		}
@@ -51,7 +56,7 @@ export function TrialCsvLimitModal({ isOpen, onClose }: { isOpen: boolean; onClo
 			portal
 			unmountOnHide
 		>
-			{step === 'initial' && (
+			{!upgraded && (
 				<>
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-3">
@@ -114,7 +119,7 @@ export function TrialCsvLimitModal({ isOpen, onClose }: { isOpen: boolean; onClo
 				</>
 			)}
 
-			{step === 'upgraded' && (
+			{upgraded && (
 				<div className="flex flex-col items-center gap-6">
 					<div className="flex h-16 w-16 items-center justify-center rounded-full bg-(--sub-brand-primary)/10">
 						<Icon name="check" height={32} width={32} className="text-(--sub-brand-primary)" />
