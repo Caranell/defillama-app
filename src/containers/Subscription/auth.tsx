@@ -162,6 +162,7 @@ interface AuthContextType {
 		unknown
 	>
 	signInWithGithubMutation: UseMutationResult<RecordAuthResponse, Error, void>
+	signInWithGoogleMutation: UseMutationResult<RecordAuthResponse, Error, void>
 	addWallet: (address: string, signMessageFunction: any, onSuccess?: () => void) => Promise<void>
 	resetPasswordMutation: UseMutationResult<void, Error, string>
 	changeEmail: (email: string) => void
@@ -461,6 +462,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 		}
 	})
 
+	const signInWithGoogleMutation = useMutation({
+		mutationFn: async () => {
+			try {
+				const authData = await pb.collection('users').authWithOAuth2({
+					provider: 'google'
+				})
+
+				return authData
+			} catch (error) {
+				console.log('Google sign-in error:', error)
+				throw new Error('Failed to sign in with Google')
+			}
+		}
+	})
+
 	const addWalletMutation = useMutation({
 		mutationFn: async ({ address, signMessageFunction }: { address: string; signMessageFunction: any }) => {
 			if (!pb.authStore.isValid) {
@@ -657,6 +673,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 		authorizedFetch,
 		signInWithEthereumMutation,
 		signInWithGithubMutation,
+		signInWithGoogleMutation,
 		addWallet,
 		resetPasswordMutation,
 		changeEmail: changeEmail.mutate,

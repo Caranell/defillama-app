@@ -78,8 +78,15 @@ export function SignInFlow({ dialogStore }: { dialogStore: Ariakit.DialogStore }
 	const [turnstileToken, setTurnstileToken] = useState('')
 	const [acceptedTerms, setAcceptedTerms] = useState(false)
 
-	const { login, signup, signInWithEthereumMutation, signInWithGithubMutation, resetPasswordMutation, loaders } =
-		useAuthContext()
+	const {
+		login,
+		signup,
+		signInWithEthereumMutation,
+		signInWithGithubMutation,
+		signInWithGoogleMutation,
+		resetPasswordMutation,
+		loaders
+	} = useAuthContext()
 	const { openConnectModal } = useConnectModal()
 	const { address } = useAccount()
 	const { signMessageAsync } = useSignMessage()
@@ -160,6 +167,10 @@ export function SignInFlow({ dialogStore }: { dialogStore: Ariakit.DialogStore }
 
 	const handleGithubSignIn = () => {
 		void signInWithGithubMutation.mutateAsync().then(() => dialogStore.hide())
+	}
+
+	const handleGoogleSignIn = () => {
+		void signInWithGoogleMutation.mutateAsync().then(() => dialogStore.hide())
 	}
 
 	/* ── Header ── */
@@ -265,6 +276,16 @@ export function SignInFlow({ dialogStore }: { dialogStore: Ariakit.DialogStore }
 				>
 					<Icon name="github" height={20} width={20} />
 					{signInWithGithubMutation.isPending ? 'Connecting...' : 'Continue with GitHub'}
+				</button>
+
+				<button
+					type="button"
+					className={outlineBtnCls}
+					onClick={handleGoogleSignIn}
+					disabled={signInWithGoogleMutation.isPending}
+				>
+					<Icon name="check" height={20} width={20} />
+					{signInWithGoogleMutation.isPending ? 'Connecting...' : 'Continue with Google'}
 				</button>
 
 				<p className="mt-6 text-center text-xs text-(--text-primary)">
