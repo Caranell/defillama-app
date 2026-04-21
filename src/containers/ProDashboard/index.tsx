@@ -4,7 +4,7 @@ import { Icon } from '~/components/Icon'
 import { BasicLink } from '~/components/Link'
 import { Tooltip } from '~/components/Tooltip'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { AppMetadataProvider } from './AppMetadataContext'
 import { ChartGrid } from './components/ChartGrid'
 import { CopyDashboardLinkButton } from './components/CopyDashboardLinkButton'
@@ -62,7 +62,7 @@ function ProDashboardContent() {
 		setOpen: (open) => setPaywallState((prev) => ({ ...prev, open }))
 	})
 	const showPaywall = (reason: PaywallReason) => {
-		setSignupSource('pro-dashboard')
+		setSignupSource(SIGNUP_SOURCES.PRO_DASHBOARD)
 		setPaywallState({ open: true, reason })
 	}
 	const { items } = useProDashboardItemsState()

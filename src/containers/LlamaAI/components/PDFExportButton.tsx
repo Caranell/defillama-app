@@ -10,7 +10,7 @@ const SubscribeProModal = lazy(() =>
 )
 import { AI_SERVER } from '~/constants'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 
 function formatPdfError(error: unknown): string {
 	if (!error) return 'Failed to generate PDF'
@@ -131,7 +131,7 @@ export function PDFExportButton({ sessionId, messageId, exportType, className }:
 				setIsLoading(false)
 			}
 		} else {
-			setSignupSource('llamaai-pdf')
+			setSignupSource(SIGNUP_SOURCES.LLAMAAI_PDF)
 			subscribeModalStore.show()
 		}
 	}

@@ -2,7 +2,7 @@ import * as Ariakit from '@ariakit/react'
 import { useState, type ReactNode } from 'react'
 import { Icon } from '~/components/Icon'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { DashboardPaywallModal, type PaywallReason } from './DashboardPaywallModal'
 
 interface PremiumFeatureGateProps {
@@ -32,7 +32,7 @@ export function PremiumFeatureGate({ featureName, paywallReason = 'pro-feature',
 				</div>
 				<button
 					onClick={() => {
-						setSignupSource('pro-dashboard')
+						setSignupSource(SIGNUP_SOURCES.PRO_DASHBOARD)
 						setPaywallOpen(true)
 					}}
 					className="flex items-center gap-2 rounded-md pro-btn-blue px-6 py-2.5 text-sm font-medium transition-opacity hover:opacity-90"

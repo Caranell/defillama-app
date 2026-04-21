@@ -1,6 +1,6 @@
 import * as Ariakit from '@ariakit/react'
 import { lazy, Suspense, useCallback, useState } from 'react'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { trackYieldsEvent, YIELDS_EVENTS } from '~/utils/analytics/yields'
 
 const SubscribeProModal = lazy(() =>
@@ -13,7 +13,7 @@ export function useYieldsUpgradePrompt() {
 
 	const onRequestUpgrade = useCallback((source: 'header' | 'cell') => {
 		trackYieldsEvent(YIELDS_EVENTS.YIELD_SCORE_CLICK, { source })
-		setSignupSource('yield-score')
+		setSignupSource(SIGNUP_SOURCES.YIELD_SCORE)
 		setShouldRenderModal(true)
 	}, [])
 

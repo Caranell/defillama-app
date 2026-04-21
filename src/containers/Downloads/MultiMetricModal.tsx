@@ -5,7 +5,7 @@ import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useR
 import { toast } from 'react-hot-toast'
 import { Icon, type IIcon } from '~/components/Icon'
 import { LoadingSpinner } from '~/components/Loaders'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useRecentDownloads, useSavedDownloads } from '~/contexts/LocalStorage'
 import { slug as toSlug } from '~/utils'
 import { downloadTabular, type DownloadFormat } from '~/utils/download'
@@ -386,7 +386,7 @@ export function MultiMetricModal({
 	)
 
 	const handleSubscribeClick = useCallback(() => {
-		setSignupSource('downloads')
+		setSignupSource(SIGNUP_SOURCES.DOWNLOADS)
 		subscribeModalStore.show()
 	}, [subscribeModalStore])
 

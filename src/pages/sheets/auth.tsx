@@ -6,6 +6,7 @@ import { Icon } from '~/components/Icon'
 import { Toast } from '~/components/Toast'
 import { AuthProvider, useAuthContext } from '~/containers/Subscription/auth'
 import { SignInFlow } from '~/containers/Subscription/SignInModal'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useSubscribe } from '~/containers/Subscription/useSubscribe'
 import { WalletProvider } from '~/layout/WalletProvider'
 import { trackUmamiEvent } from '~/utils/analytics/umami'
@@ -26,6 +27,10 @@ function AuthContent() {
 	const redirectUrl = router.query.redirect_uri
 
 	const { subscription, isSubscriptionLoading } = useSubscribe()
+
+	useEffect(() => {
+		setSignupSource(SIGNUP_SOURCES.SHEETS_AUTH)
+	}, [])
 
 	useEffect(() => {
 		if (isAuthenticated && !isSubscriptionLoading) {

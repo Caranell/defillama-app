@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { lazy, Suspense, useState } from 'react'
 import { setPendingPrompt, setPendingPageContext, setPendingSuggestedFlag } from '~/components/LlamaAIFloatingButton'
 import { useAuthContext } from '~/containers/Subscription/auth'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { trackUmamiEvent } from '~/utils/analytics/umami'
 
 interface Props {
@@ -51,6 +52,7 @@ export function EntityQuestionsStrip({ questions, entitySlug, entityType, entity
 				route: router.asPath
 			})
 			setPendingQuestion(question)
+			setSignupSource(SIGNUP_SOURCES.ENTITY_QUESTIONS)
 			signInDialogStore.show()
 		}
 	}

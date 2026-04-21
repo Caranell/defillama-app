@@ -6,7 +6,7 @@ import { Icon } from '~/components/Icon'
 import { LoadingSpinner } from '~/components/Loaders'
 import { TrialCsvLimitModal } from '~/components/TrialCsvLimitModal'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useIsClient } from '~/hooks/useIsClient'
 import { slug } from '~/utils'
 import { downloadCSV } from '~/utils/download'
@@ -152,7 +152,7 @@ export function CSVDownloadButton(props: CSVDownloadButtonPropsUnion) {
 			return
 		}
 
-		setSignupSource('csv')
+		setSignupSource(SIGNUP_SOURCES.CSV)
 		subscribeModalStore.show()
 	}, [
 		hasActiveSubscription,

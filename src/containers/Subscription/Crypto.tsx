@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { Icon } from '~/components/Icon'
 import { useAuthContext } from '~/containers/Subscription/auth'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
+import { SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useSubscribe } from '~/containers/Subscription/useSubscribe'
 
 const StripeCheckoutModal = lazy(() =>
@@ -31,6 +32,7 @@ export const PaymentButton = ({
 			<SignInModal
 				text={text}
 				className="group flex w-full items-center justify-center gap-2 rounded-lg border border-[#5C5CF9] bg-[#5C5CF9] py-3.5 font-medium text-white shadow-xs transition-all duration-200 hover:bg-[#4A4AF0] hover:shadow-md dark:border-[#5C5CF9] dark:bg-[#5C5CF9] dark:hover:bg-[#4A4AF0]"
+				source={SIGNUP_SOURCES.PAYMENT_BUTTON}
 			/>
 		)
 	}

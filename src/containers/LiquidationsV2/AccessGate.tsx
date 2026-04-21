@@ -5,6 +5,7 @@ import { LocalLoader } from '~/components/Loaders'
 import { RowLinksWithDropdown } from '~/components/RowLinksWithDropdown'
 import { useAuthContext } from '~/containers/Subscription/auth'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
+import { SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import type { NavLink } from './api.types'
 
 interface LiquidationsShellChromeProps {
@@ -106,7 +107,7 @@ export function LiquidationsAccessGate(props: LiquidationsShellChromeProps) {
 				)}
 			</LiquidationsShellCard>
 
-			<SignInModal store={signInDialogStore} hideWhenAuthenticated={false} />
+			<SignInModal store={signInDialogStore} hideWhenAuthenticated={false} source={SIGNUP_SOURCES.LIQUIDATIONS} />
 		</>
 	)
 }

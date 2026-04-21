@@ -4,7 +4,7 @@ import type { ColumnOrderState, SortingState, VisibilityState } from '@tanstack/
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { Icon } from '~/components/Icon'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 
 const SubscribeProModal = lazy(() =>
 	import('~/components/SubscribeCards/SubscribeProCard').then((m) => ({ default: m.SubscribeProModal }))
@@ -730,7 +730,7 @@ function TabContent({
 
 	const handleSelectTableType = (type: CombinedTableType) => {
 		if (type === 'token-usage' && !hasActiveSubscription) {
-			setSignupSource('pro-dashboard')
+			setSignupSource(SIGNUP_SOURCES.PRO_DASHBOARD)
 			subscribeModalStore.show()
 			return
 		}
@@ -935,7 +935,7 @@ function TabContent({
 									type="button"
 									onClick={() => {
 										if (isProLocked) {
-											setSignupSource('pro-dashboard')
+											setSignupSource(SIGNUP_SOURCES.PRO_DASHBOARD)
 											subscribeModalStore.show()
 											return
 										}

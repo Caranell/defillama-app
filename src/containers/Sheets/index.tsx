@@ -1,7 +1,7 @@
 import * as Ariakit from '@ariakit/react'
 import { lazy, Suspense, type ReactNode } from 'react'
 import { useAuthContext } from '../Subscription/auth'
-import { setSignupSource } from '../Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '../Subscription/signupSource'
 
 const SubscribeProModal = lazy(() =>
 	import('~/components/SubscribeCards/SubscribeProCard').then((m) => ({ default: m.SubscribeProModal }))
@@ -449,7 +449,7 @@ export default function SheetsContainer() {
 
 	const onGoogleSheetsButtonClick = () => {
 		if (!isAuthenticated || !hasActiveSubscription) {
-			setSignupSource('sheets')
+			setSignupSource(SIGNUP_SOURCES.SHEETS)
 			subscribeModalStore.show()
 			return
 		}
@@ -458,7 +458,7 @@ export default function SheetsContainer() {
 
 	const onExcelButtonClick = () => {
 		if (!isAuthenticated || !hasActiveSubscription) {
-			setSignupSource('sheets')
+			setSignupSource(SIGNUP_SOURCES.SHEETS)
 			subscribeModalStore.show()
 			return
 		}

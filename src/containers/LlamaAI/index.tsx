@@ -79,7 +79,7 @@ import type {
 	ToolExecution
 } from '~/containers/LlamaAI/types'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useAiBalance } from '~/containers/Subscription/useTopup'
 import { useMedia } from '~/hooks/useMedia'
 
@@ -2127,7 +2127,7 @@ export function AgenticChat({
 						Please{' '}
 						<button
 							onClick={() => {
-								setSignupSource('llamaai')
+								setSignupSource(SIGNUP_SOURCES.LLAMAAI)
 								if (!shouldRenderSubscribeModal) setShouldRenderSubscribeModal(true)
 								subscribeModalStore.show()
 							}}

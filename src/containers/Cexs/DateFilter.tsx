@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { lazy, Suspense, useState } from 'react'
 import { Icon } from '~/components/Icon'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { toNiceDayMonthAndYear, toNiceDayMonthAndYearAndTime } from '~/utils'
 
 const SubscribeProModal = lazy(() =>
@@ -101,7 +101,7 @@ export const DateFilter = ({ startDate, endDate }: { startDate: number | null; e
 					onClick={(e) => {
 						if (!isSubscribed) {
 							e.preventDefault()
-							setSignupSource('cex-inflows')
+							setSignupSource(SIGNUP_SOURCES.CEX_INFLOWS)
 							setShouldRenderModal(true)
 						}
 					}}

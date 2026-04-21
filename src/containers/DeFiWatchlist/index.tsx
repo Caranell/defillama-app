@@ -16,7 +16,7 @@ import { useGroupAndFormatChains } from '~/containers/ChainsByCategory'
 import { ChainsByCategoryTable } from '~/containers/ChainsByCategory/Table'
 import { applyProtocolTvlSettings } from '~/containers/Protocols/utils'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { WatchListTabs } from '~/containers/Yields/Watchlist'
 import { DEFAULT_PORTFOLIO_NAME, useLocalStorageSettingsManager } from '~/contexts/LocalStorage'
 import { useBookmarks } from '~/hooks/useBookmarks'
@@ -251,7 +251,7 @@ function PortfolioNotifications({
 		}
 
 		if (!isAuthenticated || !hasActiveSubscription) {
-			setSignupSource('watchlist')
+			setSignupSource(SIGNUP_SOURCES.WATCHLIST)
 			subscribeModalStore.show()
 		} else {
 			dialogStore.toggle()

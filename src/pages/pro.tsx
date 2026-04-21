@@ -15,7 +15,7 @@ import {
 	useProDashboardUI
 } from '~/containers/ProDashboard/ProDashboardAPIContext'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import Layout from '~/layout'
 const CreateDashboardPicker = lazy(() =>
 	import('~/containers/ProDashboard/components/CreateDashboardPicker').then((m) => ({
@@ -95,7 +95,7 @@ function ProContent({
 		setOpen: (open) => setPaywallState((prev) => ({ ...prev, open }))
 	})
 	const showPaywall = (reason: PaywallReason) => {
-		setSignupSource('pro-dashboard')
+		setSignupSource(SIGNUP_SOURCES.PRO_DASHBOARD)
 		setPaywallState({ open: true, reason })
 	}
 	const { deleteDashboard, handleCreateDashboard, handleGenerateDashboard } = useProDashboardDashboard()

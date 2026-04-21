@@ -4,7 +4,7 @@ import { lazy, Suspense, useMemo, useRef, useState } from 'react'
 import { LockIcon } from '~/components/LockIcon'
 import { SelectWithCombobox } from '~/components/Select/SelectWithCombobox'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { trackYieldsEvent, YIELDS_EVENTS } from '~/utils/analytics/yields'
 import { POOL_OPTIONAL_COLUMN_OPTIONS } from './poolColumns'
 
@@ -69,7 +69,7 @@ export function ColumnFilters({ nestedMenu, enabledColumns }: IColumnFiltersProp
 			const newlyAdded = newOptions.filter((op) => !prevSet.has(op))
 			const hasPremiumToggle = newlyAdded.some((op) => PREMIUM_KEYS.has(op))
 			if (hasPremiumToggle) {
-				setSignupSource('yield-columns')
+				setSignupSource(SIGNUP_SOURCES.YIELD_COLUMNS)
 				setShouldRenderModal(true)
 				return
 			}

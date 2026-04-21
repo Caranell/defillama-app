@@ -9,7 +9,7 @@ import { QuestionHelper } from '~/components/QuestionHelper'
 import { Tooltip } from '~/components/Tooltip'
 import { getCategoryRoute } from '~/constants'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { setSignupSource } from '~/containers/Subscription/signupSource'
+import { setSignupSource, SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { formattedNum, slug } from '~/utils'
 import type { IProtocolOverviewPageData } from './types'
 
@@ -523,7 +523,7 @@ const Competitors = (props: IProtocolOverviewPageData) => {
 						onClick={(event) => {
 							if (canOpenComparison) return
 							event.preventDefault()
-							setSignupSource('protocol-comparison')
+							setSignupSource(SIGNUP_SOURCES.PROTOCOL_COMPARISON)
 							subscribeModalStore.show()
 						}}
 						className="rounded-md border border-(--primary) px-2 py-1.5 text-xs text-(--primary) hover:bg-(--primary)/10 focus-visible:bg-(--primary)/10"

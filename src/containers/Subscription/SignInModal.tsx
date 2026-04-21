@@ -1,11 +1,12 @@
 import * as Ariakit from '@ariakit/react'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { Icon } from '~/components/Icon'
 import { BasicLink } from '~/components/Link'
 import { Turnstile } from '~/components/Turnstile'
 import { type PromotionalEmailsValue, useAuthContext } from '~/containers/Subscription/auth'
+import { setSignupSourceIfEmpty, type SignupSource } from '~/containers/Subscription/signupSource'
 import { WalletProvider } from '~/layout/WalletProvider'
 import type { FormSubmitEvent } from '~/types/forms'
 
@@ -24,7 +25,11 @@ const signInDialogCls =
 
 /* ── Modal entry point ─────────────────────────────────────────────── */
 
-function SignInDialog({ store }: { store: Ariakit.DialogStore }) {
+function SignInDialog({ store, source }: { store: Ariakit.DialogStore; source?: SignupSource }) {
+	const open = Ariakit.useStoreState(store, 'open')
+	useEffect(() => {
+		if (open && source) setSignupSourceIfEmpty(source)
+	}, [open, source])
 	return (
 		<Ariakit.Dialog store={store} className={signInDialogCls} unmountOnHide>
 			<WalletProvider>
@@ -38,12 +43,14 @@ export function SignInModal({
 	text,
 	className,
 	hideWhenAuthenticated = true,
-	store
+	store,
+	source
 }: {
 	text?: string
 	className?: string
 	hideWhenAuthenticated?: boolean
 	store?: Ariakit.DialogStore
+	source?: SignupSource
 }) {
 	const localDialogStore = Ariakit.useDialogStore()
 	const dialogStore = store ?? localDialogStore
@@ -60,7 +67,7 @@ export function SignInModal({
 					{text ?? 'Sign In'}
 				</button>
 			) : null}
-			<SignInDialog store={dialogStore} />
+			<SignInDialog store={dialogStore} source={source} />
 		</>
 	)
 }

@@ -3,6 +3,7 @@ import { LoadingDots } from '~/components/Loaders'
 import { AgenticChat } from '~/containers/LlamaAI'
 import { useAuthContext } from '~/containers/Subscription/auth'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
+import { SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useIsClient } from '~/hooks/useIsClient'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
@@ -55,7 +56,7 @@ export default function LlamaAIPage() {
 						to access this page.
 					</p>
 				</div>
-				<SignInModal store={signInDialogStore} hideWhenAuthenticated={false} />
+				<SignInModal store={signInDialogStore} hideWhenAuthenticated={false} source={SIGNUP_SOURCES.LLAMAAI_CHAT} />
 			</Layout>
 		)
 	}

@@ -21,6 +21,7 @@ import { prepareTableCsv } from '~/components/Table/utils'
 import { TokenLogo } from '~/components/TokenLogo'
 import { useAuthContext } from '~/containers/Subscription/auth'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
+import { SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { fetchProtocolsByTokenClient } from '~/containers/TokenUsage/api'
 import type { RawProtocolTokenUsageEntry } from '~/containers/TokenUsage/api.types'
 import { formattedNum } from '~/utils'
@@ -282,7 +283,7 @@ export function TokenUsageSection({
 				</div>
 			</section>
 
-			<SignInModal store={signInDialogStore} hideWhenAuthenticated={false} />
+			<SignInModal store={signInDialogStore} hideWhenAuthenticated={false} source={SIGNUP_SOURCES.TOKEN_USAGE} />
 		</>
 	)
 }

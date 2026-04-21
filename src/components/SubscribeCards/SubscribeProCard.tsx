@@ -7,6 +7,7 @@ import { useAuthContext } from '~/containers/Subscription/auth'
 import { PricingCardContent } from '~/containers/Subscription/components'
 import { MONTHLY_PRICING_CARDS } from '~/containers/Subscription/data'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
+import { SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useSubscribe } from '~/containers/Subscription/useSubscribe'
 import { WalletProvider } from '~/layout/WalletProvider'
 import { trackUmamiEvent } from '~/utils/analytics/umami'
@@ -73,7 +74,7 @@ export function SubscribeProModal({ dialogStore }: SubscribeProModalProps) {
 					</span>
 				</Ariakit.Dialog>
 			</Ariakit.DialogProvider>
-			<SignInModal store={signInDialogStore} />
+			<SignInModal store={signInDialogStore} source={SIGNUP_SOURCES.PRO_CARD} />
 		</WalletProvider>
 	)
 }

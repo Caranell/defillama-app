@@ -3,6 +3,7 @@ import { BasicLink } from '~/components/Link'
 import { LoadingDots } from '~/components/Loaders'
 import { useAuthContext } from '~/containers/Subscription/auth'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
+import { SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useIsClient } from '~/hooks/useIsClient'
 
 export function Account({ asPath: _asPath }: { asPath: string }) {
@@ -46,6 +47,7 @@ export function Account({ asPath: _asPath }: { asPath: string }) {
 			text="Sign In / Subscribe"
 			className="flex items-center justify-center gap-2 rounded-md pro-btn-purple p-1 text-sm font-medium"
 			hideWhenAuthenticated={false}
+			source={SIGNUP_SOURCES.NAV_ACCOUNT}
 		/>
 	)
 }

@@ -8,6 +8,7 @@ import { AI_SERVER } from '~/constants'
 import { AgenticChat } from '~/containers/LlamaAI'
 import { useAuthContext } from '~/containers/Subscription/auth'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
+import { SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import Layout from '~/layout'
 import { fetchJson } from '~/utils/async'
 
@@ -157,7 +158,7 @@ export default function SharedConversationPage({ shareToken: ssrToken, sessionTi
 				onForkSubmit={handleForkSubmit}
 				initialPrompt={initialPrompt}
 			/>
-			<SignInModal store={signInDialogStore} hideWhenAuthenticated={false} />
+			<SignInModal store={signInDialogStore} hideWhenAuthenticated={false} source={SIGNUP_SOURCES.LLAMAAI_SHARED} />
 		</Layout>
 	)
 }

@@ -1,5 +1,6 @@
 import { useAuthContext } from '~/containers/Subscription/auth'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
+import { SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useIsClient } from '~/hooks/useIsClient'
 import { AuthenticationCard } from './AuthenticationCard'
 import { SettingsCard } from './SettingsCard'
@@ -32,6 +33,7 @@ export function ManageAccount() {
 				<SignInModal
 					text="Sign In"
 					className="flex h-10 items-center gap-2 rounded-lg bg-(--sub-brand-primary) px-5 text-sm font-medium text-white"
+					source={SIGNUP_SOURCES.ACCOUNT_ACCESS}
 				/>
 			</div>
 		)

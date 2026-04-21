@@ -11,6 +11,7 @@ import { TOOL_ICONS, TOOL_LABELS } from '~/containers/LlamaAI/components/status/
 import type { LandingQuestion } from '~/containers/LlamaAI/types'
 import { useAuthContext } from '~/containers/Subscription/auth'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
+import { SIGNUP_SOURCES } from '~/containers/Subscription/signupSource'
 import { useIsClient } from '~/hooks/useIsClient'
 import { trackUmamiEvent } from '~/utils/analytics/umami'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
@@ -174,7 +175,7 @@ function FreeQuestionsSection({ landingQuestions }: { landingQuestions?: Landing
 				</div>
 			</form>
 
-			<SignInModal store={signInDialogStore} />
+			<SignInModal store={signInDialogStore} source={SIGNUP_SOURCES.LLAMAAI} />
 		</section>
 	)
 }
