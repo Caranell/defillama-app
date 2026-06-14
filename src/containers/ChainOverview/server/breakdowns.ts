@@ -1,9 +1,10 @@
 import { DIMENSIONS_OVERVIEW_API, DIMENSIONS_SUMMARY_API } from '~/constants'
+import { normalizeCacheList } from '~/server/api/cacheKey'
 import { queryFilterMode, queryIntClamped, queryList, queryString } from '~/server/api/params'
 import { badRequest, ok } from '~/server/api/respond'
 import { cachedResult } from '~/server/api/resultCache'
 import { defineApiRoute } from '~/server/api/types'
-import { displayChainName, resolveAllowedChainSlugsFromCategories } from '~/server/breakdowns'
+import { resolveAllowedChainNamesFromCategories } from '~/server/breakdowns'
 import { fetchJson } from '~/utils/async'
 import { CHAIN_NATIVE_BREAKDOWN_METRICS } from '~/utils/breakdownMetrics'
 import {
@@ -14,7 +15,7 @@ import {
 	type ChartSeries,
 	type ProtocolChainData
 } from '~/utils/breakdowns'
-import { buildChainMatchSet, toDimensionsSlug } from '~/utils/chainNormalizer'
+import { toDisplayName } from '~/utils/chainNormalizer'
 import { recordRouteRuntimeError } from '~/utils/telemetry'
 
 const BREAKDOWN_RESULT_TTL_MS = 10 * 60 * 1000
@@ -27,6 +28,29 @@ const CHAIN_NATIVE_BREAKDOWN_LABELS: Record<'chain-fees' | 'chain-revenue', stri
 const CHAIN_NATIVE_BREAKDOWN_CONFIG: Record<'chain-fees' | 'chain-revenue', { dataType?: string }> = {
 	'chain-fees': {},
 	'chain-revenue': { dataType: 'dailyRevenue' }
+}
+
+const toChainSlugKey = (chain: string): string =>
+	chain
+		.trim()
+		.toLowerCase()
+		.replace(/[\s_]+/g, '-')
+
+const displayNameFromSlug = (slug: string): string =>
+	slug
+		.replace(/_/g, '-')
+		.split('-')
+		.filter(Boolean)
+		.map((part) => part[0].toUpperCase() + part.slice(1))
+		.join(' ')
+
+function normalizeLegacyChainFilters(rawChains: string[]): string[] {
+	const chains = normalizeCacheList(rawChains)
+	if (chains.some((chain) => chain.toLowerCase() === 'all')) return []
+
+	// TODO(chain-normalizer): keep saved ProDashboard chain-fees/revenue aliases
+	// like xdai/optimism/era working. Remove after configs migrate to display names.
+	return normalizeCacheList(chains.map(toDisplayName))
 }
 
 async function getChainNativeByChainBreakdownData({
@@ -50,39 +74,42 @@ async function getChainNativeByChainBreakdownData({
 		if (config?.dataType) overviewUrl += `&dataType=${config.dataType}`
 
 		const overview = await fetchJson<any>(overviewUrl)
-		const includeSet = chains && chains.length > 0 ? buildChainMatchSet(chains) : new Set<string>()
-		let allowSlugsFromCategories: Set<string> | null = null
+		const includeNames = chains && chains.length > 0 ? new Set(chains) : new Set<string>()
+		const includeSlugKeys = chains && chains.length > 0 ? new Set(chains.map(toChainSlugKey)) : new Set<string>()
+		let allowedCategoryNames: Set<string> | null = null
+		let allowedCategorySlugKeys: Set<string> | null = null
 		if (chainCategories && chainCategories.length > 0) {
-			allowSlugsFromCategories = await resolveAllowedChainSlugsFromCategories(chainCategories)
+			const allowedNames = await resolveAllowedChainNamesFromCategories(chainCategories)
+			allowedCategoryNames = allowedNames
+			allowedCategorySlugKeys = new Set(Array.from(allowedNames, (name) => toChainSlugKey(name)))
 		}
 
 		const protocols: any[] = Array.isArray(overview?.protocols) ? overview.protocols : []
 		const rankedEntries = protocols
 			.filter((p) => (p?.protocolType || '').toLowerCase() === 'chain')
 			.map((p) => {
-				const slug = typeof p.slug === 'string' && p.slug.length > 0 ? p.slug : toDimensionsSlug(p.name || '')
+				const name = typeof p.name === 'string' && p.name.length > 0 ? p.name : ''
+				const slug = typeof p.slug === 'string' && p.slug.length > 0 ? p.slug : toChainSlugKey(name)
 				const total24h = Number(p.total24h) || 0
 				return {
-					name: displayChainName(slug),
+					name: name || displayNameFromSlug(slug),
 					slug,
+					slugKey: toChainSlugKey(slug),
 					total24h
 				}
 			})
 			.filter((entry) => entry.total24h > 0)
 			.filter((entry) => {
 				if (!chains || chains.length === 0) return true
-				const matches =
-					includeSet.has(entry.slug) ||
-					includeSet.has(entry.slug.toLowerCase()) ||
-					includeSet.has(entry.name) ||
-					includeSet.has(entry.name.toLowerCase())
+				const matches = includeNames.has(entry.name) || includeSlugKeys.has(entry.slugKey)
 				if (chainFilterMode === 'include') return matches
 				return !matches
 			})
 			.filter((entry) => {
-				if (!allowSlugsFromCategories || allowSlugsFromCategories.size === 0) return true
-				if (chainCategoryFilterMode === 'include') return allowSlugsFromCategories.has(entry.slug)
-				return !allowSlugsFromCategories.has(entry.slug)
+				if (!allowedCategoryNames || !allowedCategorySlugKeys || allowedCategoryNames.size === 0) return true
+				const matches = allowedCategoryNames.has(entry.name) || allowedCategorySlugKeys.has(entry.slugKey)
+				if (chainCategoryFilterMode === 'include') return matches
+				return !matches
 			})
 			.sort((a, b) => b.total24h - a.total24h)
 
@@ -102,7 +129,7 @@ async function getChainNativeByChainBreakdownData({
 
 		const picked = rankedEntries.slice(0, Math.min(topN, rankedEntries.length))
 		const chainSeriesPromises = picked.map(async (entry, idx) => {
-			let summaryUrl = `${DIMENSIONS_SUMMARY_API}/fees/${entry.slug}`
+			let summaryUrl = `${DIMENSIONS_SUMMARY_API}/fees/${encodeURIComponent(entry.slug)}`
 			if (config?.dataType) summaryUrl += `?dataType=${config.dataType}`
 			const json = await fetchJson<any>(summaryUrl).catch(() => null)
 			if (!json) return null
@@ -163,6 +190,11 @@ async function getChainNativeByChainBreakdownData({
 	}
 }
 
+/**
+ * @deprecated Legacy ProDashboard chart-builder route for chain-fees and
+ * chain-revenue. It is backed by Dimensions overview/summary payloads; migrate
+ * callers to v2 metric/chart APIs with display-name chain keys before removing.
+ */
 export const chainNativeByChainBreakdown = defineApiRoute({
 	route: '/api/public/chains/breakdowns/by-chain/[metric]',
 	cacheControl: BREAKDOWN_CACHE_CONTROL,
@@ -176,8 +208,7 @@ export const chainNativeByChainBreakdown = defineApiRoute({
 			return badRequest(`${metric} metric is only available when protocol=All`)
 		}
 
-		const rawChains = queryList(req.query, 'chains')
-		const chains = rawChains.includes('All') ? [] : rawChains
+		const chains = normalizeLegacyChainFilters(queryList(req.query, 'chains'))
 		const chainCategories = queryList(req.query, 'chainCategories')
 		const chainMode = queryFilterMode(req.query, 'chainFilterMode', 'filterMode')
 		const chainCategoryMode = queryFilterMode(req.query, 'chainCategoryFilterMode', 'filterMode')

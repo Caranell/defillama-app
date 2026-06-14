@@ -36,6 +36,9 @@ For a broader route-to-container map, see `src/containers/README.md`.
 
 AdapterMetrics owns the adapter-backed breakdown routes used by chart builder surfaces:
 
+These APIs are deprecated ProDashboard chart-builder routes backed by Dimensions overview/summary payloads.
+Migrate chart builder callers to v2 metric/chart APIs with display-name chain keys before removing this code.
+
 - `server/breakdownRoutes.ts`: route definitions and cache keys for AdapterMetrics breakdown APIs.
 - `server/breakdowns/protocolSeries.ts`: `/api/public/adapter-metrics/breakdowns/[metric]`, returning top protocols over time.
 - `server/breakdowns/chainSeries.ts`: `/api/public/adapter-metrics/breakdowns/by-chain/[metric]`, returning top chains over time.

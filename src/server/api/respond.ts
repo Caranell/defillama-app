@@ -4,6 +4,21 @@ export function ok(body: unknown, headers?: Record<string, string>): ApiResult {
 	return { status: 200, body, ...(headers ? { headers } : null) }
 }
 
+export function okSerializedJson(
+	payload: { serializedJson: string; responseBytes: number },
+	headers?: Record<string, string>
+): ApiResult {
+	return {
+		status: 200,
+		serializedJson: payload.serializedJson,
+		responseBytes: payload.responseBytes,
+		headers: {
+			'Content-Type': 'application/json; charset=utf-8',
+			...(headers ?? {})
+		}
+	}
+}
+
 export function badRequest(error: string, extra?: Record<string, unknown>): ApiResult {
 	return { status: 400, body: { error, ...extra } }
 }

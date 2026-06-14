@@ -10,7 +10,6 @@ import {
 	type ChartSeries,
 	type ProtocolChainData
 } from '~/utils/breakdowns'
-import { buildChainMatchSet, toDisplayName } from '~/utils/chainNormalizer'
 import { processAdjustedProtocolTvl, processAdjustedTvl } from '~/utils/tvl'
 
 const keysToSkip = new Set(['staking', 'pool2', 'borrowed', 'doublecounted', 'liquidstaking', 'vesting'])
@@ -31,7 +30,7 @@ async function getTvlProtocolChainData(
 		const availableChains: string[] = []
 		let colorIndex = 0
 
-		const chainMatchSet = chains && chains.length > 0 ? buildChainMatchSet(chains) : new Set<string>()
+		const chainSet = chains && chains.length > 0 ? new Set(chains) : new Set<string>()
 
 		let allowNamesFromCategories: Set<string> | null = null
 		if (chainCategories && chainCategories.length > 0) {
@@ -49,7 +48,7 @@ async function getTvlProtocolChainData(
 			}
 
 			if (chains && chains.length > 0) {
-				const matches = chainMatchSet.has(chainKey) || chainMatchSet.has(chainKey.toLowerCase())
+				const matches = chainSet.has(chainKey)
 				if (chainFilterMode === 'include') {
 					if (!matches) continue
 				} else {
@@ -139,7 +138,7 @@ async function getAllProtocolsTopChainsTvlData(
 ): Promise<ProtocolChainData> {
 	try {
 		const allChains = await fetchChainsTvlOverview()
-		const includeSet = new Set<string>((chains || []).map((c) => toDisplayName(c)))
+		const includeSet = new Set<string>(chains || [])
 		let allowNamesFromCategories: Set<string> | null = null
 		if (chainCategories && chainCategories.length > 0) {
 			allowNamesFromCategories = await resolveAllowedChainNamesFromCategories(chainCategories)
@@ -149,8 +148,8 @@ async function getAllProtocolsTopChainsTvlData(
 			.filter((c) => typeof c.tvl === 'number' && c.tvl > 0 && c.name)
 			.filter((c) => {
 				if (!chains || chains.length === 0) return true
-				if (chainFilterMode === 'include') return includeSet.has(toDisplayName(c.name))
-				return !includeSet.has(toDisplayName(c.name))
+				if (chainFilterMode === 'include') return includeSet.has(c.name)
+				return !includeSet.has(c.name)
 			})
 			.filter((c) => {
 				if (!allowNamesFromCategories || allowNamesFromCategories.size === 0) return true

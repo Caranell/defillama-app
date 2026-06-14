@@ -48,6 +48,13 @@ export function toNextHandler(definition: ApiRouteDefinition): NextApiHandler {
 				)
 			}
 
+			if ('serializedJson' in result) {
+				if (!res.hasHeader('Content-Type')) {
+					res.setHeader('Content-Type', 'application/json; charset=utf-8')
+				}
+				return res.status(result.status).send(result.serializedJson)
+			}
+
 			return res.status(result.status).json(result.body)
 		} catch (error) {
 			recordRouteRuntimeError(error, 'apiRoute')

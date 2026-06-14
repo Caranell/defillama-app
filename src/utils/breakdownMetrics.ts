@@ -10,6 +10,8 @@ export const NON_ADAPTER_BY_CHAIN_BREAKDOWN_METRICS = new Set(['tvl', ...PROTOCO
 export const STREAM_PROTOCOL_SERIES_SKIP_METRICS = new Set(['tvl', ...PROTOCOL_UNSUPPORTED_BY_CHAIN_METRICS])
 
 export const getProtocolChainBreakdownRoute = (metric: string): string => {
+	// Deprecated ProDashboard chart-builder routes. Migrate the chart builder to
+	// v2 metric/chart APIs with display-name chain keys before removing them.
 	if (metric === 'tvl') return '/api/public/protocols/breakdowns/by-chain/tvl'
 	if (metric === 'stablecoins') return '/api/public/stablecoins/breakdowns/by-chain'
 	if (CHAIN_NATIVE_BREAKDOWN_METRICS.has(metric)) return `/api/public/chains/breakdowns/by-chain/${metric}`

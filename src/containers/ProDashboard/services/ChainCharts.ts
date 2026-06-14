@@ -48,6 +48,9 @@ const CHART_METADATA = {
 	chainPrice: { type: 'chainToken' }
 }
 
+// TODO(chain-normalizer): this service accepts saved chart-builder chain values
+// and calls external APIs that historically accepted mixed chain names. Migrate
+// configs and calls to v2 display-name chain values, then remove normalization.
 export default class ChainCharts {
 	private static async fetchAndMergeChains(
 		chains: string[],
@@ -79,6 +82,9 @@ export default class ChainCharts {
 		return []
 	}
 
+	// TODO(chain-normalizer): saved ProDashboard chain chart configs can still
+	// contain legacy/internal chain values. Remove this once chart configs and
+	// external chain chart calls use v2 display-name chain values end to end.
 	private static getChainNames(chain: string): string[] {
 		const displayName = toDisplayName(chain)
 		if (displayName !== chain) {

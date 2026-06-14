@@ -38,7 +38,11 @@ vi.mock('~/utils/metadata', () => ({
 }))
 
 vi.mock('~/utils/telemetry', () => ({
+	addRouteTelemetryAttributes: vi.fn(),
+	currentTelemetryContext: vi.fn(() => null),
+	recordRuntimeError: vi.fn(),
 	recordRouteRuntimeError: vi.fn(),
+	withRouteTelemetry: (_options: unknown, run: () => unknown) => run(),
 	withApiRouteTelemetry: (_route: string, handler: unknown) => handler
 }))
 

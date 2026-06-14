@@ -15,6 +15,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 		res.setHeader(name, value)
 	}
 
+	if ('serializedJson' in result) {
+		if (!res.hasHeader('Content-Type')) {
+			res.setHeader('Content-Type', 'application/json; charset=utf-8')
+		}
+		return res.status(result.status).send(result.serializedJson)
+	}
 	if (typeof result.body === 'string') {
 		return res.status(result.status).send(result.body)
 	}

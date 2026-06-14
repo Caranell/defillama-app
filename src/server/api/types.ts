@@ -20,11 +20,20 @@ export type ApiRequest = {
 	body?: unknown
 }
 
-export type ApiResult = {
+export type JsonApiResult = {
 	status: number
 	body: unknown
 	headers?: Record<string, string>
 }
+
+export type SerializedJsonApiResult = {
+	status: number
+	serializedJson: string
+	responseBytes: number
+	headers?: Record<string, string>
+}
+
+export type ApiResult = JsonApiResult | SerializedJsonApiResult
 
 export type ApiHandler = (req: ApiRequest) => Promise<ApiResult>
 

@@ -12,7 +12,6 @@ import {
 	type ChartSeries,
 	type ProtocolBreakdownData
 } from '~/utils/breakdowns'
-import { toDisplayName } from '~/utils/chainNormalizer'
 import { processAdjustedProtocolTvl, processAdjustedTvl, type TvlChartData } from '~/utils/tvl'
 
 // Some protocol responses include synthetic keys that shouldn't be counted in TVL totals
@@ -154,11 +153,9 @@ export const getTvlBreakdownData = async (
 	type ChildScore = { childName: string; childSlug: string; parentId: string | null; value: number }
 	const childScores: ChildScore[] = []
 	const childrenByParent: Map<string, Set<string>> = new Map()
-	const excludedChainSetForProtocols: Set<string> = new Set(
-		chainFilterMode === 'exclude' ? selectedChains.map((ch) => toDisplayName(ch)) : []
-	)
+	const excludedChainSetForProtocols: Set<string> = new Set(chainFilterMode === 'exclude' ? selectedChains : [])
 	const includedChainSetForProtocols: Set<string> = new Set(
-		chainFilterMode === 'include' && !isAll ? selectedChains.map((ch) => toDisplayName(ch)) : []
+		chainFilterMode === 'include' && !isAll ? selectedChains : []
 	)
 	const protocolSlugToCategory: Map<string, string> = new Map()
 	const categoriesFilterSet = new Set(categoriesFilter)
@@ -204,7 +201,7 @@ export const getTvlBreakdownData = async (
 				}
 			} else {
 				for (const ch of selectedChains) {
-					const key = toDisplayName(ch)
+					const key = ch
 					if (isIgnoredChainKey(key)) continue
 					const chainEntry = p.chainTvls?.[key]
 					if (chainEntry && typeof chainEntry.tvl === 'number') {

@@ -9,6 +9,8 @@ export {
 } from '~/utils/breakdownMetrics'
 
 export const displayChainName = (slug: string): string => {
+	// TODO(chain-normalizer): only needed to display Dimensions chain keys from
+	// legacy all-protocol `breakdown24h` responses. Remove with that route.
 	const display = toDisplayName(slug)
 	if (display !== slug) return display
 	const normalized = slug.toLowerCase().replace(/_/g, '-')
@@ -34,6 +36,8 @@ export async function resolveAllowedChainSlugsFromCategories(categories: string[
 	const names = await resolveAllowedChainNamesFromCategories(categories)
 	const slugs = new Set<string>()
 	for (const name of names) {
+		// TODO(chain-normalizer): only Dimensions overview `breakdown24h` uses these keys.
+		// Remove after ProDashboard chart builder migrates off legacy overview routes.
 		slugs.add(toDimensionsSlug(name))
 	}
 	return slugs

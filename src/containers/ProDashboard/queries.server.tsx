@@ -66,6 +66,8 @@ export async function fetchProtocolsAndChains(): Promise<{ protocols: any[]; cha
 	try {
 		const [protocolsData, chainsData] = await Promise.all([fetchProtocols(), fetchChainsList()])
 
+		// TODO(chain-normalizer): chain metadata still comes from /chains here.
+		// Prefer v2/app metadata display names before removing alias support.
 		const transformedChains = chainsData.map((chain: any) => ({
 			...chain,
 			name: toDisplayName(chain.name)

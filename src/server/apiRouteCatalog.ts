@@ -58,6 +58,8 @@ export const dynamicApiRoutePaths = [
 
 export const allApiRoutePaths = [
 	'aave/graphql',
+	// Deprecated ProDashboard chart-builder APIs backed by Dimensions overview/summary payloads.
+	// Migrate chart builder to v2 metric/chart APIs with display-name chain keys.
 	'adapter-metrics/breakdowns/[metric]',
 	'adapter-metrics/breakdowns/by-chain/[metric]',
 	'adapter-metrics/bridge-aggregators',
@@ -79,6 +81,8 @@ export const allApiRoutePaths = [
 	'cexs',
 	'cexs/analytics',
 	'chain-icon',
+	// Deprecated ProDashboard chart-builder API for chain-fees/chain-revenue.
+	// Migrate chart builder to v2 metric/chart APIs with display-name chain keys.
 	'chains/breakdowns/by-chain/[metric]',
 	'chains',
 	'chains/charts',
@@ -129,6 +133,8 @@ export const allApiRoutePaths = [
 	'page-data/dimension-adapters/chains-chart',
 	'protocol-icon',
 	'protocols/charts',
+	// Deprecated ProDashboard chart-builder APIs for TVL breakdown charts.
+	// Migrate chart builder to v2 metric/chart APIs with display-name chain keys.
 	'protocols/breakdowns/by-chain/tvl',
 	'protocols/breakdowns/tvl',
 	'research/articles/[id]/publish',
@@ -152,6 +158,8 @@ export const allApiRoutePaths = [
 	'spark/reports',
 	'stablecoins/chart',
 	'stablecoins/chart-series',
+	// Deprecated ProDashboard chart-builder API for stablecoin by-chain breakdowns.
+	// Migrate chart builder to v2 metric/chart APIs with display-name chain keys.
 	'stablecoins/breakdowns/by-chain',
 	'stablecoins/volume-chart',
 	'token-liquidations/[symbol]',

@@ -188,6 +188,8 @@ export function AppMetadataProvider({
 				}
 				chainsByName.set(name, record)
 				chainsByName.set(name.toLowerCase(), record)
+				// TODO(chain-normalizer): legacy saved chart-builder configs can
+				// reference old display aliases. Remove after configs are migrated.
 				const aliases = getDisplayAliases(name)
 				for (const alias of aliases) {
 					chainsByName.set(alias, record)

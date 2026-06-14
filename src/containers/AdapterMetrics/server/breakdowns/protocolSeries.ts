@@ -1,7 +1,9 @@
 import { DIMENSIONS_OVERVIEW_API } from '~/constants'
 import { fetchProtocols } from '~/containers/ProtocolLists/api'
+import { stableCacheKey } from '~/server/api/cacheKey'
+import { addApiRoutePhase, timeApiRoutePhase } from '~/server/api/phaseTelemetry'
+import { cachedResult } from '~/server/api/resultCache'
 import { BREAKDOWN_COLOR_PALETTE, toSlug, type ChartSeries, type ProtocolBreakdownData } from '~/utils/breakdowns'
-import { toInternalSlug } from '~/utils/chainNormalizer'
 import { fetchWithPoolingOnServer } from '~/utils/http-client'
 import { recordRuntimeError } from '~/utils/telemetry'
 import { DIMENSIONS_API_METRIC_CONFIG } from './config'
@@ -17,6 +19,27 @@ type DimensionsBreakdownParams = {
 }
 
 type ChainResult = { chain: string; data: any }
+
+type ProtocolLookup = {
+	protocolCategories: Map<string, string>
+	protocolCategoriesBySlug: Map<string, string>
+	protocolToParentId: Map<string, string>
+	parentIdToName: Map<string, string>
+}
+
+type ProtocolBreakdownBase = {
+	chainsArray: string[]
+	metricName: string
+	chainResultsCount: number
+	totalDataChartBreakdown: Array<[number, Record<string, number>]>
+}
+
+const PROTOCOL_BASE_CACHE_MS = 10 * 60 * 1000
+const PROTOCOL_BASE_STALE_MS = 20 * 60 * 1000
+const PROTOCOL_LOOKUP_CACHE_MS = 60 * 60 * 1000
+let protocolLookupCache: { data: ProtocolLookup; timestamp: number } | null = null
+
+const encodeChainPathSegment = (chain: string): string => encodeURIComponent(chain)
 
 const buildEmptyBreakdown = (
 	chainsArray: string[],
@@ -39,14 +62,54 @@ const buildEmptyBreakdown = (
 	}
 })
 
+const getProtocolLookup = async (): Promise<ProtocolLookup> => {
+	if (protocolLookupCache && Date.now() - protocolLookupCache.timestamp < PROTOCOL_LOOKUP_CACHE_MS) {
+		return protocolLookupCache.data
+	}
+
+	const protocolsData = await timeApiRoutePhase('adapter_protocol_metadata_lookup', () => fetchProtocols())
+	const protocolCategories: Map<string, string> = new Map()
+	const protocolCategoriesBySlug: Map<string, string> = new Map()
+	const protocolToParentId: Map<string, string> = new Map()
+	const parentIdToName: Map<string, string> = new Map()
+	const protocols = protocolsData.protocols || []
+	const parentProtocols = protocolsData.parentProtocols || []
+
+	for (const pp of parentProtocols) {
+		if (pp?.id && pp?.name) {
+			parentIdToName.set(pp.id, pp.name)
+		}
+	}
+
+	for (const protocol of protocols as any[]) {
+		if (protocol.name) {
+			if (protocol.category) {
+				const cat = protocol.category.toLowerCase()
+				protocolCategories.set(protocol.name, cat)
+				protocolCategoriesBySlug.set(toSlug(protocol.name), cat)
+			}
+			if (protocol.parentProtocol) {
+				protocolToParentId.set(protocol.name, protocol.parentProtocol)
+			}
+		}
+	}
+
+	const data = {
+		parentIdToName,
+		protocolCategories,
+		protocolCategoriesBySlug,
+		protocolToParentId
+	}
+	protocolLookupCache = { data, timestamp: Date.now() }
+	return data
+}
+
 const fetchChainResults = async (chainsArray: string[], metric: string): Promise<ChainResult[]> => {
 	const config = DIMENSIONS_API_METRIC_CONFIG[metric]
 	const chainDataPromises = chainsArray.map(async (singleChain) => {
-		let apiChain = toInternalSlug(singleChain)
-
 		let apiUrl =
-			apiChain && apiChain !== 'all'
-				? `${DIMENSIONS_OVERVIEW_API}/${config.endpoint}/${apiChain}?excludeTotalDataChartBreakdown=false`
+			singleChain.toLowerCase() !== 'all'
+				? `${DIMENSIONS_OVERVIEW_API}/${config.endpoint}/${encodeChainPathSegment(singleChain)}?excludeTotalDataChartBreakdown=false`
 				: `${DIMENSIONS_OVERVIEW_API}/${config.endpoint}?excludeTotalDataChartBreakdown=false`
 
 		if (config.dataType) {
@@ -103,8 +166,7 @@ const buildAggregatedBreakdown = async (
 
 		const excludedResults = await Promise.all(
 			realChainsToExclude.map(async (singleChain) => {
-				let apiChain = toInternalSlug(singleChain)
-				let url = `${DIMENSIONS_OVERVIEW_API}/${config.endpoint}/${apiChain}?excludeTotalDataChartBreakdown=false`
+				let url = `${DIMENSIONS_OVERVIEW_API}/${config.endpoint}/${encodeChainPathSegment(singleChain)}?excludeTotalDataChartBreakdown=false`
 				if (config.dataType) url += `&dataType=${config.dataType}`
 				try {
 					const r = await fetchWithPoolingOnServer(url)
@@ -160,6 +222,44 @@ const buildAggregatedBreakdown = async (
 	return aggregatedBreakdown
 }
 
+const getAdapterMetricProtocolBase = async (
+	metric: string,
+	chainsArray: string[],
+	chainFilterMode: 'include' | 'exclude'
+): Promise<ProtocolBreakdownBase> => {
+	const config = DIMENSIONS_API_METRIC_CONFIG[metric]
+	const cacheKey = stableCacheKey([metric, chainsArray, chainFilterMode])
+
+	return cachedResult(
+		'adapter-metrics-protocol-breakdown-base',
+		cacheKey,
+		{ ttlMs: PROTOCOL_BASE_CACHE_MS, ttlJitter: 0.2, staleWhileRevalidateMs: PROTOCOL_BASE_STALE_MS },
+		async () => {
+			const chainResults = await timeApiRoutePhase('adapter_protocol_fetch_chains', () =>
+				fetchChainResults(chainsArray, metric)
+			)
+			const aggregatedBreakdown = await timeApiRoutePhase('adapter_protocol_aggregate', () =>
+				buildAggregatedBreakdown(chainsArray, metric, chainFilterMode, chainResults)
+			)
+			const convertStartedAt = Date.now()
+			const totalDataChartBreakdown = Array.from(aggregatedBreakdown.entries())
+				.sort(([a], [b]) => a - b)
+				.map(
+					([timestamp, protocolEntries]) =>
+						[timestamp, Object.fromEntries(protocolEntries.entries())] as [number, Record<string, number>]
+				)
+			addApiRoutePhase('adapter_protocol_base_to_object', Date.now() - convertStartedAt)
+
+			return {
+				chainResultsCount: chainResults.length,
+				chainsArray,
+				metricName: config.metricName,
+				totalDataChartBreakdown
+			}
+		}
+	)
+}
+
 export const getAdapterMetricProtocolSeries = async ({
 	metric,
 	chains,
@@ -178,9 +278,9 @@ export const getAdapterMetricProtocolSeries = async ({
 	const categoriesArray = (categories || []).map((cat) => cat.toLowerCase())
 	const categoriesSet = new Set(categoriesArray)
 
-	const chainResults = await fetchChainResults(chainsArray, metric)
+	const base = await getAdapterMetricProtocolBase(metric, chainsArray, chainFilterMode)
 
-	if (chainResults.length === 0 && chainFilterMode === 'include') {
+	if (base.chainResultsCount === 0 && chainFilterMode === 'include') {
 		return buildEmptyBreakdown(
 			chainsArray,
 			categoriesArray,
@@ -190,13 +290,8 @@ export const getAdapterMetricProtocolSeries = async ({
 		)
 	}
 
-	const aggregatedBreakdown = await buildAggregatedBreakdown(chainsArray, metric, chainFilterMode, chainResults)
-
-	const data = {
-		totalDataChartBreakdown: Array.from(aggregatedBreakdown.entries())
-			.sort(([a], [b]) => a - b)
-			.map(([timestamp, protocolEntries]) => [timestamp, Object.fromEntries(protocolEntries.entries())])
-	}
+	const projectionStartedAt = Date.now()
+	const data = { totalDataChartBreakdown: base.totalDataChartBreakdown }
 
 	if (!data.totalDataChartBreakdown || !Array.isArray(data.totalDataChartBreakdown)) {
 		return buildEmptyBreakdown(chainsArray, categoriesArray, config.metricName, topN)
@@ -209,35 +304,7 @@ export const getAdapterMetricProtocolSeries = async ({
 
 	const lastDayProtocols = lastDayData[1]
 
-	let protocolCategories: Map<string, string> = new Map()
-	let protocolCategoriesBySlug: Map<string, string> = new Map()
-	let protocolToParentId: Map<string, string> = new Map()
-	let parentIdToName: Map<string, string> = new Map()
-	let parentIdToSlug: Map<string, string> = new Map()
-
-	const protocolsData = await fetchProtocols()
-	const protocols = protocolsData.protocols || []
-	const parentProtocols = protocolsData.parentProtocols || []
-
-	for (const pp of parentProtocols) {
-		if (pp?.id && pp?.name) {
-			parentIdToName.set(pp.id, pp.name)
-			parentIdToSlug.set(pp.id, toSlug(pp.name))
-		}
-	}
-
-	for (const protocol of protocols as any[]) {
-		if (protocol.name) {
-			if (protocol.category) {
-				const cat = protocol.category.toLowerCase()
-				protocolCategories.set(protocol.name, cat)
-				protocolCategoriesBySlug.set(toSlug(protocol.name), cat)
-			}
-			if (protocol.parentProtocol) {
-				protocolToParentId.set(protocol.name, protocol.parentProtocol)
-			}
-		}
-	}
+	const { parentIdToName, protocolCategories, protocolCategoriesBySlug, protocolToParentId } = await getProtocolLookup()
 
 	const getCategory = (name: string): string => {
 		return protocolCategories.get(name) || protocolCategoriesBySlug.get(toSlug(name)) || ''
@@ -392,6 +459,7 @@ export const getAdapterMetricProtocolSeries = async ({
 			color: '#999999'
 		})
 	}
+	addApiRoutePhase('adapter_protocol_project', Date.now() - projectionStartedAt)
 
 	return {
 		series,

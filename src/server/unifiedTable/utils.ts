@@ -76,6 +76,8 @@ const normalizeChainList = (chains?: string[] | null): string[] => {
 				)
 			}
 
+			// TODO(chain-normalizer): ProDashboard unified-table requests may still send
+			// legacy/display chain values. Remove after filters use v2 display names.
 			return toInternalSlug(trimmed)
 		})
 		.filter((chain): chain is string => chain !== null)

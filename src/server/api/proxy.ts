@@ -28,7 +28,9 @@ export type ProxyJsonRouteOptions = {
 }
 
 function isApiResult(value: unknown): value is ApiResult {
-	return typeof value === 'object' && value !== null && 'status' in value && 'body' in value
+	return (
+		typeof value === 'object' && value !== null && 'status' in value && ('body' in value || 'serializedJson' in value)
+	)
 }
 
 /**
