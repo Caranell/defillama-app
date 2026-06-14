@@ -5,11 +5,11 @@ const mocks = vi.hoisted(() => ({
 	getTvlBreakdownData: vi.fn()
 }))
 
-vi.mock('~/containers/ProtocolOverview/server/breakdowns/byChain', () => ({
+vi.mock('~/containers/ProDashboard/server/chartBuilder/protocols/breakdowns/byChain', () => ({
 	getProtocolChainBreakdownData: mocks.getProtocolChainBreakdownData
 }))
 
-vi.mock('~/containers/ProtocolOverview/server/breakdowns/tvl', () => ({
+vi.mock('~/containers/ProDashboard/server/chartBuilder/protocols/breakdowns/tvl', () => ({
 	getTvlBreakdownData: mocks.getTvlBreakdownData
 }))
 
@@ -21,7 +21,7 @@ beforeEach(() => {
 
 describe('ProtocolOverview TVL chart-builder breakdown routes', () => {
 	it('normalizes saved legacy chain aliases for protocol TVL breakdowns', async () => {
-		const { protocolTvlBreakdown } = await import('~/containers/ProtocolOverview/server/tvlBreakdowns')
+		const { protocolTvlBreakdown } = await import('~/containers/ProDashboard/server/chartBuilder/protocols')
 
 		await protocolTvlBreakdown.handle({
 			method: 'GET',
@@ -41,7 +41,7 @@ describe('ProtocolOverview TVL chart-builder breakdown routes', () => {
 	})
 
 	it('normalizes saved legacy chain aliases for protocol TVL by-chain breakdowns', async () => {
-		const { protocolTvlByChainBreakdown } = await import('~/containers/ProtocolOverview/server/tvlBreakdowns')
+		const { protocolTvlByChainBreakdown } = await import('~/containers/ProDashboard/server/chartBuilder/protocols')
 
 		await protocolTvlByChainBreakdown.handle({
 			method: 'GET',

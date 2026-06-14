@@ -292,7 +292,7 @@ export default class ProtocolCharts {
 		if (!protocol) return []
 		try {
 			const res = await fetchWithPoolingOnServer(
-				`/api/public/dashboard/pf-ps-chart?protocol=${encodeURIComponent(protocol)}&type=pf`
+				`/api/public/pro-dashboard/pf-ps-chart?protocol=${encodeURIComponent(protocol)}&type=pf`
 			)
 			if (!res.ok) return []
 			const data = await res.json()
@@ -307,7 +307,7 @@ export default class ProtocolCharts {
 		if (!protocol) return []
 		try {
 			const res = await fetchWithPoolingOnServer(
-				`/api/public/dashboard/pf-ps-chart?protocol=${encodeURIComponent(protocol)}&type=ps`
+				`/api/public/pro-dashboard/pf-ps-chart?protocol=${encodeURIComponent(protocol)}&type=ps`
 			)
 			if (!res.ok) return []
 			const data = await res.json()

@@ -1,4 +1,7 @@
-import { getProtocolChainBreakdownRoute, NON_ADAPTER_BY_CHAIN_BREAKDOWN_METRICS } from '~/utils/breakdownMetrics'
+import {
+	getProtocolChainBreakdownRoute,
+	NON_ADAPTER_BY_CHAIN_BREAKDOWN_METRICS
+} from '~/containers/ProDashboard/utils/breakdownMetrics'
 import type { ProtocolBreakdownData, ProtocolChainData } from '~/utils/breakdowns'
 import { fetchWithPoolingOnServer } from '~/utils/http-client'
 import { recordRuntimeError } from '~/utils/telemetry'
@@ -51,11 +54,10 @@ export default class ProtocolChartBuilderData {
 			params.append('categoryFilterMode', categoryFilterMode)
 		}
 
-		// TODO(breakdown-routes): this calls deprecated ProDashboard chart-builder
-		// APIs backed by Dimensions overview/summary payloads. Migrate to v2
-		// metric/chart APIs with display-name chain keys.
 		const endpoint =
-			metric === 'tvl' ? '/api/public/protocols/breakdowns/tvl' : `/api/public/adapter-metrics/breakdowns/${metric}`
+			metric === 'tvl'
+				? '/api/public/pro-dashboard/chart-builder/protocols/breakdowns/tvl'
+				: `/api/public/pro-dashboard/chart-builder/adapter-metrics/breakdowns/${metric}`
 		const response = await fetchWithPoolingOnServer(`${endpoint}?${params.toString()}`)
 
 		if (!response.ok) {
@@ -230,9 +232,6 @@ export default class ProtocolChartBuilderData {
 		}
 
 		try {
-			// TODO(breakdown-routes): TVL, stablecoins, chain-fees/chain-revenue,
-			// and adapter metrics still use deprecated chart-builder breakdown APIs.
-			// Migrate to v2 metric/chart APIs with display-name chain keys.
 			const endpoint = getProtocolChainBreakdownRoute(metric)
 			const response = await fetchWithPoolingOnServer(`${endpoint}?${params.toString()}`)
 

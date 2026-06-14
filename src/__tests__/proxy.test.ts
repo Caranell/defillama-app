@@ -92,7 +92,7 @@ describe('api proxy CORS', () => {
 
 		const privateResponse = proxy(apiRequest('https://unknown.example', 'GET', '/api/private/token-usage/BTC'))
 		const dynamicResponse = proxy(
-			apiRequest('https://unknown.example', 'GET', '/api/dynamic/dashboard/public-id/stream')
+			apiRequest('https://unknown.example', 'GET', '/api/dynamic/pro-dashboard/public-id/stream')
 		)
 
 		expect(privateResponse.status).toBe(403)
@@ -107,7 +107,7 @@ describe('api proxy CORS', () => {
 		const publicResponse = proxy(apiRequest('https://unknown.example', 'OPTIONS', '/api/public/protocols/charts'))
 		const privateResponse = proxy(apiRequest('https://integrator.example', 'OPTIONS', '/api/private/token-usage/BTC'))
 		const dynamicResponse = proxy(
-			apiRequest('https://integrator.example', 'OPTIONS', '/api/dynamic/dashboard/public-id/stream')
+			apiRequest('https://integrator.example', 'OPTIONS', '/api/dynamic/pro-dashboard/public-id/stream')
 		)
 
 		expect(publicResponse.status).toBe(204)

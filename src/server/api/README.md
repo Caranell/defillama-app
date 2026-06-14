@@ -51,6 +51,6 @@ Porting to another host (standalone service, TanStack Start) means rewriting
   `jsonCache` via `src/server/datasetCache`.
 - **Telemetry**: `route` strings keep their historical values (`/api/...`) so dashboards
   stay continuous.
-- **Streams stay native**: SSE and binary routes (`dashboard/[dashboardId]/stream`,
+- **Streams stay native**: SSE and binary routes (`pro-dashboard/[dashboardId]/stream`,
   `sonic/burn-stream`, icon proxies) cannot return a single `ApiResult`; they remain
   plain Next handlers, marked with `// port: framework-native (streaming)` at the top.

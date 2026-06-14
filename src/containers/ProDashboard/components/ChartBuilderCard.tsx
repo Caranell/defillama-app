@@ -4,7 +4,7 @@ import { ChartPngExportButton } from '~/components/ButtonStyled/ChartPngExportBu
 import { Icon } from '~/components/Icon'
 import { Select } from '~/components/Select/Select'
 import { filterDataByTimePeriod, StreamDoneContext } from '~/containers/ProDashboard/queries'
-import { PROTOCOL_UNSUPPORTED_BY_CHAIN_METRICS } from '~/utils/breakdownMetrics'
+import { PROTOCOL_UNSUPPORTED_BY_CHAIN_METRICS } from '~/containers/ProDashboard/utils/breakdownMetrics'
 import { download } from '~/utils/download'
 import { useChartImageExport } from '../hooks/useChartImageExport'
 import {

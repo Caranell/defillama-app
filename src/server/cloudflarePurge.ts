@@ -55,7 +55,7 @@ export function dashboardPathsToUrls(keys: DashboardPurgeKeys, env: NodeJS.Proce
 	const urls = new Set<string>()
 	for (const key of distinctKeys) {
 		urls.add(new URL(`/pro/${key}`, siteUrl).toString())
-		urls.add(new URL(`/api/dynamic/dashboard/${key}/stream`, siteUrl).toString())
+		urls.add(new URL(`/api/dynamic/pro-dashboard/${key}/stream`, siteUrl).toString())
 	}
 	return Array.from(urls)
 }

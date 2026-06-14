@@ -1,4 +1,4 @@
-import type { ChainMetrics } from '~/server/unifiedTable/protocols'
+import type { ChainMetrics } from '~/containers/ProDashboard/server/unifiedTable/protocols'
 import { toInternalSlug } from '~/utils/chainNormalizer'
 
 let currentChainMetrics: Record<string, ChainMetrics> = {}

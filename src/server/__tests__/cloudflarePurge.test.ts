@@ -62,18 +62,18 @@ describe('dashboard Cloudflare purge helpers', () => {
 	it('builds page and stream urls for id, slug, and previous slug', () => {
 		expect(dashboardPathsToUrls({ id: 'dash-1', slug: 'yield-overview', previousSlug: 'old-yield' }, env)).toEqual([
 			'https://defillama.test/pro/dash-1',
-			'https://defillama.test/api/dynamic/dashboard/dash-1/stream',
+			'https://defillama.test/api/dynamic/pro-dashboard/dash-1/stream',
 			'https://defillama.test/pro/yield-overview',
-			'https://defillama.test/api/dynamic/dashboard/yield-overview/stream',
+			'https://defillama.test/api/dynamic/pro-dashboard/yield-overview/stream',
 			'https://defillama.test/pro/old-yield',
-			'https://defillama.test/api/dynamic/dashboard/old-yield/stream'
+			'https://defillama.test/api/dynamic/pro-dashboard/old-yield/stream'
 		])
 	})
 
 	it('dedupes keys and skips empty slugs', () => {
 		expect(dashboardPathsToUrls({ id: 'dash-1', slug: 'dash-1', previousSlug: null }, env)).toEqual([
 			'https://defillama.test/pro/dash-1',
-			'https://defillama.test/api/dynamic/dashboard/dash-1/stream'
+			'https://defillama.test/api/dynamic/pro-dashboard/dash-1/stream'
 		])
 	})
 })

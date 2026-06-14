@@ -32,17 +32,15 @@ For a broader route-to-container map, see `src/containers/README.md`.
 - `telemetry.ts`: adapter route telemetry helpers.
 - `types.ts` and `api.types.ts`: UI/read-model types and upstream DTO types.
 
-## Server Breakdown Routes
+## ProDashboard Chart-Builder Breakdowns
 
-AdapterMetrics owns the adapter-backed breakdown routes used by chart builder surfaces:
+ProDashboard owns the adapter-backed chart-builder breakdown routes. AdapterMetrics keeps the normal page-data,
+ranking, chart, and upstream adapter fetch flows.
 
-These APIs are deprecated ProDashboard chart-builder routes backed by Dimensions overview/summary payloads.
-Migrate chart builder callers to v2 metric/chart APIs with display-name chain keys before removing this code.
-
-- `server/breakdownRoutes.ts`: route definitions and cache keys for AdapterMetrics breakdown APIs.
-- `server/breakdowns/protocolSeries.ts`: `/api/public/adapter-metrics/breakdowns/[metric]`, returning top protocols over time.
-- `server/breakdowns/chainSeries.ts`: `/api/public/adapter-metrics/breakdowns/by-chain/[metric]`, returning top chains over time.
-- `server/breakdowns/config.ts`: upstream Dimensions API endpoint/data-type mapping.
+- `src/containers/ProDashboard/server/chartBuilder/adapterMetrics/routes.ts`: route definitions and cache keys.
+- `src/containers/ProDashboard/server/chartBuilder/adapterMetrics/breakdowns/protocolSeries.ts`: top protocols over time.
+- `src/containers/ProDashboard/server/chartBuilder/adapterMetrics/breakdowns/chainSeries.ts`: top chains over time.
+- `src/containers/ProDashboard/server/chartBuilder/adapterMetrics/breakdowns/config.ts`: upstream Dimensions API endpoint/data-type mapping.
 
 In this folder, `Dimensions` means the upstream Dimensions API. File names should describe the chart output axis (`protocolSeries`, `chainSeries`) rather than using `dimensions` as the route concept.
 

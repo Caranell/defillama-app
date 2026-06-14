@@ -33,7 +33,8 @@ describe('AdapterMetrics breakdown routes', () => {
 				]
 			})
 		)
-		const { adapterMetricByChainBreakdown } = await import('~/containers/AdapterMetrics/server/breakdownRoutes')
+		const { adapterMetricByChainBreakdown } =
+			await import('~/containers/ProDashboard/server/chartBuilder/adapterMetrics/routes')
 
 		const result = await adapterMetricByChainBreakdown.handle({
 			method: 'GET',
@@ -65,7 +66,8 @@ describe('AdapterMetrics breakdown routes', () => {
 				]
 			})
 		)
-		const { adapterMetricByChainBreakdown } = await import('~/containers/AdapterMetrics/server/breakdownRoutes')
+		const { adapterMetricByChainBreakdown } =
+			await import('~/containers/ProDashboard/server/chartBuilder/adapterMetrics/routes')
 
 		const result = await adapterMetricByChainBreakdown.handle({
 			method: 'GET',
@@ -118,7 +120,8 @@ describe('AdapterMetrics breakdown routes', () => {
 				]
 			})
 		})
-		const { adapterMetricByChainBreakdown } = await import('~/containers/AdapterMetrics/server/breakdownRoutes')
+		const { adapterMetricByChainBreakdown } =
+			await import('~/containers/ProDashboard/server/chartBuilder/adapterMetrics/routes')
 
 		const firstResult = await adapterMetricByChainBreakdown.handle({
 			method: 'GET',

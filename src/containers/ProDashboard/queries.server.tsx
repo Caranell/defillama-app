@@ -1,7 +1,7 @@
 import { CONFIG_API, FEATURES_SERVER } from '~/constants'
 import { fetchChainsList } from '~/containers/Chains/api'
+import type { ChainMetrics } from '~/containers/ProDashboard/server/unifiedTable/protocols'
 import { fetchProtocols } from '~/containers/ProtocolLists/api'
-import type { ChainMetrics } from '~/server/unifiedTable/protocols'
 import { sluggifyProtocol } from '~/utils/cache-client'
 import { toDisplayName } from '~/utils/chainNormalizer'
 import { fetchWithPoolingOnServer } from '~/utils/http-client'

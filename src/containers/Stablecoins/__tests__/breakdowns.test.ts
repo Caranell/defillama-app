@@ -38,7 +38,7 @@ function mockDominance(values: Record<string, number>) {
 }
 
 async function fetchBreakdown(query: Record<string, string>) {
-	const { stablecoinByChainBreakdown } = await import('~/containers/Stablecoins/server/breakdowns')
+	const { stablecoinByChainBreakdown } = await import('~/containers/ProDashboard/server/chartBuilder/stablecoins')
 	const result = await stablecoinByChainBreakdown.handle({
 		method: 'GET',
 		url: '',
@@ -64,7 +64,7 @@ describe('stablecoin breakdown routes', () => {
 				{ date: 2, totalCirculatingUSD: { tether: 20 } }
 			]
 		})
-		const { stablecoinByChainBreakdown } = await import('~/containers/Stablecoins/server/breakdowns')
+		const { stablecoinByChainBreakdown } = await import('~/containers/ProDashboard/server/chartBuilder/stablecoins')
 
 		const resultPromise = stablecoinByChainBreakdown.handle({
 			method: 'GET',

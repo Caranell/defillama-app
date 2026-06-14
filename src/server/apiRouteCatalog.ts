@@ -15,7 +15,7 @@ export interface ApiRouteCatalogEntry {
 export const privateApiRoutePaths = [
 	'cex/inflows',
 	'cex/inflows/batch',
-	'dashboard/fetch',
+	'pro-dashboard/fetch',
 	'downloads/[dataset]',
 	'downloads/chart/[dataset]',
 	'downloads/chart-breakdown/[slug]',
@@ -48,20 +48,16 @@ export const dynamicApiRoutePaths = [
 	'cexs',
 	'cexs/analytics',
 	'chains',
-	'dashboard/[dashboardId]/stream',
 	'emission/[protocol]',
 	'maple/graphql',
+	'pro-dashboard/[dashboardId]/stream',
+	'pro-dashboard/tokens/search',
 	'roundupMarkdown',
-	'sonic/burn-stream',
-	'tokens/search'
+	'sonic/burn-stream'
 ] as const
 
 export const allApiRoutePaths = [
 	'aave/graphql',
-	// Deprecated ProDashboard chart-builder APIs backed by Dimensions overview/summary payloads.
-	// Migrate chart builder to v2 metric/chart APIs with display-name chain keys.
-	'adapter-metrics/breakdowns/[metric]',
-	'adapter-metrics/breakdowns/by-chain/[metric]',
 	'adapter-metrics/bridge-aggregators',
 	'adapter-metrics/dex-aggregators',
 	'adapter-metrics/dexs',
@@ -81,15 +77,8 @@ export const allApiRoutePaths = [
 	'cexs',
 	'cexs/analytics',
 	'chain-icon',
-	// Deprecated ProDashboard chart-builder API for chain-fees/chain-revenue.
-	// Migrate chart builder to v2 metric/chart APIs with display-name chain keys.
-	'chains/breakdowns/by-chain/[metric]',
 	'chains',
 	'chains/charts',
-	'dashboard/[dashboardId]/stream',
-	'dashboard/fetch',
-	'dashboard/pf-ps-chart',
-	'dashboard/pf-ps-protocols',
 	'downloads/[dataset]',
 	'downloads/chart/[dataset]',
 	'downloads/chart-breakdown/[slug]',
@@ -131,12 +120,20 @@ export const allApiRoutePaths = [
 	'page-data/categories/charts',
 	'page-data/chains/charts',
 	'page-data/dimension-adapters/chains-chart',
+	'pro-dashboard/[dashboardId]/stream',
+	'pro-dashboard/fetch',
+	'pro-dashboard/chart-builder/adapter-metrics/breakdowns/[metric]',
+	'pro-dashboard/chart-builder/adapter-metrics/breakdowns/by-chain/[metric]',
+	'pro-dashboard/chart-builder/chains/breakdowns/by-chain/[metric]',
+	'pro-dashboard/chart-builder/protocols/breakdowns/by-chain/tvl',
+	'pro-dashboard/chart-builder/protocols/breakdowns/tvl',
+	'pro-dashboard/chart-builder/stablecoins/breakdowns/by-chain',
+	'pro-dashboard/pf-ps-chart',
+	'pro-dashboard/pf-ps-protocols',
+	'pro-dashboard/tokens/search',
+	'pro-dashboard/unified-table/[strategy]',
 	'protocol-icon',
 	'protocols/charts',
-	// Deprecated ProDashboard chart-builder APIs for TVL breakdown charts.
-	// Migrate chart builder to v2 metric/chart APIs with display-name chain keys.
-	'protocols/breakdowns/by-chain/tvl',
-	'protocols/breakdowns/tvl',
 	'research/articles/[id]/publish',
 	'research/articles/[id]/unpublish',
 	'research/entities/preview',
@@ -158,16 +155,11 @@ export const allApiRoutePaths = [
 	'spark/reports',
 	'stablecoins/chart',
 	'stablecoins/chart-series',
-	// Deprecated ProDashboard chart-builder API for stablecoin by-chain breakdowns.
-	// Migrate chart builder to v2 metric/chart APIs with display-name chain keys.
-	'stablecoins/breakdowns/by-chain',
 	'stablecoins/volume-chart',
 	'token-liquidations/[symbol]',
 	'tokens/charts/coingecko/[geckoId]',
 	'token-unlocks/[protocol]',
 	'token-usage/[symbol]',
-	'tokens/search',
-	'unified-table/[strategy]',
 	'yields',
 	'yields/borrow',
 	'yields/borrow-advanced',
