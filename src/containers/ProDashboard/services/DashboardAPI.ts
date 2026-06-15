@@ -103,7 +103,7 @@ function dashboardSaveBody(data: DashboardSavePayload) {
 }
 
 function dashboardSaveUrl(id?: string) {
-	return id ? `${FEATURES_SERVER}/dashboards/${encodeURIComponent(id)}` : `${FEATURES_SERVER}/dashboards`
+	return id ? `/api/private/pro-dashboard/save?id=${encodeURIComponent(id)}` : `/api/private/pro-dashboard/save`
 }
 
 export function buildDashboardSaveRequest(params: { id?: string; data: DashboardSavePayload }) {
@@ -211,7 +211,7 @@ class DashboardAPIService {
 		id: string,
 		authorizedFetch: (url: string, options?: any) => Promise<Response>
 	): Promise<{ message: string }> {
-		const response = await authorizedFetch(`${FEATURES_SERVER}/dashboards/delete/${id}`, {
+		const response = await authorizedFetch(`/api/private/pro-dashboard/delete?id=${encodeURIComponent(id)}`, {
 			method: 'POST'
 		})
 

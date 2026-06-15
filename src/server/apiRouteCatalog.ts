@@ -15,7 +15,9 @@ export interface ApiRouteCatalogEntry {
 export const privateApiRoutePaths = [
 	'cex/inflows',
 	'cex/inflows/batch',
+	'pro-dashboard/delete',
 	'pro-dashboard/fetch',
+	'pro-dashboard/save',
 	'downloads/[dataset]',
 	'downloads/chart/[dataset]',
 	'downloads/chart-breakdown/[slug]',
@@ -121,7 +123,9 @@ export const allApiRoutePaths = [
 	'page-data/chains/charts',
 	'page-data/dimension-adapters/chains-chart',
 	'pro-dashboard/[dashboardId]/stream',
+	'pro-dashboard/delete',
 	'pro-dashboard/fetch',
+	'pro-dashboard/save',
 	'pro-dashboard/chart-builder/adapter-metrics/breakdowns/[metric]',
 	'pro-dashboard/chart-builder/adapter-metrics/breakdowns/by-chain/[metric]',
 	'pro-dashboard/chart-builder/chains/breakdowns/by-chain/[metric]',
@@ -181,6 +185,8 @@ const dynamicApiRoutePathSet = new Set<string>(dynamicApiRoutePaths)
 const routeMethodOverrides: Partial<Record<ApiRoutePath, readonly ApiRouteMethod[]>> = {
 	'aave/graphql': ['POST'],
 	'cex/inflows/batch': ['POST'],
+	'pro-dashboard/delete': ['POST'],
+	'pro-dashboard/save': ['POST'],
 	'maple/graphql': ['POST'],
 	'protocols/charts': ['GET', 'POST'],
 	'revalidate-instances': ['POST']
