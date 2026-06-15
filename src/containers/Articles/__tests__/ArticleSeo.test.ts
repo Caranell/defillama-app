@@ -76,7 +76,9 @@ describe('ArticleSeo metadata authors', () => {
 			sameAs: ['https://x.com/janedoe'],
 			worksFor: {
 				'@type': 'Organization',
-				name: 'DefiLlama Research'
+				'@id': 'https://defillama.com/research/authors/defillama-research',
+				name: 'DefiLlama Research',
+				url: 'https://defillama.com/research/authors/defillama-research'
 			}
 		})
 		expect(authors[1]).toMatchObject({
@@ -100,9 +102,9 @@ describe('ArticleSeo metadata authors', () => {
 		expect(authors).toHaveLength(2)
 		expect(authors[0]).toMatchObject({
 			'@type': 'Organization',
-			'@id': 'https://defillama.com/research',
+			'@id': 'https://defillama.com/research/authors/defillama-research',
 			name: 'DefiLlama Research',
-			url: 'https://defillama.com/research'
+			url: 'https://defillama.com/research/authors/defillama-research'
 		})
 		expect(authors[1]).toMatchObject({
 			'@type': 'Person',
@@ -117,7 +119,7 @@ describe('ArticleSeo metadata authors', () => {
 			'https://defillama.com/research/authors/john-doe'
 		])
 		expect(getArticleOpenGraphAuthorUrls(makeArticle({ brandByline: true, coAuthors: [coAuthor] }))).toEqual([
-			'https://defillama.com/research',
+			'https://defillama.com/research/authors/defillama-research',
 			'https://defillama.com/research/authors/john-doe'
 		])
 	})

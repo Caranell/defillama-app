@@ -3,6 +3,7 @@ import type { ArticleAuthor, ArticleGuestAuthor, LocalArticleDocument } from './
 import { ARTICLE_SECTION_LABELS, ARTICLE_SECTION_SLUGS } from './types'
 
 const SITE_ORIGIN = 'https://defillama.com'
+const DEFILLAMA_RESEARCH_AUTHOR_URL = `${SITE_ORIGIN}/research/authors/defillama-research`
 
 function toSafeJsonLd(data: unknown): string {
 	return JSON.stringify(data).replace(/</g, '\\u003c')
@@ -72,9 +73,9 @@ function socialUrls(profile: ArticleAuthor): string[] {
 function defillamaResearchSeoAuthor(): ArticleSeoAuthor {
 	return {
 		type: 'Organization',
-		id: `${SITE_ORIGIN}/research`,
+		id: DEFILLAMA_RESEARCH_AUTHOR_URL,
 		name: 'DefiLlama Research',
-		url: `${SITE_ORIGIN}/research`,
+		url: DEFILLAMA_RESEARCH_AUTHOR_URL,
 		sameAs: ['https://x.com/DefiLlama', 'https://www.linkedin.com/company/defillama/']
 	}
 }
@@ -163,7 +164,9 @@ function seoAuthorToJsonLd(author: ArticleSeoAuthor): Record<string, unknown> {
 			? {
 					worksFor: {
 						'@type': 'Organization',
-						name: 'DefiLlama Research'
+						'@id': DEFILLAMA_RESEARCH_AUTHOR_URL,
+						name: 'DefiLlama Research',
+						url: DEFILLAMA_RESEARCH_AUTHOR_URL
 					}
 				}
 			: {})
