@@ -170,6 +170,14 @@ export type ArticleInterviewee = {
 	externalUrl?: string | null
 }
 
+export type ArticleGuestAuthorType = 'Person' | 'Organization'
+
+export type ArticleGuestAuthor = {
+	name: string
+	url?: string
+	type: ArticleGuestAuthorType
+}
+
 export type ArticleViewerRole = 'owner' | 'collaborator' | 'researcher'
 
 export type ArticleCollaborator = {
@@ -194,6 +202,7 @@ export type LocalArticleDocument = {
 	author?: string
 	authorProfile?: ArticleAuthor
 	coAuthors?: ArticleAuthor[]
+	guestAuthors?: ArticleGuestAuthor[]
 	viewerRole?: ArticleViewerRole
 
 	seoTitle?: string
