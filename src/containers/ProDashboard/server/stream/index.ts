@@ -536,15 +536,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
 		const seenEquitiesStatementsTickers = new Set<string>()
 		for (const item of equitiesFinancialsItems) {
-			const ticker = (item as any).datasetChain
-			if (ticker && !seenEquitiesStatementsTickers.has(ticker)) {
-				seenEquitiesStatementsTickers.add(ticker)
+			const tickerParam = (item as any).datasetChain
+			if (tickerParam && !seenEquitiesStatementsTickers.has(tickerParam)) {
+				seenEquitiesStatementsTickers.add(tickerParam)
 				phase2Promises.push(
 					(async () => {
 						const { fetchEquitiesStatements } = await import('~/containers/Equities/api')
-						const data = await withTimeout(fetchEquitiesStatements(ticker), 15_000)
+						const { parseEquityTickerCountryParam, buildEquityTickerCountrySlug } =
+							await import('~/containers/Equities/utils')
+						const tickerCountry = parseEquityTickerCountryParam(tickerParam)
+						if (!tickerCountry) return
+						const data = await withTimeout(fetchEquitiesStatements(tickerCountry.ticker, tickerCountry.country), 15_000)
 						if (data) {
-							writeLine({ type: 'equitiesStatementsData', ticker, data })
+							writeLine({
+								type: 'equitiesStatementsData',
+								ticker: buildEquityTickerCountrySlug(tickerCountry.ticker, tickerCountry.country),
+								data
+							})
 						}
 					})().catch(() => {})
 				)
@@ -553,15 +561,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
 		const seenEquitiesFilingsTickers = new Set<string>()
 		for (const item of equitiesFilingsItems) {
-			const ticker = (item as any).datasetChain
-			if (ticker && !seenEquitiesFilingsTickers.has(ticker)) {
-				seenEquitiesFilingsTickers.add(ticker)
+			const tickerParam = (item as any).datasetChain
+			if (tickerParam && !seenEquitiesFilingsTickers.has(tickerParam)) {
+				seenEquitiesFilingsTickers.add(tickerParam)
 				phase2Promises.push(
 					(async () => {
 						const { fetchEquitiesFilings } = await import('~/containers/Equities/api')
-						const data = await withTimeout(fetchEquitiesFilings(ticker), 15_000)
+						const { parseEquityTickerCountryParam, buildEquityTickerCountrySlug } =
+							await import('~/containers/Equities/utils')
+						const tickerCountry = parseEquityTickerCountryParam(tickerParam)
+						if (!tickerCountry) return
+						const data = await withTimeout(fetchEquitiesFilings(tickerCountry.ticker, tickerCountry.country), 15_000)
 						if (data) {
-							writeLine({ type: 'equitiesFilingsData', ticker, data })
+							writeLine({
+								type: 'equitiesFilingsData',
+								ticker: buildEquityTickerCountrySlug(tickerCountry.ticker, tickerCountry.country),
+								data
+							})
 						}
 					})().catch(() => {})
 				)

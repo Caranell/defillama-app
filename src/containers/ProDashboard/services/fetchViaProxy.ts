@@ -85,10 +85,14 @@ export async function fetchEquitiesCompaniesViaProxy(authToken: string): Promise
 	return proxyFetch<any>('equitiesCompanies', {}, authToken)
 }
 
-export async function fetchEquitiesStatementsViaProxy(ticker: string, authToken: string): Promise<any> {
-	return proxyFetch<any>('equitiesStatements', { ticker }, authToken)
+export async function fetchEquitiesStatementsViaProxy(
+	ticker: string,
+	country: string,
+	authToken: string
+): Promise<any> {
+	return proxyFetch<any>('equitiesStatements', { ticker, country }, authToken)
 }
 
-export async function fetchEquitiesFilingsViaProxy(ticker: string, authToken: string): Promise<any> {
-	return proxyFetch<any>('equitiesFilings', { ticker }, authToken)
+export async function fetchEquitiesFilingsViaProxy(ticker: string, country: string, authToken: string): Promise<any> {
+	return proxyFetch<any>('equitiesFilings', { ticker, country }, authToken)
 }
