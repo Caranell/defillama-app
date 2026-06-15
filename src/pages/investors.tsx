@@ -598,13 +598,24 @@ export default function InvestorsPage() {
 								Verified metrics, investor reports, and calls hosted in one place. Powered by DefiLlama.
 							</p>
 						</div>
-						<a
-							href="mailto:sales@defillama.com"
-							className="flex h-13 shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-(--sl-accent) px-6 text-base font-medium text-white transition-colors hover:bg-(--sl-accent-hover) md:self-center"
-						>
-							Get in touch
-							<Icon name="arrow-right" className="size-4" />
-						</a>
+						<div className="flex shrink-0 flex-col gap-2.5 self-start sm:flex-row sm:items-center md:self-center">
+							<a
+								href="mailto:sales@defillama.com"
+								className="flex h-13 items-center justify-center gap-2 rounded-xl bg-(--sl-accent) px-6 text-base font-medium text-white transition-colors hover:bg-(--sl-accent-hover)"
+							>
+								Email Us
+								<Icon name="arrow-right" className="size-4" />
+							</a>
+							<a
+								href="https://calendly.com/research-defillama/30min"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="flex h-13 items-center justify-center gap-2 rounded-xl bg-black/5 px-6 text-base font-medium text-(--sl-accent) transition-colors hover:bg-black/10 dark:bg-white/15 dark:text-[#4b86db] dark:hover:bg-white/25"
+							>
+								Schedule a Call
+								<Icon name="calendar" className="size-4" />
+							</a>
+						</div>
 					</div>
 				</section>
 
