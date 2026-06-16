@@ -38,7 +38,7 @@ export const INVESTORS_SITES = {
 		projectIds: INVESTORS_DOMAIN_PROJECT_IDS,
 		landingProjectIds: INVESTORS_LIVE_PROJECT_IDS,
 		defaultProjectId: 'spark',
-		comingSoonProjectIds: INVESTORS_COMING_SOON_PROJECT_IDS
+		comingSoonProjectIds: [...INVESTORS_PREVIEW_PROJECT_IDS, ...INVESTORS_COMING_SOON_PROJECT_IDS]
 	},
 	enterprise: {
 		hosts: ['enterprise.defillama.com'],

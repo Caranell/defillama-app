@@ -238,20 +238,30 @@ describe('investors landing links', () => {
 	it('keeps coming-soon projects on the investors landing page but not routable as dashboards', async () => {
 		const { proxy, investorsConfig } = await loadProxyWithInvestorsConfig('investors')
 
-		expect(investorsConfig.INVESTORS_COMING_SOON_PROJECTS.map((project) => project.id)).toEqual(['berachain'])
+		expect(investorsConfig.INVESTORS_COMING_SOON_PROJECTS.map((project) => project.id)).toEqual([
+			'flare',
+			'thorchain',
+			'berachain'
+		])
 		expect(investorsConfig.INVESTORS_LANDING_PROJECTS.map((project) => project.id)).toEqual(['spark', 'sonic', 'near'])
 
-		const response = proxy(pageRequest('https://investors.defillama.com/berachain'))
+		for (const project of investorsConfig.INVESTORS_COMING_SOON_PROJECTS) {
+			const response = proxy(pageRequest(`https://investors.defillama.com/${project.id}`))
 
-		expect(rewriteUrl(response)).toBe('https://investors.defillama.com/404')
+			expect(rewriteUrl(response)).toBe('https://investors.defillama.com/404')
+		}
 	})
 
-	it('keeps preview investor dashboards off the investors landing page', async () => {
+	it('keeps preview investor dashboards as coming-soon cards rather than active landing dashboards', async () => {
 		const config = await loadInvestorsConfig('investors', 'true')
 
 		expect(config.INVESTORS_PROTOCOL_IDS).toEqual(['spark', 'sonic', 'near', 'flare', 'thorchain'])
 		expect(config.INVESTORS_LANDING_PROJECTS.map((project) => project.id)).toEqual(['spark', 'sonic', 'near'])
-		expect(config.INVESTORS_COMING_SOON_PROJECTS.map((project) => project.id)).toEqual(['berachain'])
+		expect(config.INVESTORS_COMING_SOON_PROJECTS.map((project) => project.id)).toEqual([
+			'flare',
+			'thorchain',
+			'berachain'
+		])
 
 		for (const projectId of ['flare', 'thorchain'] as const) {
 			expect(config.getInvestorsLandingProjectHref(projectId)).toBe(`/${projectId}`)
