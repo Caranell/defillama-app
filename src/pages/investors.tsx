@@ -626,13 +626,6 @@ export default function InvestorsPage() {
 						</div>
 					</div>
 				</section>
-
-				<p className="relative mt-14 text-center text-sm text-(--text-secondary)">
-					Contact —{' '}
-					<a href="mailto:sales@defillama.com" className="underline underline-offset-2 hover:text-(--text-primary)">
-						sales@defillama.com
-					</a>
-				</p>
 			</div>
 		</>
 	)
