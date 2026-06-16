@@ -6,6 +6,7 @@ import type {
 	ArticleCollaborator,
 	ArticleGuestAuthor,
 	ArticleImage,
+	ArticlePageAsset,
 	ArticleSection,
 	LocalArticleDocument
 } from '../types'
@@ -16,6 +17,7 @@ import { Icon } from './ArticleEditorIcon'
 import type { ArticleFieldUpdater } from './ArticleEditorTypes'
 import { formatArticleDate, fromDateTimeLocal, slugFromTitle, toDateTimeLocal } from './ArticleEditorUtils'
 import { MetaFieldHint, MetaSection, MetaSwitch } from './ArticleMetaFields'
+import { ArticlePageAssetPicker } from './ArticlePageAssetPicker'
 
 type DialogStore = ReturnType<typeof Ariakit.useDialogStore>
 
@@ -119,6 +121,17 @@ export function ArticleMetaDialog({
 		const next = guestRows.filter((_, i) => i !== index)
 		setGuestRows(next)
 		commitGuestAuthors(next)
+	}
+
+	const [assetRows, setAssetRows] = useState<ArticlePageAsset[]>(() => article.pageAssets ?? [])
+	const savedPageAssetsRef = useRef(article.pageAssets)
+	savedPageAssetsRef.current = article.pageAssets
+	useEffect(() => {
+		if (dialogOpen) setAssetRows(savedPageAssetsRef.current ?? [])
+	}, [dialogOpen])
+	const updatePageAssets = (rows: ArticlePageAsset[]) => {
+		setAssetRows(rows)
+		updateArticle('pageAssets', rows)
 	}
 
 	return (
@@ -754,6 +767,10 @@ export function ArticleMetaDialog({
 						<Icon name="plus" className="size-3.5" />
 						Add co-author
 					</button>
+				</MetaSection>
+
+				<MetaSection title="Assets on this page">
+					<ArticlePageAssetPicker value={assetRows} onChange={updatePageAssets} />
 				</MetaSection>
 			</div>
 

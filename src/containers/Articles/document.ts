@@ -5,6 +5,7 @@ import type {
 	ArticleGuestAuthorType,
 	ArticleImage,
 	ArticleInterviewee,
+	ArticlePageAsset,
 	ArticlePdf,
 	ArticleSection,
 	ArticleSnapshotPayload,
@@ -165,6 +166,24 @@ function normalizeGuestAuthors(value: unknown): ArticleGuestAuthor[] | undefined
 		if (url) guest.url = url
 		out.push(guest)
 		if (out.length >= 20) break
+	}
+	return out.length > 0 ? out : undefined
+}
+
+function normalizePageAssets(value: unknown): ArticlePageAsset[] | undefined {
+	if (!Array.isArray(value)) return undefined
+	const seen = new Set<string>()
+	const out: ArticlePageAsset[] = []
+	for (const entry of value) {
+		if (!isRecord(entry)) continue
+		const geckoId = normalizeOptionalString(entry.geckoId)
+		const symbol = normalizeOptionalString(entry.symbol)
+		const name = normalizeOptionalString(entry.name)
+		if (!geckoId || !symbol || !name) continue
+		if (seen.has(geckoId)) continue
+		seen.add(geckoId)
+		out.push({ geckoId, symbol, name })
+		if (out.length >= 12) break
 	}
 	return out.length > 0 ? out : undefined
 }
@@ -401,6 +420,7 @@ export function normalizeLocalArticleDocument(
 		'interviewees' in input ? normalizeInterviewees(input.interviewees) : (existing?.interviewees ?? undefined)
 	const guestAuthors =
 		'guestAuthors' in input ? normalizeGuestAuthors(input.guestAuthors) : (existing?.guestAuthors ?? undefined)
+	const pageAssets = 'pageAssets' in input ? normalizePageAssets(input.pageAssets) : (existing?.pageAssets ?? undefined)
 	const extracted = extractArticleContent(contentJson)
 	const trimmedPlain = extracted.plainText.trim()
 	const firstSentenceMatch = trimmedPlain.match(/^[\s\S]*?[.!?](?:\s|$)/)
@@ -446,6 +466,7 @@ export function normalizeLocalArticleDocument(
 			editorialTags,
 			...(interviewees && interviewees.length > 0 ? { interviewees } : {}),
 			...(guestAuthors && guestAuthors.length > 0 ? { guestAuthors } : {}),
+			...(pageAssets && pageAssets.length > 0 ? { pageAssets } : {}),
 			section,
 			displayDate,
 			goLiveAt,

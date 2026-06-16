@@ -178,6 +178,12 @@ export type ArticleGuestAuthor = {
 	type: ArticleGuestAuthorType
 }
 
+export type ArticlePageAsset = {
+	geckoId: string
+	symbol: string
+	name: string
+}
+
 export type ArticleViewerRole = 'owner' | 'collaborator' | 'researcher'
 
 export type ArticleCollaborator = {
@@ -203,6 +209,7 @@ export type LocalArticleDocument = {
 	authorProfile?: ArticleAuthor
 	coAuthors?: ArticleAuthor[]
 	guestAuthors?: ArticleGuestAuthor[]
+	pageAssets?: ArticlePageAsset[]
 	viewerRole?: ArticleViewerRole
 
 	seoTitle?: string
