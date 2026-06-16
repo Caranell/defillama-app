@@ -1,9 +1,8 @@
 import * as Ariakit from '@ariakit/react'
-import { useCallback, useState } from 'react'
 import { Icon } from '~/components/Icon'
 import { BasicLink } from '~/components/Link'
+import { EndTrialModal } from '~/containers/Account/EndTrialModal'
 import { useAuthContext } from '~/containers/Subscription/auth'
-import { useSubscribe } from '~/containers/Subscription/useSubscribe'
 
 interface ResearchLimitModalProps {
 	dialogStore: Ariakit.DialogStore
@@ -16,22 +15,18 @@ interface ResearchLimitModalProps {
 const COPY = {
 	research: {
 		titleLimit: 'Research Report Limit Reached',
-		bodyVerify: 'Verify your email to unlock research reports.',
 		bodyBlocked: 'Subscribe to Pro to use research reports.',
 		bodyLifetime: (n: number) => `You've used all ${n} research reports available on your trial plan.`,
 		bodyDaily: (n: number) => `You've used all ${n} research reports for today. Resets at midnight UTC.`,
 		proPitch: 'Get 5 research reports per day with Pro',
-		umamiVerify: 'verify-email-research-limit',
 		umamiUpgrade: 'subscribe-research-limit-upgrade'
 	},
 	fact_checked: {
 		titleLimit: 'Fact-Checked Answer Limit Reached',
-		bodyVerify: 'Verify your email to unlock fact-checked answers.',
 		bodyBlocked: 'Subscribe to Pro to use fact-checked answers.',
 		bodyLifetime: (n: number) => `You've used all ${n} fact-checked answers available on your trial plan.`,
 		bodyDaily: (n: number) => `You've used all ${n} fact-checked answers for today. Resets at midnight UTC.`,
 		proPitch: 'Get 10 fact-checked answers per day with Pro',
-		umamiVerify: 'verify-email-fact-checked-limit',
 		umamiUpgrade: 'subscribe-fact-checked-limit-upgrade'
 	}
 } as const
@@ -45,33 +40,27 @@ export function ResearchLimitModal({
 }: ResearchLimitModalProps) {
 	const isLifetime = period === 'lifetime'
 	const isBlocked = period === 'blocked'
-	const { user, isTrial } = useAuthContext()
-	const needsVerification = !!user && !user.verified
-	const { endTrialSubscription, isEndTrialLoading } = useSubscribe()
-	const [upgraded, setUpgraded] = useState(false)
+	const { isTrial } = useAuthContext()
+	const open = dialogStore.useState('open')
 
-	const handleUpgrade = useCallback(async () => {
-		try {
-			await endTrialSubscription()
-			setUpgraded(true)
-		} catch (error) {
-			console.error('Failed to upgrade:', error)
-		}
-	}, [endTrialSubscription])
+	const limitBody = isLifetime ? COPY[feature].bodyLifetime(limit) : COPY[feature].bodyDaily(limit)
 
-	const resetUpgradeState = useCallback(() => {
-		setUpgraded(false)
-	}, [])
-
-	const handleClose = useCallback(() => {
-		resetUpgradeState()
-		dialogStore.hide()
-	}, [dialogStore, resetUpgradeState])
+	// Trial users converting to a paid plan get the shared, instant-charge modal.
+	if (isTrial) {
+		return (
+			<EndTrialModal
+				isOpen={open}
+				onClose={dialogStore.hide}
+				title={COPY[feature].titleLimit}
+				description={isBlocked ? COPY[feature].bodyBlocked : limitBody}
+				confirmLabel="Upgrade to Pro"
+			/>
+		)
+	}
 
 	return (
 		<Ariakit.DialogProvider store={dialogStore}>
 			<Ariakit.Dialog
-				onClose={resetUpgradeState}
 				className="dialog fixed inset-0 z-50 m-auto h-fit w-full max-w-md overflow-hidden rounded-2xl border border-[#E6E6E6] bg-[#FFFFFF] p-0 shadow-xl dark:border-[#39393E] dark:bg-[#222429]"
 				backdrop={<div className="backdrop fixed inset-0 bg-black/60 backdrop-blur-sm" />}
 				portal
@@ -79,7 +68,7 @@ export function ResearchLimitModal({
 			>
 				<button
 					type="button"
-					onClick={handleClose}
+					onClick={dialogStore.hide}
 					className="absolute top-4 right-4 z-20 rounded-full p-1.5 text-[#666] transition-colors hover:bg-[#f7f7f7] hover:text-black dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-white"
 				>
 					<Icon name="x" className="size-5" />
@@ -92,78 +81,34 @@ export function ResearchLimitModal({
 						</div>
 					</div>
 
-					{upgraded ? (
+					<h2 className="mb-4 text-center text-xl leading-snug font-bold text-black dark:text-white">
+						{COPY[feature].titleLimit}
+					</h2>
+					<p className="mb-6 text-center text-base leading-6 text-[#666] dark:text-[#919296]">
+						{isBlocked ? COPY[feature].bodyBlocked : limitBody}
+					</p>
+
+					{isBlocked ? (
 						<>
-							<h2 className="mb-4 text-center text-xl leading-snug font-bold text-black dark:text-white">
-								Upgrade Successful
-							</h2>
-							<div className="mb-6 rounded-lg border border-green-500/30 bg-green-500/10 p-4">
-								<div className="flex items-start gap-3">
-									<Icon name="check" height={20} width={20} className="mt-0.5 shrink-0 text-green-500" />
-									<p className="text-sm text-[#666] dark:text-[#c5c5c5]">
-										Please wait a few minutes and refresh the page after upgrading, the upgrade might take a few minutes
-										to apply.
-									</p>
-								</div>
-							</div>
-							<button
-								onClick={handleClose}
-								className="w-full rounded-lg bg-[#5C5CF9] px-6 py-3.5 text-center text-base font-semibold text-white transition-colors hover:bg-[#4A4AF0]"
+							<BasicLink
+								href="/subscription"
+								data-umami-event={COPY[feature].umamiUpgrade}
+								className="mx-auto flex w-full items-center justify-center gap-2 rounded-lg bg-[#5C5CF9] px-6 py-3.5 text-center text-base font-semibold text-white transition-colors hover:bg-[#4A4AF0]"
+								onClick={dialogStore.hide}
 							>
-								Close
-							</button>
+								Upgrade to Pro
+							</BasicLink>
+							<p className="mt-4 text-center text-sm text-[#888] dark:text-[#777]">{COPY[feature].proPitch}</p>
 						</>
 					) : (
-						<>
-							<h2 className="mb-4 text-center text-xl leading-snug font-bold text-black dark:text-white">
-								{isBlocked && needsVerification ? 'Email Verification Required' : COPY[feature].titleLimit}
-							</h2>
-							<p className="mb-6 text-center text-base leading-6 text-[#666] dark:text-[#919296]">
-								{isBlocked
-									? needsVerification
-										? COPY[feature].bodyVerify
-										: COPY[feature].bodyBlocked
-									: isLifetime
-										? COPY[feature].bodyLifetime(limit)
-										: COPY[feature].bodyDaily(limit)}
-							</p>
-
-							{isBlocked && needsVerification ? (
-								<BasicLink
-									href="/account"
-									data-umami-event={COPY[feature].umamiVerify}
-									className="mx-auto flex w-full items-center justify-center gap-2 rounded-lg bg-[#5C5CF9] px-6 py-3.5 text-center text-base font-semibold text-white transition-colors hover:bg-[#4A4AF0]"
-									onClick={dialogStore.hide}
-								>
-									Go to Account Settings
-								</BasicLink>
-							) : isTrial ? (
-								<div className="flex flex-col gap-3">
-									<button
-										onClick={() => {
-											void handleUpgrade()
-										}}
-										disabled={isEndTrialLoading}
-										className="w-full rounded-lg bg-[#5C5CF9] px-6 py-3.5 text-center text-base font-semibold text-white transition-colors hover:bg-[#4A4AF0] disabled:cursor-not-allowed disabled:opacity-70"
-									>
-										{isEndTrialLoading ? 'Processing...' : 'Upgrade to Pro'}
-									</button>
-									<p className="text-center text-sm text-[#888] dark:text-[#777]">{COPY[feature].proPitch}</p>
-								</div>
-							) : (
-								<>
-									<BasicLink
-										href="/subscription"
-										data-umami-event={COPY[feature].umamiUpgrade}
-										className="mx-auto flex w-full items-center justify-center gap-2 rounded-lg bg-[#5C5CF9] px-6 py-3.5 text-center text-base font-semibold text-white transition-colors hover:bg-[#4A4AF0]"
-										onClick={dialogStore.hide}
-									>
-										Upgrade to Pro
-									</BasicLink>
-									<p className="mt-4 text-center text-sm text-[#888] dark:text-[#777]">{COPY[feature].proPitch}</p>
-								</>
-							)}
-						</>
+						// Already on a paid plan, just hit the daily cap — informational only, no upsell.
+						<button
+							type="button"
+							onClick={dialogStore.hide}
+							className="mx-auto flex w-full items-center justify-center gap-2 rounded-lg bg-[#5C5CF9] px-6 py-3.5 text-center text-base font-semibold text-white transition-colors hover:bg-[#4A4AF0]"
+						>
+							Got it
+						</button>
 					)}
 				</div>
 			</Ariakit.Dialog>
