@@ -18,6 +18,7 @@ import type {
 import { buildEquitiesDimensionsChart } from './chartData'
 import { EquitiesFilingsTable } from './FilingsTable'
 import { EquitiesFinancialsTable } from './FinancialsTable'
+import { EquitiesMarketsTable, EquitiesTokensTable } from './OnchainTables'
 import type { IEquityTickerPageProps } from './types'
 import { formatEquitiesDate, formatEquitiesDateTime } from './utils'
 
@@ -33,7 +34,7 @@ const EQUITIES_PRICE_HISTORY_TIMEFRAMES: readonly EquitiesPriceHistoryTimeframe[
 ]
 const DEFAULT_PRICE_HISTORY_TIMEFRAME: EquitiesPriceHistoryTimeframe = 'MAX'
 
-const TABS = ['financials', 'overview', 'filings'] as const
+const TABS = ['financials', 'overview', 'filings', 'tokens', 'markets'] as const
 type EquityTab = (typeof TABS)[number]
 
 const EQUITY_FUNDAMENTAL_CHART_OPTIONS = ['Revenue', 'Holders Revenue', 'Earnings'] as const
@@ -74,7 +75,9 @@ const TIMEFRAME_MS: Record<EquitiesPriceHistoryTimeframe, number | null> = {
 const TAB_LABELS: Record<EquityTab, string> = {
 	overview: 'Overview',
 	financials: 'Financials',
-	filings: 'Filings'
+	filings: 'Filings',
+	tokens: 'Tokens',
+	markets: 'Markets'
 }
 
 function formatMetricValue(value: unknown, symbol?: string): string {
@@ -463,9 +466,6 @@ export function EquityTickerPage(props: IEquityTickerPageProps) {
 									)
 								}
 							/>
-							{props.metadata.cik ? (
-								<MetricRow label="CIK" tooltip="Central Index Key" value={props.metadata.cik} />
-							) : null}
 							<MetricRow
 								label="Coverage since"
 								value={<span suppressHydrationWarning>{formatEquitiesDate(props.metadata.startDate)}</span>}
@@ -486,6 +486,8 @@ export function EquityTickerPage(props: IEquityTickerPageProps) {
 			{activeTab === 'filings' ? (
 				<EquitiesFilingsTable filings={props.filings} filingForms={props.filingForms} />
 			) : null}
+			{activeTab === 'tokens' ? <EquitiesTokensTable tokens={props.onchain.tokens} ticker={props.ticker} /> : null}
+			{activeTab === 'markets' ? <EquitiesMarketsTable markets={props.onchain.perps} ticker={props.ticker} /> : null}
 
 			<footer className="rounded-md border border-(--cards-border) bg-(--cards-bg) p-3">
 				<h2 className="text-sm font-semibold">Attribution</h2>

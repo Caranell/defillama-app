@@ -4,6 +4,8 @@ import type {
 	IEquitiesDimensionsResponse,
 	IEquitiesFilingApiItem,
 	IEquitiesMetadataResponse,
+	IEquitiesOnchainPerpApiItem,
+	IEquitiesOnchainTokenApiItem,
 	IEquitiesStatementsResponse,
 	IEquitiesSummaryResponse
 } from './api.types'
@@ -19,7 +21,21 @@ export interface IEquitiesListCompanyRow extends IEquitiesCompanyApiItem {
 
 export interface IEquitiesListPageProps {
 	companies: IEquitiesListCompanyRow[]
-	updatedAt?: string
+	updatedAt?: string | null
+}
+
+export interface IEquitiesOnchainMarketRow extends IEquitiesOnchainPerpApiItem {
+	exchangeName: string | null
+	platformName: string | null
+}
+
+export interface IEquitiesOnchainTokenRow extends IEquitiesOnchainTokenApiItem {
+	issuerRwaPlatformName: string
+}
+
+export interface IEquitiesOnchainPageData {
+	perps: IEquitiesOnchainMarketRow[]
+	tokens: IEquitiesOnchainTokenRow[]
 }
 
 export interface IEquitiesStatementTableRow {
@@ -42,4 +58,5 @@ export interface IEquityTickerPageProps {
 	dimensions: IEquitiesDimensionsResponse
 	filings: IEquitiesFilingApiItem[]
 	filingForms: string[]
+	onchain: IEquitiesOnchainPageData
 }

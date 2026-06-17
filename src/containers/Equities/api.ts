@@ -2,9 +2,11 @@ import { EQUITIES_SERVER_URL } from '~/constants'
 import { fetchJson } from '~/utils/async'
 import type {
 	IEquitiesCompanyApiItem,
+	IEquitiesCompanyListApiItem,
 	IEquitiesDimensionsResponse,
 	IEquitiesFilingApiItem,
 	IEquitiesMetadataResponse,
+	IEquitiesOnchainResponse,
 	EquitiesPriceHistory,
 	EquitiesPriceHistoryTimeframe,
 	IEquitiesStatementsResponse,
@@ -12,12 +14,14 @@ import type {
 } from './api.types'
 
 const EQUITIES_COMPANIES_API = `${EQUITIES_SERVER_URL}/companies`
+const EQUITIES_COMPANIES_LIST_API = `${EQUITIES_SERVER_URL}/companies-list`
 const EQUITIES_STATEMENTS_API = `${EQUITIES_SERVER_URL}/statements`
 const EQUITIES_PRICE_HISTORY_API = `${EQUITIES_SERVER_URL}/price-history`
 const EQUITIES_SUMMARY_API = `${EQUITIES_SERVER_URL}/summary`
 const EQUITIES_METADATA_API = `${EQUITIES_SERVER_URL}/metadata`
 const EQUITIES_FILINGS_API = `${EQUITIES_SERVER_URL}/filings`
 const EQUITIES_DIMENSIONS_API = `${EQUITIES_SERVER_URL}/dimensions`
+const EQUITIES_ONCHAIN_API = `${EQUITIES_SERVER_URL}/onchain`
 
 function createEquitiesUrl(
 	baseUrl: string,
@@ -46,6 +50,13 @@ function createEquitiesUrl(
  */
 export async function fetchEquitiesCompanies(): Promise<IEquitiesCompanyApiItem[]> {
 	return fetchJson<IEquitiesCompanyApiItem[]>(createEquitiesUrl(EQUITIES_COMPANIES_API))
+}
+
+/**
+ * Fetch the lightweight identity list for all synced companies.
+ */
+export async function fetchEquitiesCompaniesList(): Promise<IEquitiesCompanyListApiItem[]> {
+	return fetchJson<IEquitiesCompanyListApiItem[]>(createEquitiesUrl(EQUITIES_COMPANIES_LIST_API))
 }
 
 /**
@@ -92,4 +103,11 @@ export async function fetchEquitiesFilings(ticker: string, country: string): Pro
  */
 export async function fetchEquitiesDimensions(ticker: string, country: string): Promise<IEquitiesDimensionsResponse> {
 	return fetchJson<IEquitiesDimensionsResponse>(createEquitiesUrl(EQUITIES_DIMENSIONS_API, { ticker, country }))
+}
+
+/**
+ * Fetch on-chain tokenized asset and perp market coverage for a company ticker.
+ */
+export async function fetchEquitiesOnchain(ticker: string): Promise<IEquitiesOnchainResponse> {
+	return fetchJson<IEquitiesOnchainResponse>(createEquitiesUrl(EQUITIES_ONCHAIN_API, { ticker }))
 }

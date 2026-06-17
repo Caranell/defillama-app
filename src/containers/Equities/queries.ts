@@ -1,14 +1,18 @@
+import { rwaSlug } from '~/containers/RWA/rwaSlug'
 import {
 	fetchEquitiesCompanies,
+	fetchEquitiesCompaniesList,
 	fetchEquitiesDimensions,
 	fetchEquitiesFilings,
 	fetchEquitiesMetadata,
+	fetchEquitiesOnchain,
 	fetchEquitiesPriceHistory,
 	fetchEquitiesStatements,
 	fetchEquitiesSummary
 } from './api'
+import type { IEquitiesCompanyRoute, IEquitiesOnchainResponse } from './api.types'
 import { buildPriceHistoryChart } from './chartData'
-import type { IEquitiesListPageProps, IEquityTickerPageProps } from './types'
+import type { IEquitiesListPageProps, IEquitiesOnchainPageData, IEquityTickerPageProps } from './types'
 import { buildEquityTickerCountrySlug, normalizeEquityCountry, normalizeEquityTicker } from './utils'
 
 export async function getEquitiesListPageData(): Promise<IEquitiesListPageProps> {
@@ -35,20 +39,70 @@ export async function getEquitiesListPageData(): Promise<IEquitiesListPageProps>
 	}
 }
 
+function buildRwaPlatformNameLookup(platforms: string[]): Map<string, string> {
+	const lookup = new Map<string, string>()
+
+	for (const platform of platforms) {
+		lookup.set(rwaSlug(platform), platform)
+	}
+
+	return lookup
+}
+
+function addEquitiesOnchainDisplayNames({
+	onchain,
+	protocolDisplayNames,
+	rwaPlatforms
+}: {
+	onchain: IEquitiesOnchainResponse
+	protocolDisplayNames: Map<string, string>
+	rwaPlatforms: string[]
+}): IEquitiesOnchainPageData {
+	const rwaPlatformNames = buildRwaPlatformNameLookup(rwaPlatforms)
+	const perps: IEquitiesOnchainPageData['perps'] = []
+	const tokens: IEquitiesOnchainPageData['tokens'] = []
+
+	for (const row of onchain.perps) {
+		perps.push({
+			...row,
+			exchangeName: row.exchangeProtocolSlug
+				? (protocolDisplayNames.get(row.exchangeProtocolSlug) ?? row.exchangeProtocolSlug)
+				: null,
+			platformName: row.rwaPlatformSlug ? (rwaPlatformNames.get(row.rwaPlatformSlug) ?? row.rwaPlatformSlug) : null
+		})
+	}
+
+	for (const row of onchain.tokens) {
+		tokens.push({
+			...row,
+			issuerRwaPlatformName: rwaPlatformNames.get(row.issuerRwaPlatformSlug) ?? row.issuerRwaPlatformSlug
+		})
+	}
+
+	return { perps, tokens }
+}
+
+interface EquitiesTickerPageMetadata {
+	protocolDisplayNames: Map<string, string>
+	rwaPlatforms: string[]
+}
+
 export async function getEquitiesTickerPageData(
 	rawTicker: string,
-	rawCountry: string
+	rawCountry: string,
+	pageMetadata: EquitiesTickerPageMetadata
 ): Promise<IEquityTickerPageProps | null> {
 	const ticker = normalizeEquityTicker(rawTicker)
 	const country = normalizeEquityCountry(rawCountry)
 
-	const [summary, metadata, priceHistory, statements, filings, dimensions] = await Promise.all([
+	const [summary, metadata, priceHistory, statements, filings, dimensions, rawOnchain] = await Promise.all([
 		fetchEquitiesSummary(ticker, country),
 		fetchEquitiesMetadata(ticker, country),
 		fetchEquitiesPriceHistory(ticker, country).catch(() => []),
 		fetchEquitiesStatements(ticker, country).catch(() => null),
 		fetchEquitiesFilings(ticker, country).catch(() => []),
-		fetchEquitiesDimensions(ticker, country).catch(() => null)
+		fetchEquitiesDimensions(ticker, country).catch(() => null),
+		fetchEquitiesOnchain(ticker).catch(() => ({ perps: [], tokens: [] }))
 	])
 
 	if (!summary || !metadata || !statements || !dimensions || !metadata.ticker || !metadata.name) {
@@ -71,25 +125,32 @@ export async function getEquitiesTickerPageData(
 		statements,
 		dimensions,
 		filings,
-		filingForms: Array.from(filingForms).sort((a, b) => a.localeCompare(b))
+		filingForms: Array.from(filingForms).sort((a, b) => a.localeCompare(b)),
+		onchain: addEquitiesOnchainDisplayNames({
+			onchain: rawOnchain,
+			protocolDisplayNames: pageMetadata.protocolDisplayNames,
+			rwaPlatforms: pageMetadata.rwaPlatforms
+		})
 	}
 }
 
 export async function getEquitiesTickerPaths(limit = 50): Promise<string[]> {
-	const companies = await fetchEquitiesCompanies().catch(() => [])
-	const sortedCompanies = companies.toSorted((a, b) => (b.marketCap ?? -1) - (a.marketCap ?? -1))
+	const companies = await fetchEquitiesCompaniesList().catch(() => [])
 	const paths: string[] = []
-	for (let i = 0; i < sortedCompanies.length && i < limit; i++) {
-		const company = sortedCompanies[i]
+	for (let i = 0; i < companies.length && i < limit; i++) {
+		const company = companies[i]
 		if (company.ticker && company.country) paths.push(buildEquityTickerCountrySlug(company.ticker, company.country))
 	}
 	return paths
 }
 
-export async function getEquitiesTickerRedirectSlug(rawTicker: string): Promise<string | null> {
+export async function getEquitiesTickerRedirectSlug(
+	rawTicker: string,
+	companiesList?: IEquitiesCompanyRoute[]
+): Promise<string | null> {
 	const ticker = normalizeEquityTicker(rawTicker)
-	const companies = await fetchEquitiesCompanies().catch(() => [])
-	let match: (typeof companies)[number] | null = null
+	const companies = companiesList ?? (await fetchEquitiesCompaniesList().catch(() => []))
+	let match: IEquitiesCompanyRoute | null = null
 	for (const company of companies) {
 		if (normalizeEquityTicker(company.ticker) !== ticker) continue
 		if (match) return null

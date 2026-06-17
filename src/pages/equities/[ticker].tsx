@@ -6,7 +6,7 @@ import {
 	getEquitiesTickerRedirectSlug
 } from '~/containers/Equities/queries'
 import { EquityTickerPage } from '~/containers/Equities/TickerPage'
-import { parseEquityTickerCountrySlug } from '~/containers/Equities/utils'
+import { buildEquityTickerCountrySlug, parseEquityTickerCountrySlug } from '~/containers/Equities/utils'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
@@ -18,10 +18,11 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
+		const metadata = await import('~/utils/metadata').then((m) => m.default)
 		const tickerCountry = parseEquityTickerCountrySlug(params.ticker)
 
 		if (!tickerCountry) {
-			const redirectSlug = await getEquitiesTickerRedirectSlug(params.ticker)
+			const redirectSlug = await getEquitiesTickerRedirectSlug(params.ticker, metadata.equitiesCompanyRoutes)
 			if (!redirectSlug) return { notFound: true }
 
 			return {
@@ -32,7 +33,16 @@ export const getStaticProps = withPerformanceLogging(
 			}
 		}
 
-		const props = await getEquitiesTickerPageData(tickerCountry.ticker, tickerCountry.country)
+		if (
+			!metadata.equitiesCompanySlugsSet.has(buildEquityTickerCountrySlug(tickerCountry.ticker, tickerCountry.country))
+		) {
+			return { notFound: true }
+		}
+
+		const props = await getEquitiesTickerPageData(tickerCountry.ticker, tickerCountry.country, {
+			protocolDisplayNames: metadata.protocolDisplayNames,
+			rwaPlatforms: metadata.rwaList.platforms
+		})
 
 		if (!props) {
 			return { notFound: true }

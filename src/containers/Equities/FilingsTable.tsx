@@ -1,12 +1,24 @@
-import { createColumnHelper } from '@tanstack/react-table'
+import {
+	createColumnHelper,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getPaginationRowModel,
+	getSortedRowModel,
+	type SortingState,
+	useReactTable
+} from '@tanstack/react-table'
 import { useMemo, useState } from 'react'
+import { CSVDownloadButton } from '~/components/ButtonStyled/CsvButton'
 import { Icon } from '~/components/Icon'
-import { TableWithSearch } from '~/components/Table/TableWithSearch'
+import { PaginatedTable } from '~/components/Table/PaginatedTable'
+import { prepareTableCsv, useTableSearch } from '~/components/Table/utils'
 import type { IEquitiesFilingApiItem } from './api.types'
 import { formatEquitiesDate } from './utils'
 
 const columnHelper = createColumnHelper<IEquitiesFilingApiItem>()
-const DEFAULT_SORTING_STATE = [{ id: 'filingDate', desc: true }]
+const DEFAULT_SORTING_STATE: SortingState = [{ id: 'filingDate', desc: true }]
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
+const DEFAULT_PAGE_SIZE = 10
 
 const columns = [
 	columnHelper.accessor('filingDate', {
@@ -87,19 +99,41 @@ export function EquitiesFilingsTable({
 		}
 		return matchingFilings
 	}, [filings, selectedForm])
+	const table = useReactTable({
+		data: filteredFilings,
+		columns,
+		initialState: {
+			pagination: {
+				pageIndex: 0,
+				pageSize: DEFAULT_PAGE_SIZE
+			},
+			sorting: DEFAULT_SORTING_STATE
+		},
+		enableSortingRemoval: false,
+		getCoreRowModel: getCoreRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+		getPaginationRowModel: getPaginationRowModel()
+	})
+	const [_searchValue, setSearchValue] = useTableSearch({ instance: table, columnToSearch: 'documentDescription' })
 
 	return (
-		<TableWithSearch
-			data={filteredFilings}
-			columns={columns}
-			placeholder="Search filings"
-			columnToSearch="documentDescription"
-			header={null}
-			sortingState={DEFAULT_SORTING_STATE}
-			rowSize={52}
-			compact
-			csvFileName="equities-filings"
-			customFilters={
+		<div className="rounded-md border border-(--cards-border) bg-(--cards-bg)">
+			<div className="flex w-full flex-wrap items-center justify-end gap-3 p-3">
+				<label className="relative mr-auto w-full max-w-full sm:max-w-[280px]">
+					<span className="sr-only">Search filings</span>
+					<Icon
+						name="search"
+						height={16}
+						width={16}
+						className="absolute top-0 bottom-0 left-2 my-auto text-(--text-tertiary)"
+					/>
+					<input
+						onInput={(e) => setSearchValue(e.currentTarget.value)}
+						placeholder="Search filings"
+						className="w-full rounded-md border border-(--form-control-border) bg-white p-1 pl-7 text-black dark:bg-black dark:text-white"
+					/>
+				</label>
 				<label className="flex items-center gap-2 text-sm">
 					<span className="text-(--text-form)">Form</span>
 					<select
@@ -115,7 +149,9 @@ export function EquitiesFilingsTable({
 						))}
 					</select>
 				</label>
-			}
-		/>
+				<CSVDownloadButton prepareCsv={() => prepareTableCsv({ instance: table, filename: 'equities-filings' })} smol />
+			</div>
+			<PaginatedTable table={table} pageSizeOptions={PAGE_SIZE_OPTIONS} />
+		</div>
 	)
 }

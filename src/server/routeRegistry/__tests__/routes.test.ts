@@ -60,7 +60,9 @@ function metadataFixture(): MetadataCache {
 		digitalAssetTreasuryAssetSlugsSet: new Set(),
 		digitalAssetTreasuryCompanySlugsSet: new Set(),
 		stablecoinPeggedAssetSlugs: [],
-		stablecoinPeggedAssetSlugsSet: new Set()
+		stablecoinPeggedAssetSlugsSet: new Set(),
+		equitiesCompanyRoutes: [],
+		equitiesCompanySlugsSet: new Set()
 	}
 }
 

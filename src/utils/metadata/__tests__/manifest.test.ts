@@ -57,7 +57,8 @@ function createPayload(): CoreMetadataPayload {
 		narrativeCategories: { ids: [], nameById: {} },
 		oracleRoutes: { oracleNameBySlug: {}, chainNameBySlug: {}, chainSlugsByOracleSlug: {} },
 		digitalAssetTreasuryRoutes: { assetSlugs: [], companySlugs: [] },
-		stablecoinPeggedAssetSlugs: []
+		stablecoinPeggedAssetSlugs: [],
+		equitiesCompanyRoutes: []
 	}
 }
 

@@ -1,3 +1,4 @@
+import type { IEquitiesCompanyRoute } from '~/containers/Equities/api.types'
 import type { ProtocolEmissionSupplyMetricsMap } from '~/containers/Unlocks/api.types'
 import type { TokenDirectory } from '~/utils/tokenDirectory'
 import { buildChainDisplayNameLookupRecord, createStringLookupMap } from './displayLookups'
@@ -43,6 +44,7 @@ export type CoreMetadataPayload = {
 	oracleRoutes: OracleRoutesMetadata
 	digitalAssetTreasuryRoutes: DigitalAssetTreasuryRoutesMetadata
 	stablecoinPeggedAssetSlugs: string[]
+	equitiesCompanyRoutes: IEquitiesCompanyRoute[]
 }
 
 // Serialized artifacts intentionally differ from this runtime shape: the cache
@@ -77,6 +79,8 @@ export type MetadataCache = {
 	digitalAssetTreasuryCompanySlugsSet: Set<string>
 	stablecoinPeggedAssetSlugs: string[]
 	stablecoinPeggedAssetSlugsSet: Set<string>
+	equitiesCompanyRoutes: IEquitiesCompanyRoute[]
+	equitiesCompanySlugsSet: Set<string>
 }
 
 export type MetadataArtifactKey = keyof CoreMetadataPayload
@@ -219,6 +223,11 @@ export const METADATA_ARTIFACT_REGISTRY = defineMetadataArtifactRegistry({
 		file: 'stablecoinPeggedAssetSlugs.json',
 		stub: [],
 		parse: parseArtifact<string[]>
+	},
+	equitiesCompanyRoutes: {
+		file: 'equitiesCompanyRoutes.json',
+		stub: [],
+		parse: parseArtifact<IEquitiesCompanyRoute[]>
 	}
 })
 
@@ -286,7 +295,9 @@ export function hydrateMetadataCache(payload: CoreMetadataPayload): MetadataCach
 		digitalAssetTreasuryAssetSlugsSet: new Set(payload.digitalAssetTreasuryRoutes.assetSlugs),
 		digitalAssetTreasuryCompanySlugsSet: new Set(payload.digitalAssetTreasuryRoutes.companySlugs),
 		stablecoinPeggedAssetSlugs: payload.stablecoinPeggedAssetSlugs,
-		stablecoinPeggedAssetSlugsSet: new Set(payload.stablecoinPeggedAssetSlugs)
+		stablecoinPeggedAssetSlugsSet: new Set(payload.stablecoinPeggedAssetSlugs),
+		equitiesCompanyRoutes: payload.equitiesCompanyRoutes,
+		equitiesCompanySlugsSet: new Set(payload.equitiesCompanyRoutes.map(getEquityCompanySlug))
 	}
 }
 
@@ -299,6 +310,10 @@ function createChainDisplayNameMap(payload: CoreMetadataPayload): Map<string, st
 		...payload.chainDisplayNames,
 		...buildChainDisplayNameLookupRecord(payload.chains)
 	})
+}
+
+function getEquityCompanySlug(company: IEquitiesCompanyRoute): string {
+	return `${company.ticker.trim().toLowerCase()}:${company.country.trim().toLowerCase()}`
 }
 
 export function replaceMetadataCacheContents(metadataCache: MetadataCache, payload: CoreMetadataPayload): void {

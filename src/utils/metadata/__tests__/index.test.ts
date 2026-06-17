@@ -101,6 +101,7 @@ function createMetadataPayload(overrides: Partial<CoreMetadataPayload> = {}): Co
 		oracleRoutes: { oracleNameBySlug: {}, chainNameBySlug: {}, chainSlugsByOracleSlug: {} },
 		digitalAssetTreasuryRoutes: { assetSlugs: [], companySlugs: [] },
 		stablecoinPeggedAssetSlugs: [],
+		equitiesCompanyRoutes: [],
 		...overrides
 	}
 }

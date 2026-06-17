@@ -2,25 +2,25 @@ export interface IEquitiesCompanyApiItem {
 	ticker: string
 	country: string
 	name: string
-	currentPrice: number
-	volume: number
-	marketCap: number
+	currentPrice: number | null
+	volume: number | null
+	marketCap: number | null
 	circulatingMarketCap: number | null
 	enterpriseValue: number | null
-	fiftyTwoWeekHigh: number
-	fiftyTwoWeekLow: number
+	fiftyTwoWeekHigh: number | null
+	fiftyTwoWeekLow: number | null
 	dividendYield: number | null
 	trailingPE: number | null
 	priceToRevenue: number | null
-	priceChangePercentage1d: number
-	priceChangePercentage7d: number
-	priceChangePercentage1m: number
-	priceChange1d: number
+	priceChangePercentage1d: number | null
+	priceChangePercentage7d: number | null
+	priceChangePercentage1m: number | null
+	priceChange1d: number | null
 	marketCapChange1d: number | null
-	priceToBook: number
+	priceToBook: number | null
 	enterpriseValueToEbitda: number | null
 	holdersYield: number | null
-	updatedAt: string
+	updatedAt: string | null
 	revenueTTM: number | null
 	grossProfitTTM: number | null
 	earningsTTM: number | null
@@ -33,15 +33,25 @@ export interface IEquitiesCompanyApiItem {
 	stockIssuanceTTM: number | null
 	stockBasedCompensationTTM: number | null
 	cashAndCashEquivalents: number | null
-	totalAssets: number
-	totalLiabilities: number
-	totalShareholdersEquity: number
-	totalDebt: number
+	totalAssets: number | null
+	totalLiabilities: number | null
+	totalShareholdersEquity: number | null
+	totalDebt: number | null
 	circulatingSupply: number | null
-	totalSupply: number
-	employeeCount: number
+	totalSupply: number | null
+	employeeCount: number | null
 	sector: string
 	industry: string
+}
+
+export interface IEquitiesCompanyRoute {
+	ticker: string
+	country: string
+}
+
+export interface IEquitiesCompanyListApiItem extends IEquitiesCompanyRoute {
+	companyName: string
+	countryName: string
 }
 
 export interface IEquitiesSummaryResponse extends Omit<
@@ -55,11 +65,10 @@ export interface IEquitiesMetadataResponse {
 	country: string
 	sector: string
 	industry: string
-	employeeCount: number
-	website?: string
-	description?: string
-	cik?: string
-	startDate?: string
+	employeeCount: number | null
+	website: string
+	description: string
+	startDate: string
 }
 
 export type EquitiesPriceHistoryTimeframe = '1W' | '1M' | '6M' | '1Y' | '5Y' | 'MAX'
@@ -70,7 +79,7 @@ export type EquitiesDimensionMetric = 'revenue' | 'holdersRevenue' | 'earnings'
 
 export type EquitiesDimensionPeriod = 'quarterly' | 'annual'
 
-type EquitiesDimensionSeries = Array<[string, number | null]>
+type EquitiesDimensionSeries = Array<[string, number]>
 
 interface IEquitiesDimensionData {
 	annual: EquitiesDimensionSeries
@@ -85,10 +94,36 @@ export interface IEquitiesDimensionsResponse {
 
 export interface IEquitiesFilingApiItem {
 	filingDate: string
-	reportDate: string
+	reportDate: string | null
 	form: string
 	primaryDocumentUrl: string
 	documentDescription: string
+}
+
+export interface IEquitiesOnchainPerpApiItem {
+	pair: string
+	price: number | null
+	volume24h: number | null
+	openInterest: number | null
+	annualizedFundingRate: number | null
+	tradeUrl: string
+	contractSlug: string
+	exchangeProtocolSlug?: string
+	rwaPlatformSlug?: string
+	updatedAt: string
+}
+
+export interface IEquitiesOnchainTokenApiItem {
+	issuer: string
+	issuerRwaPlatformSlug: string
+	price: number | null
+	assetSlug: string
+	activeMarketcap: number | null
+}
+
+export interface IEquitiesOnchainResponse {
+	perps: IEquitiesOnchainPerpApiItem[]
+	tokens: IEquitiesOnchainTokenApiItem[]
 }
 
 interface IEquitiesStatementPeriodData {

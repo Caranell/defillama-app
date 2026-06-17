@@ -80,6 +80,7 @@ function createCoreMetadataSources(overrides: Record<string, unknown> = {}) {
 		emissionsProtocolsList: ['aave'],
 		emissionsSupplyMetrics: {},
 		emissions: [],
+		equitiesCompanyRoutes: [{ ticker: 'NVDA', country: 'US' }],
 		...overrides
 	}
 }
@@ -118,6 +119,7 @@ describe('fetchCoreMetadata', () => {
 		expect(payload.narrativeCategories.ids).toEqual(['ai'])
 		expect(payload.digitalAssetTreasuryRoutes.assetSlugs).toEqual(['bitcoin'])
 		expect(payload.stablecoinPeggedAssetSlugs).toEqual(['tether'])
+		expect(payload.equitiesCompanyRoutes).toEqual([{ ticker: 'NVDA', country: 'US' }])
 		expect(fetchMetadataJsonMock).not.toHaveBeenCalled()
 	})
 

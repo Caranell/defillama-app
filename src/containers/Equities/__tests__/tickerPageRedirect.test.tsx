@@ -15,9 +15,25 @@ function setupPageModule({
 }) {
 	const getEquitiesTickerPageData = vi.fn().mockResolvedValue(pageData)
 	const getEquitiesTickerRedirectSlug = vi.fn().mockResolvedValue(redirectSlug)
+	const metadataCache = {
+		protocolDisplayNames: new Map([['hyperliquid-perps', 'Hyperliquid Perps']]),
+		rwaList: {
+			platforms: ['Felix', 'Robinhood']
+		},
+		equitiesCompanyRoutes: [
+			{
+				ticker: 'NVDA',
+				country: 'US'
+			}
+		],
+		equitiesCompanySlugsSet: new Set(['nvda:us'])
+	}
 
 	vi.doMock('~/constants', () => ({
 		SKIP_BUILD_STATIC_GENERATION: true
+	}))
+	vi.doMock('~/utils/metadata', () => ({
+		default: metadataCache
 	}))
 	vi.doMock('~/containers/Equities/queries', () => ({
 		getEquitiesTickerPageData,
@@ -55,7 +71,7 @@ describe('equities ticker page routing', () => {
 			props: { ticker: 'NVDA', country: 'US', slug: 'nvda:us', name: 'NVIDIA Corporation' },
 			revalidate: 123
 		})
-		expect(setup.getEquitiesTickerPageData).toHaveBeenCalledWith('NVDA', 'US')
+		expect(setup.getEquitiesTickerPageData.mock.calls[0]?.slice(0, 2)).toEqual(['NVDA', 'US'])
 		expect(setup.getEquitiesTickerRedirectSlug).not.toHaveBeenCalled()
 	})
 
@@ -71,7 +87,12 @@ describe('equities ticker page routing', () => {
 				permanent: false
 			}
 		})
-		expect(setup.getEquitiesTickerRedirectSlug).toHaveBeenCalledWith('nvda')
+		expect(setup.getEquitiesTickerRedirectSlug).toHaveBeenCalledWith('nvda', [
+			{
+				ticker: 'NVDA',
+				country: 'US'
+			}
+		])
 		expect(setup.getEquitiesTickerPageData).not.toHaveBeenCalled()
 	})
 
@@ -82,5 +103,16 @@ describe('equities ticker page routing', () => {
 		await expect(
 			page.getStaticProps({ params: { ticker: 'meta' } } as GetStaticPropsContext<{ ticker: string }>)
 		).resolves.toEqual({ notFound: true })
+	})
+
+	it('404s unknown ticker-country slugs before loading page data', async () => {
+		const setup = setupPageModule({})
+		const page = await setup.page
+
+		await expect(
+			page.getStaticProps({ params: { ticker: 'tsla:us' } } as GetStaticPropsContext<{ ticker: string }>)
+		).resolves.toEqual({ notFound: true })
+		expect(setup.getEquitiesTickerPageData).not.toHaveBeenCalled()
+		expect(setup.getEquitiesTickerRedirectSlug).not.toHaveBeenCalled()
 	})
 })

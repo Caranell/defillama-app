@@ -1,6 +1,8 @@
 import { LIQUIDATIONS_SERVER_URL_V2, TOKEN_DIRECTORY_API } from '~/constants'
 import type { RawBridgesResponse } from '~/containers/Bridges/api.types'
 import type { RawCexsResponse } from '~/containers/Cexs/api.types'
+import type { IEquitiesCompanyRoute } from '~/containers/Equities/api.types'
+import { fetchEquitiesCompanyRouteMetadata } from '~/containers/Equities/server/metadata'
 import type { RawAllLiquidationsResponse } from '~/containers/LiquidationsV2/api.types'
 import { fetchEmissionsProtocolsList } from '~/containers/Unlocks/api'
 import type { ProtocolEmissionSupplyMetricsMap } from '~/containers/Unlocks/api.types'
@@ -35,6 +37,7 @@ export type CoreMetadataSources = {
 	emissionsProtocolsList: string[]
 	emissionsSupplyMetrics: ProtocolEmissionSupplyMetricsMap
 	emissions: UnlockHistoricalPriceProtocol[]
+	equitiesCompanyRoutes: IEquitiesCompanyRoute[]
 }
 
 async function fetchNamedMetadataSource<T>(name: string, promise: Promise<T>): Promise<T> {
@@ -65,7 +68,8 @@ export async function fetchCoreMetadataSources(): Promise<CoreMetadataSources> {
 		bridgesResponse,
 		emissionsProtocolsList,
 		emissionsSupplyMetrics,
-		emissions
+		emissions,
+		equitiesCompanyRoutes
 	] = await Promise.all([
 		fetchNamedMetadataSource(
 			'protocols API',
@@ -118,7 +122,8 @@ export async function fetchCoreMetadataSources(): Promise<CoreMetadataSources> {
 		fetchNamedMetadataSource(
 			'emissions API',
 			fetchMetadataJson<UnlockHistoricalPriceProtocol[]>(`${coreApiBase}/emissions`)
-		)
+		),
+		fetchNamedMetadataSource('equities company routes API', fetchEquitiesCompanyRouteMetadata())
 	])
 
 	return {
@@ -135,6 +140,7 @@ export async function fetchCoreMetadataSources(): Promise<CoreMetadataSources> {
 		bridgesResponse,
 		emissionsProtocolsList,
 		emissionsSupplyMetrics,
-		emissions
+		emissions,
+		equitiesCompanyRoutes
 	}
 }

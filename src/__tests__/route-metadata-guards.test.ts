@@ -38,7 +38,9 @@ const {
 		digitalAssetTreasuryAssetSlugsSet: new Set<string>(),
 		digitalAssetTreasuryCompanySlugsSet: new Set<string>(),
 		stablecoinPeggedAssetSlugs: [],
-		stablecoinPeggedAssetSlugsSet: new Set<string>()
+		stablecoinPeggedAssetSlugsSet: new Set<string>(),
+		equitiesCompanyRoutes: [],
+		equitiesCompanySlugsSet: new Set<string>()
 	}
 }))
 

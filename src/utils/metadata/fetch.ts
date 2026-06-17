@@ -76,7 +76,8 @@ export async function fetchCoreMetadata(): Promise<CoreMetadataPayload> {
 			bridgesResponse,
 			emissionsProtocolsList,
 			emissionsSupplyMetrics,
-			emissions
+			emissions,
+			equitiesCompanyRoutes
 		},
 		routeIndexes
 	] = await Promise.all([fetchCoreMetadataSources(), fetchMetadataRouteIndexes()])
@@ -157,6 +158,7 @@ export async function fetchCoreMetadata(): Promise<CoreMetadataPayload> {
 		narrativeCategories: routeIndexes.narrativeCategories,
 		oracleRoutes: routeIndexes.oracleRoutes,
 		digitalAssetTreasuryRoutes: routeIndexes.digitalAssetTreasuryRoutes,
-		stablecoinPeggedAssetSlugs: routeIndexes.stablecoinPeggedAssetSlugs
+		stablecoinPeggedAssetSlugs: routeIndexes.stablecoinPeggedAssetSlugs,
+		equitiesCompanyRoutes
 	}
 }

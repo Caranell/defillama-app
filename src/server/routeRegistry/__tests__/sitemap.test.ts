@@ -55,7 +55,9 @@ const metadataCache = vi.hoisted(
 		digitalAssetTreasuryAssetSlugsSet: new Set(['bitcoin']),
 		digitalAssetTreasuryCompanySlugsSet: new Set(['mstr']),
 		stablecoinPeggedAssetSlugs: ['tether'],
-		stablecoinPeggedAssetSlugsSet: new Set(['tether'])
+		stablecoinPeggedAssetSlugsSet: new Set(['tether']),
+		equitiesCompanyRoutes: [],
+		equitiesCompanySlugsSet: new Set()
 	})
 )
 
