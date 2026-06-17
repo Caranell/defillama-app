@@ -25,7 +25,7 @@
 	},
 	"dividendYield": {
 		"label": "Dividend Yield",
-		"description": "Annual dividend payment as a percentage of the current share price"
+		"description": "Trailing twelve month dividends as a percentage of market cap"
 	},
 	"priceToBook": {
 		"label": "P/B",
@@ -55,7 +55,7 @@
 	"earningsTTM": { "label": "Earnings (TTM)", "description": "Net income over the trailing twelve months" },
 	"holderEarningsTTM": {
 		"label": "Holder Earnings (TTM)",
-		"description": "Earnings attributable to common shareholders over the trailing twelve months"
+		"description": "Dividends plus buybacks minus stock issuance over the trailing twelve months"
 	},
 	"dividendsTTM": {
 		"label": "Dividends (TTM)",
@@ -74,7 +74,7 @@
 		"description": "Stock-based compensation over the trailing twelve months"
 	},
 	"cashAndCashEquivalents": {
-		"label": "Cash",
+		"label": "Cash on hand",
 		"description": "Cash and cash equivalents on the balance sheet"
 	},
 	"totalAssets": {
@@ -86,8 +86,8 @@
 		"description": "Sum of all current and long-term obligations on the balance sheet"
 	},
 	"totalShareholdersEquity": {
-		"label": "Shareholders Equity",
-		"description": "Total shareholders equity on the balance sheet"
+		"label": "Net Assets",
+		"description": "Total assets minus total liabilities, equivalent to total shareholders' equity on the balance sheet"
 	},
 	"totalDebt": { "label": "Total Debt", "description": "Total debt on the balance sheet" },
 	"circulatingSupply": { "label": "Circ. Shares", "description": "Current circulating share count" },
@@ -101,7 +101,7 @@
 	},
 	"holdersRevenueTTM": {
 		"label": "Holders Revenue (TTM)",
-		"description": "Revenue distributed to shareholders via buybacks and dividends over the trailing twelve months"
+		"description": "Dividends plus buybacks over the trailing twelve months"
 	},
 	"treasury": {
 		"label": "Treasury / Balance Sheet",

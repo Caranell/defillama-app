@@ -36,8 +36,19 @@ function formatNumber(value: unknown, symbol?: string): string {
 }
 
 function ChangePercent({ value }: { value: number | null }) {
-	const className = value == null || value === 0 ? undefined : value > 0 ? 'text-(--success)' : 'text-(--error)'
-	return <span className={className}>{formatNumber(value, '%')}</span>
+	return (
+		<span className={value == null || value === 0 ? undefined : value > 0 ? 'text-(--success)' : 'text-(--error)'}>
+			{formatNumber(value, '%')}
+		</span>
+	)
+}
+
+function ChangeValue({ value, symbol }: { value: number | null; symbol?: string }) {
+	return (
+		<span className={value == null || value === 0 ? undefined : value > 0 ? 'text-(--success)' : 'text-(--error)'}>
+			{formatNumber(value, symbol)}
+		</span>
+	)
 }
 
 function EquityTickerCell({ row }: { row: { id: string; original: IEquitiesListCompanyRow } }) {
@@ -62,7 +73,7 @@ function EquityTickerCell({ row }: { row: { id: string; original: IEquitiesListC
 	)
 }
 
-const columns: ColumnDef<IEquitiesListCompanyRow, any>[] = [
+const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 	columnHelper.accessor('ticker', {
 		header: 'Ticker',
 		enableSorting: false,
@@ -178,6 +189,15 @@ const columns: ColumnDef<IEquitiesListCompanyRow, any>[] = [
 			headerClassName: 'w-[138px] min-w-[138px]',
 			align: 'end',
 			headerHelperText: defs.marketCap.description
+		}
+	}),
+	columnHelper.accessor('marketCapChange1d', {
+		header: defs.marketCapChange1d.label,
+		cell: ({ getValue }) => <ChangeValue value={getValue()} symbol="$" />,
+		meta: {
+			headerClassName: 'w-[176px] min-w-[176px]',
+			align: 'end',
+			headerHelperText: defs.marketCapChange1d.description
 		}
 	}),
 	columnHelper.accessor('circulatingMarketCap', {
@@ -355,7 +375,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow, any>[] = [
 		header: defs.cashAndCashEquivalents.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[82px] min-w-[82px]',
+			headerClassName: 'w-[132px] min-w-[132px]',
 			align: 'end',
 			headerHelperText: defs.cashAndCashEquivalents.description
 		}
@@ -425,19 +445,30 @@ const columns: ColumnDef<IEquitiesListCompanyRow, any>[] = [
 	})
 ]
 
-const EQUITIES_PRESETS = [
+const EQUITIES_PRIMARY_PRESETS = [
 	'Market Cap',
 	'Earnings',
 	'Revenue',
+	'Employees',
 	'P/E ratio',
 	'Dividend %',
+	'Market Cap gain',
+	'Market Cap loss',
+	'Operating Margin'
+] as const
+
+const EQUITIES_MORE_PRESETS = [
 	'Holder Yield',
-	'Operating Margin',
 	'Enterprise Value',
 	'Total assets',
 	'Total liabilities',
+	'Net Assets',
+	'Total debt',
+	'Cash on hand',
 	'Price to Book'
 ] as const
+
+const EQUITIES_PRESETS = [...EQUITIES_PRIMARY_PRESETS, ...EQUITIES_MORE_PRESETS] as const
 
 type EquitiesPreset = (typeof EQUITIES_PRESETS)[number]
 
@@ -445,13 +476,19 @@ const PRESET_QUERY_SLUGS: Record<EquitiesPreset, string | undefined> = {
 	'Market Cap': undefined,
 	Earnings: 'earnings',
 	Revenue: 'revenue',
+	Employees: 'employees',
 	'P/E ratio': 'pe-ratio',
 	'Dividend %': 'dividend',
-	'Holder Yield': 'holder-yield',
+	'Market Cap gain': 'market-cap-gain',
+	'Market Cap loss': 'market-cap-loss',
 	'Operating Margin': 'operating-margin',
+	'Holder Yield': 'holder-yield',
 	'Enterprise Value': 'enterprise-value',
 	'Total assets': 'total-assets',
 	'Total liabilities': 'total-liabilities',
+	'Net Assets': 'net-assets',
+	'Total debt': 'total-debt',
+	'Cash on hand': 'cash-on-hand',
 	'Price to Book': 'price-to-book'
 }
 
@@ -465,6 +502,7 @@ const DATA_COLUMN_IDS = [
 	'priceChangePercentage1m',
 	'volume',
 	'marketCap',
+	'marketCapChange1d',
 	'circulatingMarketCap',
 	'enterpriseValue',
 	'trailingPE',
@@ -506,6 +544,7 @@ const PRESET_VISIBLE_COLUMNS: Record<EquitiesPreset, readonly string[]> = {
 		'volume',
 		'marketCap'
 	],
+	Employees: ['country', 'sector', 'industry', 'employeeCount', 'marketCap', 'revenueTTM', 'currentPrice'],
 	Earnings: [
 		'country',
 		'sector',
@@ -528,6 +567,24 @@ const PRESET_VISIBLE_COLUMNS: Record<EquitiesPreset, readonly string[]> = {
 	],
 	'P/E ratio': ['country', 'sector', 'trailingPE', 'currentPrice', 'earningsTTM', 'marketCap', 'priceToBook'],
 	'Dividend %': ['country', 'sector', 'dividendYield', 'currentPrice', 'marketCap', 'trailingPE'],
+	'Market Cap gain': [
+		'country',
+		'sector',
+		'marketCapChange1d',
+		'marketCap',
+		'priceChangePercentage1d',
+		'currentPrice',
+		'volume'
+	],
+	'Market Cap loss': [
+		'country',
+		'sector',
+		'marketCapChange1d',
+		'marketCap',
+		'priceChangePercentage1d',
+		'currentPrice',
+		'volume'
+	],
 	'Holder Yield': [
 		'country',
 		'sector',
@@ -562,9 +619,37 @@ const PRESET_VISIBLE_COLUMNS: Record<EquitiesPreset, readonly string[]> = {
 		'sector',
 		'totalLiabilities',
 		'totalAssets',
+		'totalShareholdersEquity',
 		'totalDebt',
 		'marketCap',
 		'currentPrice'
+	],
+	'Net Assets': [
+		'country',
+		'sector',
+		'totalShareholdersEquity',
+		'totalAssets',
+		'totalLiabilities',
+		'totalDebt',
+		'marketCap'
+	],
+	'Total debt': [
+		'country',
+		'sector',
+		'totalDebt',
+		'totalLiabilities',
+		'totalAssets',
+		'cashAndCashEquivalents',
+		'marketCap'
+	],
+	'Cash on hand': [
+		'country',
+		'sector',
+		'cashAndCashEquivalents',
+		'totalDebt',
+		'totalLiabilities',
+		'totalAssets',
+		'marketCap'
 	],
 	'Price to Book': ['country', 'sector', 'priceToBook', 'currentPrice', 'marketCap', 'totalAssets']
 }
@@ -573,13 +658,19 @@ const PRESET_SORTING: Record<EquitiesPreset, SortingState> = {
 	'Market Cap': [{ id: 'marketCap', desc: true }],
 	Earnings: [{ id: 'earningsTTM', desc: true }],
 	Revenue: [{ id: 'revenueTTM', desc: true }],
+	Employees: [{ id: 'employeeCount', desc: true }],
 	'P/E ratio': [{ id: 'trailingPE', desc: true }],
 	'Dividend %': [{ id: 'dividendYield', desc: true }],
+	'Market Cap gain': [{ id: 'marketCapChange1d', desc: true }],
+	'Market Cap loss': [{ id: 'marketCapChange1d', desc: false }],
 	'Holder Yield': [{ id: 'holdersYield', desc: true }],
 	'Operating Margin': [{ id: 'operatingProfitMarginTTM', desc: true }],
 	'Enterprise Value': [{ id: 'enterpriseValue', desc: true }],
 	'Total assets': [{ id: 'totalAssets', desc: true }],
 	'Total liabilities': [{ id: 'totalLiabilities', desc: true }],
+	'Net Assets': [{ id: 'totalShareholdersEquity', desc: true }],
+	'Total debt': [{ id: 'totalDebt', desc: true }],
+	'Cash on hand': [{ id: 'cashAndCashEquivalents', desc: true }],
 	'Price to Book': [{ id: 'priceToBook', desc: true }]
 }
 
@@ -610,6 +701,9 @@ export function EquitiesOverview({ companies, updatedAt }: IEquitiesListPageProp
 	const router = useRouter()
 	const presetQueryValue = readSingleQueryValue(router.query.rankBy)
 	const activePreset = useMemo(() => getPresetFromQuery(presetQueryValue), [presetQueryValue])
+	const [showMorePresets, setShowMorePresets] = useState(() =>
+		EQUITIES_MORE_PRESETS.some((preset) => preset === activePreset)
+	)
 	const countryOptions = useMemo(() => getUniqueValues(companies, 'country'), [companies])
 	const sectorOptions = useMemo(() => getUniqueValues(companies, 'sector'), [companies])
 	const industryOptions = useMemo(() => getUniqueValues(companies, 'industry'), [companies])
@@ -699,12 +793,13 @@ export function EquitiesOverview({ companies, updatedAt }: IEquitiesListPageProp
 	const setPreset = (preset: EquitiesPreset) => {
 		void pushShallowQuery(router, { rankBy: PRESET_QUERY_SLUGS[preset] })
 	}
+	const isMorePresetActive = EQUITIES_MORE_PRESETS.some((preset) => preset === activePreset)
 
 	return (
 		<div className="flex flex-col gap-2">
 			<div className="flex flex-wrap items-center justify-center gap-2">
 				<span className="text-sm font-medium text-(--text-secondary)">Rank by</span>
-				{EQUITIES_PRESETS.map((preset) => (
+				{EQUITIES_PRIMARY_PRESETS.map((preset) => (
 					<button
 						key={preset}
 						data-active={preset === activePreset}
@@ -716,6 +811,41 @@ export function EquitiesOverview({ companies, updatedAt }: IEquitiesListPageProp
 						{preset}
 					</button>
 				))}
+				{showMorePresets ? (
+					<>
+						{EQUITIES_MORE_PRESETS.map((preset) => (
+							<button
+								key={preset}
+								data-active={preset === activePreset}
+								data-umami-event="equities-preset-click"
+								data-umami-event-preset={PRESET_QUERY_SLUGS[preset]}
+								onClick={() => startTransition(() => setPreset(preset))}
+								className="rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg) data-[active=true]:bg-(--old-blue) data-[active=true]:text-white"
+							>
+								{preset}
+							</button>
+						))}
+						<button
+							type="button"
+							aria-expanded={true}
+							onClick={() => setShowMorePresets(false)}
+							className="flex items-center gap-1 rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg)"
+						>
+							<Icon name="minus" height={12} width={12} />
+							Less
+						</button>
+					</>
+				) : (
+					<button
+						type="button"
+						aria-expanded={false}
+						data-active={isMorePresetActive}
+						onClick={() => setShowMorePresets(true)}
+						className="rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg) data-[active=true]:bg-(--old-blue) data-[active=true]:text-white"
+					>
+						+ More
+					</button>
+				)}
 			</div>
 
 			<div className="flex flex-col gap-3 rounded-md border border-(--cards-border) bg-(--cards-bg) p-3">
