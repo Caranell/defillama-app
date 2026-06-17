@@ -501,16 +501,21 @@ export default function InvestorsPage() {
 				</p>
 				<div className="ir-rise relative mt-9 flex flex-wrap items-center justify-center gap-2.5 [animation-delay:160ms]">
 					<a
-						href="mailto:sales@defillama.com"
+						href="https://t.me/defillama_research"
+						target="_blank"
+						rel="noopener noreferrer"
 						className="flex h-13 items-center justify-center rounded-xl bg-(--sl-accent) px-6 text-base font-medium text-white transition-colors hover:bg-(--sl-accent-hover)"
 					>
 						Get listed
 					</a>
 					<a
-						href="#how-it-works"
-						className="flex h-13 items-center justify-center rounded-xl bg-black/5 px-6 text-base font-medium text-(--sl-accent) transition-colors hover:bg-black/10 dark:bg-white/15 dark:text-[#4b86db] dark:hover:bg-white/25"
+						href="https://calendly.com/research-defillama/30min"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="flex h-13 items-center justify-center gap-2 rounded-xl bg-(--sl-accent) px-6 text-base font-medium text-white transition-colors hover:bg-(--sl-accent-hover)"
 					>
-						How it works
+						Book a call
+						<CalendlyIcon />
 					</a>
 				</div>
 
