@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import toast from 'react-hot-toast'
+import { ArticleMultiPicker } from '~/containers/Articles/admin/ArticleMultiPicker'
 import { ArticlePicker } from '~/containers/Articles/admin/ArticlePicker'
 import { useResearchLandingRevalidation } from '~/containers/Articles/admin/useResearchLandingRevalidation'
 import { ArticleApiError, createBanner, deleteBanner, updateBanner } from '~/containers/Articles/api'
@@ -30,6 +31,7 @@ type FormState = {
 	scope: BannerScope
 	section: ArticleSection | ''
 	articleId: string | null
+	excludedArticleIds: string[]
 	text: string
 	linkUrl: string
 	linkLabel: string
@@ -45,6 +47,7 @@ function bannerToForm(banner: Banner | null): FormState {
 			scope: 'landing',
 			section: '',
 			articleId: null,
+			excludedArticleIds: [],
 			text: '',
 			linkUrl: '',
 			linkLabel: '',
@@ -58,6 +61,7 @@ function bannerToForm(banner: Banner | null): FormState {
 		scope: banner.scope,
 		section: banner.section ?? '',
 		articleId: banner.articleId,
+		excludedArticleIds: banner.excludedArticleIds ?? [],
 		text: banner.text ?? '',
 		linkUrl: banner.linkUrl ?? '',
 		linkLabel: banner.linkLabel ?? '',
@@ -74,6 +78,7 @@ function buildPayload(state: FormState): BannerPayload {
 		scope: state.scope,
 		section: state.scope === 'section' ? (state.section as ArticleSection) : null,
 		articleId: state.scope === 'article' ? state.articleId : null,
+		excludedArticleIds: state.scope === 'all_articles' ? state.excludedArticleIds : [],
 		linkUrl,
 		enabled: state.enabled
 	}
@@ -168,6 +173,7 @@ export function BannerForm({ banner }: Props) {
 		state.scope !== initial.scope ||
 		state.section !== initial.section ||
 		state.articleId !== initial.articleId ||
+		state.excludedArticleIds.join(',') !== initial.excludedArticleIds.join(',') ||
 		state.text !== initial.text ||
 		state.linkUrl !== initial.linkUrl ||
 		state.linkLabel !== initial.linkLabel ||
@@ -233,6 +239,7 @@ export function BannerForm({ banner }: Props) {
 		scope: state.scope,
 		section: state.scope === 'section' ? (state.section as ArticleSection) : null,
 		articleId: state.scope === 'article' ? state.articleId : null,
+		excludedArticleIds: state.excludedArticleIds,
 		text: state.kind === 'text' ? state.text || 'Banner preview text — write your message above' : null,
 		linkUrl: state.linkUrl.trim() || null,
 		linkLabel: state.kind === 'text' ? state.linkLabel.trim() || null : null,
@@ -369,6 +376,19 @@ export function BannerForm({ banner }: Props) {
 							value={state.articleId}
 							onChange={(article) => update({ articleId: article?.id ?? null })}
 							error={errors.articleId}
+						/>
+					</div>
+				) : null}
+
+				{state.scope === 'all_articles' ? (
+					<div className="grid gap-1.5">
+						<span className="text-sm font-medium text-(--text-primary)">
+							Hide on these articles <span className="font-normal text-(--text-tertiary)">(optional)</span>
+						</span>
+						<ArticleMultiPicker
+							value={state.excludedArticleIds}
+							onChange={(ids) => update({ excludedArticleIds: ids })}
+							hint="The banner shows on every article except the ones listed here."
 						/>
 					</div>
 				) : null}

@@ -337,6 +337,7 @@ export type Banner = {
 	linkLabel: string | null
 	imageUrl: string | null
 	imageAlt: string | null
+	excludedArticleIds: string[]
 	enabled: boolean
 	createdByPbUserId: string
 	createdAt: string
@@ -353,6 +354,7 @@ export type BannerPayload = {
 	linkLabel?: string | null
 	imageUrl?: string | null
 	imageAlt?: string | null
+	excludedArticleIds?: string[] | null
 	enabled?: boolean
 }
 

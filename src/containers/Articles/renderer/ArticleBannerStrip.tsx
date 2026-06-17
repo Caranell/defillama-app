@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Icon } from '~/components/Icon'
 import { getAllArticlesBanner, getArticleBanner, getLandingBanner, getSectionBanner } from '~/containers/Articles/api'
+import { allArticlesBannerForArticle } from '~/containers/Articles/renderer/bannerExclusion'
 import type { ArticleSection, Banner, BannerLookupResult } from '~/containers/Articles/types'
 
 type Props = {
@@ -84,7 +85,9 @@ export function ArticleBannerStrip({ scope, section, articleId, initialData }: P
 
 	const banner: Banner | null =
 		scope === 'article'
-			? (articleBannerQuery.data?.text ?? sectionBannerQuery.data?.text ?? allArticlesBannerQuery.data?.text ?? null)
+			? (articleBannerQuery.data?.text ??
+				sectionBannerQuery.data?.text ??
+				allArticlesBannerForArticle(allArticlesBannerQuery.data?.text ?? null, articleId))
 			: scope === 'section'
 				? (sectionBannerQuery.data?.text ?? null)
 				: (landingBannerQuery.data?.text ?? null)

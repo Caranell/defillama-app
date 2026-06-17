@@ -36,6 +36,7 @@ const banner = (overrides: Partial<Banner>): Banner => ({
 	linkLabel: null,
 	imageUrl: null,
 	imageAlt: null,
+	excludedArticleIds: [],
 	enabled: true,
 	createdByPbUserId: 'user-id',
 	createdAt: '2026-05-14T00:00:00.000Z',
@@ -100,5 +101,45 @@ describe('article banners', () => {
 
 		expect(html).toContain('/uploads/image/global')
 		expect(html).toContain('Global image')
+	})
+
+	it('hides the all-articles text banner on an excluded article but shows it elsewhere', () => {
+		queryState.lookups.set(JSON.stringify(['research', 'banner', 'article', 'article-id']), emptyLookup())
+		queryState.lookups.set(JSON.stringify(['research', 'banner', 'section', 'report']), emptyLookup())
+		queryState.lookups.set(JSON.stringify(['research', 'banner', 'all-articles']), {
+			...emptyLookup(),
+			text: banner({ id: 'global-text', text: 'Global strip', excludedArticleIds: ['article-id'] })
+		})
+
+		const excludedHtml = renderToStaticMarkup(
+			<ArticleBannerStrip scope="article" articleId="article-id" section="report" />
+		)
+		expect(excludedHtml).not.toContain('Global strip')
+
+		const otherHtml = renderToStaticMarkup(
+			<ArticleBannerStrip scope="article" articleId="other-article" section="report" />
+		)
+		expect(otherHtml).toContain('Global strip')
+	})
+
+	it('hides the all-articles image banner on an excluded article but shows it elsewhere', () => {
+		queryState.lookups.set(JSON.stringify(['research', 'banner', 'article', 'article-id']), emptyLookup())
+		queryState.lookups.set(JSON.stringify(['research', 'banner', 'section', 'report']), emptyLookup())
+		queryState.lookups.set(JSON.stringify(['research', 'banner', 'all-articles']), {
+			...emptyLookup(),
+			image: banner({
+				id: 'global-image',
+				type: 'image',
+				imageUrl: '/uploads/image/global',
+				imageAlt: 'Global image',
+				excludedArticleIds: ['article-id']
+			})
+		})
+
+		const excludedHtml = renderToStaticMarkup(<ArticleImageBanner articleId="article-id" section="report" />)
+		expect(excludedHtml).not.toContain('/uploads/image/global')
+
+		const otherHtml = renderToStaticMarkup(<ArticleImageBanner articleId="other-article" section="report" />)
+		expect(otherHtml).toContain('/uploads/image/global')
 	})
 })

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { getAllArticlesBanner, getArticleBanner, getSectionBanner } from '~/containers/Articles/api'
+import { allArticlesBannerForArticle } from '~/containers/Articles/renderer/bannerExclusion'
 import type { ArticleSection, Banner, BannerLookupResult } from '~/containers/Articles/types'
 
 type Props = {
@@ -46,7 +47,9 @@ export function ArticleImageBanner({ articleId, section }: Props) {
 	})
 
 	const banner: Banner | null =
-		articleBannerQuery.data?.image ?? sectionBannerQuery.data?.image ?? allArticlesBannerQuery.data?.image ?? null
+		articleBannerQuery.data?.image ??
+		sectionBannerQuery.data?.image ??
+		allArticlesBannerForArticle(allArticlesBannerQuery.data?.image ?? null, articleId)
 
 	if (!banner || !banner.enabled || !banner.imageUrl) return null
 
