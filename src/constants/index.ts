@@ -1,6 +1,16 @@
 import { getDirectUrlEnv } from '~/utils/directApi'
 
+function optionalEnv(value: string | undefined): string | undefined {
+	value = value?.trim()
+	return value || undefined
+}
+
 const API_KEY = process.env.API_KEY
+const MARKETS_API_KEY =
+	optionalEnv(process.env.MARKETS_API_KEY) ??
+	optionalEnv(API_KEY) ??
+	optionalEnv(process.env.LLAMA_API_KEY) ??
+	optionalEnv(process.env.API2_SECRET_KEY)
 export const PRO_API_BASE_URL =
 	process.env.NODE_ENV === 'production' && process.env.PRO_API_URL
 		? process.env.PRO_API_URL
@@ -54,7 +64,7 @@ export const LIQUIDATIONS_SERVER_URL_V2 =
 	(API_KEY ? `${PRO_API_BASE_URL}/${API_KEY}/liquidations` : 'https://api.llama.fi/liquidations')
 export const RISK_SERVER_URL =
 	getDirectUrlEnv('RISK_SERVER_URL') ?? (API_KEY ? `${PRO_API_BASE_URL}/${API_KEY}/risks` : 'https://risks.llama.fi')
-export const MARKETS_SERVER_URL = API_KEY ? `${PRO_API_BASE_URL}/${API_KEY}/markets` : undefined
+export const MARKETS_SERVER_URL = MARKETS_API_KEY ? `${PRO_API_BASE_URL}/${MARKETS_API_KEY}/markets` : undefined
 
 // Core llama APIs
 export const CONFIG_API = `${SERVER_URL}/config`
