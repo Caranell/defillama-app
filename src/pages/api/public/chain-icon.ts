@@ -1,8 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { ICONS_CDN } from '~/constants'
 import { fetchWithPoolingOnServer } from '~/utils/http-client'
 import { recordRouteRuntimeError, withApiRouteTelemetry } from '~/utils/telemetry'
-
-const ICONS_CDN = 'https://icons.llamao.fi/icons'
 
 function buildIconUrl(slug: string): string {
 	const normalized = slug.trim().toLowerCase()

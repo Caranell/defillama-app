@@ -13,6 +13,7 @@ import { PercentChange } from '~/components/PercentChange'
 import { VirtualTable } from '~/components/Table/Table'
 import { useTableSearch } from '~/components/Table/utils'
 import { TokenLogo } from '~/components/TokenLogo'
+import { tokenIconUrl } from '~/utils/icons'
 
 interface INftMarketplace {
 	exchangeName: string
@@ -59,7 +60,7 @@ const columns = [
 			return (
 				<span className="flex items-center gap-2">
 					<span className="vf-row-index shrink-0" aria-hidden="true" />
-					<TokenLogo src={`https://icons.llamao.fi/icons/protocols/${icon}`} alt={`Logo of ${name}`} data-lgonly />
+					<TokenLogo src={tokenIconUrl(icon)} alt={`Logo of ${name}`} data-lgonly />
 					<span className="overflow-hidden text-ellipsis whitespace-nowrap hover:underline">{name}</span>
 				</span>
 			)

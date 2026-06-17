@@ -4,6 +4,7 @@ import { matchSorter } from 'match-sorter'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '~/components/Icon'
 import { fetchChainsByCategory, fetchChainsCategories } from '~/containers/Chains/api'
+import { chainIconUrl, tokenIconUrl } from '~/utils/icons'
 import { useProDashboardCatalog } from '../../../ProDashboardAPIContext'
 import { AriakitMultiSelect } from '../../AriakitMultiSelect'
 import { useComparisonWizardContext } from '../ComparisonWizardContext'
@@ -65,7 +66,7 @@ export function SelectItemsStep() {
 				.map((chainItem) => ({
 					value: chainItem.name,
 					label: chainItem.name,
-					logo: `https://icons.llamao.fi/icons/chains/rsz_${chainItem.name.toLowerCase().replace(/\s+/g, '-')}?w=48&h=48`
+					logo: chainIconUrl(chainItem.name.toLowerCase().replace(/\s+/g, '-'))
 				}))
 		}
 
@@ -91,7 +92,7 @@ export function SelectItemsStep() {
 			result.push({
 				value: parent.slug,
 				label: parent.name,
-				logo: parent.logo || `https://icons.llamao.fi/icons/protocols/${parent.slug}?w=48&h=48`
+				logo: parent.logo || tokenIconUrl(parent.slug)
 			})
 			const children = childrenByParentId.get(parent.id) || []
 			if (children.length > 0) {
@@ -100,7 +101,7 @@ export function SelectItemsStep() {
 					result.push({
 						value: child.slug,
 						label: child.name,
-						logo: child.logo || `https://icons.llamao.fi/icons/protocols/${child.slug}?w=48&h=48`,
+						logo: child.logo || tokenIconUrl(child.slug),
 						isChild: true,
 						parentSlug: parent.slug
 					})
@@ -144,7 +145,7 @@ export function SelectItemsStep() {
 				filtered = matchingProtocols.map((protocol) => ({
 					value: protocol.slug,
 					label: protocol.name,
-					logo: protocol.logo || `https://icons.llamao.fi/icons/protocols/${protocol.slug}?w=48&h=48`
+					logo: protocol.logo || tokenIconUrl(protocol.slug)
 				}))
 			}
 		}

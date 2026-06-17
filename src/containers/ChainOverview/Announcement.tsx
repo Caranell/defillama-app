@@ -1,8 +1,9 @@
 import { Announcement } from '~/components/Announcement'
 import { TokenLogo } from '~/components/TokenLogo'
+import { chainIconUrl } from '~/utils/icons'
 import { useAuthContext } from '../Subscription/auth'
 
-const NEAR_CHAIN_ICON = 'https://icons.llamao.fi/icons/chains/rsz_near'
+const NEAR_CHAIN_ICON = chainIconUrl('near')
 
 export const ChainOverviewAnnouncement = ({ chainName }: { chainName?: string }) => {
 	const { user } = useAuthContext()

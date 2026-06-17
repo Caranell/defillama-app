@@ -7,7 +7,7 @@ import { TokenLogo } from '~/components/TokenLogo'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import defs from '~/public/equities-definitions.json'
 import { abbreviateNumber } from '~/utils'
-import { equityCountryFlagUrl, equityIconUrl } from '~/utils/icons'
+import { equityCountryFlagUrl } from '~/utils/icons'
 import { pushShallowQuery, readSingleQueryValue } from '~/utils/routerQuery'
 import type {
 	EquitiesDimensionMetric,
@@ -157,7 +157,7 @@ function EquityKeyMetrics({ summary }: { summary: IEquitiesSummaryResponse }) {
 function EquityTitle({ ticker, country, name }: Pick<IEquityTickerPageProps, 'ticker' | 'country' | 'name'>) {
 	return (
 		<span className="flex items-center gap-2">
-			<TokenLogo src={equityIconUrl(ticker, country)} fallbackSrc={equityIconUrl(ticker)} alt={`Logo of ${ticker}`} />
+			<TokenLogo kind="equities" name={ticker} country={country} alt={`Logo of ${ticker}`} />
 			<h1 className="flex flex-wrap items-center gap-2 text-xl">
 				<span className="font-bold">{name}</span>
 				<span className="font-normal text-(--text-disabled)">

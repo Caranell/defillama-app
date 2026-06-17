@@ -292,7 +292,7 @@ function EntityLinkRenderer({
 			)
 		}
 
-		const logoUrl = type === 'equity' ? equityIconUrl(slug) : null
+		const logoUrl = type === 'equity' ? equityIconUrl(slug, 'US') : null
 		return (
 			<a
 				href={entityUrl}

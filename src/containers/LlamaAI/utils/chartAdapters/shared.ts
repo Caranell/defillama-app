@@ -21,7 +21,7 @@ export function buildAxisLogoUrls(
 					: entityType === 'stablecoin'
 						? peggedAssetIconUrl
 						: entityType === 'equity'
-							? equityIconUrl
+							? (ticker: string) => equityIconUrl(ticker, 'US')
 							: null
 	if (!builder) return undefined
 	return logoCategories.map((v) => (v ? builder(v) : ''))

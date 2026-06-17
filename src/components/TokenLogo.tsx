@@ -9,18 +9,24 @@ type TokenLogoProps = {
 	title?: string
 	fallbackSrc?: string | null
 	'data-lgonly'?: boolean
-} & ({ name: string; kind: LogoKind; src?: never } | { src: string | null | undefined; name?: never; kind?: never })
+} & (
+	| { name: string; kind: Exclude<LogoKind, 'equities'>; country?: never; src?: never }
+	| { name: string; kind: 'equities'; country: string; src?: never }
+	| { src: string | null | undefined; name?: never; kind?: never; country?: never }
+)
 
-function resolveLogoUrl(name: string, kind: LogoKind): string {
-	switch (kind) {
+type NamedLogoProps = Extract<TokenLogoProps, { name: string }>
+
+function resolveLogoUrl(props: NamedLogoProps): string {
+	switch (props.kind) {
 		case 'token':
-			return tokenIconUrl(name)
+			return tokenIconUrl(props.name)
 		case 'chain':
-			return chainIconUrl(name)
+			return chainIconUrl(props.name)
 		case 'pegged':
-			return peggedAssetIconUrl(name)
+			return peggedAssetIconUrl(props.name)
 		case 'equities':
-			return equityIconUrl(name)
+			return equityIconUrl(props.name, props.country)
 	}
 }
 
@@ -30,7 +36,7 @@ export const FallbackLogo = () => (
 
 export function TokenLogo(props: TokenLogoProps) {
 	const { size = 24, fallbackSrc, alt, title, 'data-lgonly': lgonly, ...rest } = props
-	const resolvedSrc = 'kind' in rest && rest.kind ? resolveLogoUrl(rest.name, rest.kind) : (rest.src ?? null)
+	const resolvedSrc = 'kind' in rest && rest.kind ? resolveLogoUrl(rest) : (rest.src ?? null)
 
 	const sourcesKey = `${resolvedSrc ?? ''}|${fallbackSrc ?? ''}`
 

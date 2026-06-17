@@ -22,7 +22,7 @@ import { prepareTableCsv, useTableSearch } from '~/components/Table/utils'
 import { TokenLogo } from '~/components/TokenLogo'
 import defs from '~/public/equities-definitions.json'
 import { abbreviateNumber } from '~/utils'
-import { equityCountryFlagUrl, equityIconUrl } from '~/utils/icons'
+import { equityCountryFlagUrl } from '~/utils/icons'
 import { pushShallowQuery, readSingleQueryValue } from '~/utils/routerQuery'
 import type { IEquitiesListCompanyRow, IEquitiesListPageProps } from './types'
 import { formatEquitiesDateTime } from './utils'
@@ -49,8 +49,9 @@ function EquityTickerCell({ row }: { row: { id: string; original: IEquitiesListC
 				{rowIndex}
 			</span>
 			<TokenLogo
-				src={equityIconUrl(row.original.ticker, row.original.country)}
-				fallbackSrc={equityIconUrl(row.original.ticker)}
+				kind="equities"
+				name={row.original.ticker}
+				country={row.original.country}
 				data-lgonly
 				alt={`Logo of ${row.original.ticker}`}
 			/>
@@ -76,7 +77,13 @@ const columns: ColumnDef<IEquitiesListCompanyRow, any>[] = [
 		enableSorting: false,
 		cell: ({ getValue }) => (
 			<span className="flex items-center gap-2">
-				<TokenLogo src={equityCountryFlagUrl(getValue())} alt={`${getValue()} flag`} />
+				<img
+					src={equityCountryFlagUrl(getValue())}
+					alt={`${getValue()} flag`}
+					className="h-6 w-6 rounded-full object-contain"
+					height={24}
+					width={24}
+				/>
 				<span>{getValue()}</span>
 			</span>
 		),

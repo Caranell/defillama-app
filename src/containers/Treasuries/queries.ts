@@ -1,3 +1,4 @@
+import { ICONS_CDN } from '~/constants'
 import { slug } from '~/utils'
 import { fetchEntities, fetchTreasuries } from './api'
 import type { RawTreasuryProtocol } from './api.types'
@@ -46,7 +47,7 @@ export async function getNetProjectTreasuryData(): Promise<INetProjectTreasury[]
 			const name = t.name.replace(' (treasury)', '')
 			return {
 				name,
-				logo: `${t.logo.replace('https://icons.llama.fi', 'https://icons.llamao.fi/icons/protocols')}?w=48&h=48`,
+				logo: `${t.logo.replace('https://icons.llama.fi', `${ICONS_CDN}/protocols`)}?w=48&h=48`,
 				slug: slug(name),
 				netTreasury
 			}

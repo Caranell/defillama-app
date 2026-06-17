@@ -16,6 +16,7 @@ import { useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 import { useDarkModeManager } from '~/contexts/LocalStorage'
 import { useChartResize } from '~/hooks/useChartResize'
 import { formattedNum } from '~/utils'
+import { chainIconUrl, tokenIconUrl } from '~/utils/icons'
 import type { IScatterChartProps } from '../types'
 import { isIconUrlValid, validateIconUrl } from '../utils'
 
@@ -34,8 +35,8 @@ echarts.use([
 ])
 
 const getEntityIcon = (type: string, slug: string) => {
-	if (type === 'chain') return `https://icons.llamao.fi/icons/chains/rsz_${slug}?w=48&h=48`
-	return `https://icons.llamao.fi/icons/protocols/${slug}?w=48&h=48`
+	if (type === 'chain') return chainIconUrl(slug)
+	return tokenIconUrl(slug)
 }
 
 export default function ScatterChart({

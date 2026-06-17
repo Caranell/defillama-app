@@ -1,5 +1,6 @@
 import type { ChartTimeGrouping } from '~/components/ECharts/types'
 import { getBucketTimestampSec } from '~/components/ECharts/utils'
+import { chainIconUrl, tokenIconUrl } from '~/utils/icons'
 import type { DashboardGrouping } from './types'
 import { generateConsistentChartColor } from './utils/colorManager'
 
@@ -133,12 +134,11 @@ export const convertToCumulative = <T extends string | number>(data: [T, number]
 // Icon URL helper functions
 export const getItemIconUrl = (itemType: 'chain' | 'protocol', itemInfo: any, itemIdentifier: string): string => {
 	if (itemType === 'chain') {
-		// Replicate chainIconUrl logic from main utils
-		return `https://icons.llamao.fi/icons/chains/rsz_${itemIdentifier?.toLowerCase()}?w=48&h=48`
+		return chainIconUrl(itemIdentifier)
 	} else {
 		if (itemInfo?.logo) return itemInfo.logo
 		const key = (itemInfo?.id || itemIdentifier)?.toString()
-		return `https://icons.llamao.fi/icons/protocols/${key}?w=48&h=48`
+		return tokenIconUrl(key)
 	}
 }
 

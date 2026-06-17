@@ -14,14 +14,15 @@ import { Select } from '~/components/Select/Select'
 import { TableWithSearch } from '~/components/Table/TableWithSearch'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { formattedNum } from '~/utils'
+import { tokenIconUrl } from '~/utils/icons'
 import type { ETFOverviewProps, IETFSnapshotRow } from './types'
 
 const MultiSeriesChart2 = React.lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
 
 const ASSETS = [
-	{ key: 'bitcoin', name: 'Bitcoin', iconUrl: 'https://icons.llamao.fi/icons/protocols/bitcoin' },
-	{ key: 'ethereum', name: 'Ethereum', iconUrl: 'https://icons.llamao.fi/icons/protocols/ethereum' },
-	{ key: 'solana', name: 'Solana', iconUrl: 'https://icons.llamao.fi/icons/protocols/solana' }
+	{ key: 'bitcoin', name: 'Bitcoin', iconUrl: tokenIconUrl('bitcoin') },
+	{ key: 'ethereum', name: 'Ethereum', iconUrl: tokenIconUrl('ethereum') },
+	{ key: 'solana', name: 'Solana', iconUrl: tokenIconUrl('solana') }
 ] as const
 
 type GroupBy = LowercaseDwmcGrouping

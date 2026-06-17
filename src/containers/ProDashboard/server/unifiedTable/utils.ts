@@ -1,5 +1,6 @@
 import type { UnifiedTableConfig } from '~/containers/ProDashboard/types'
 import { toInternalSlug } from '~/utils/chainNormalizer'
+import { chainIconUrl, tokenIconUrl } from '~/utils/icons'
 
 // oxlint-disable-next-line no-unused-vars
 interface LensTotals {
@@ -87,13 +88,13 @@ const normalizeChainList = (chains?: string[] | null): string[] => {
 
 export const resolveLogoUrl = (slug: string | null | undefined) => {
 	if (!slug) return null
-	return `https://icons.llamao.fi/icons/protocols/${slug}?w=48&h=48`
+	return tokenIconUrl(slug)
 }
 
 // oxlint-disable-next-line no-unused-vars
 const resolveChainLogo = (slug: string | null | undefined) => {
 	if (!slug) return null
-	return `https://icons.llamao.fi/icons/chains/rsz_${slug}?w=48&h=48`
+	return chainIconUrl(slug)
 }
 
 export const extractChainFilters = (config: UnifiedTableConfig): string[] => {

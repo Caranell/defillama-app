@@ -8,7 +8,7 @@ export function LiquidationsPageHeader({
 }: {
 	title: string
 	rightText?: string | null
-	logo?: { name: string; kind: LogoKind } | null
+	logo?: { name: string; kind: Exclude<LogoKind, 'equities'> } | null
 }) {
 	return (
 		<div className="flex w-full items-center gap-3 rounded-md border border-(--cards-border) bg-(--cards-bg) px-4 py-3">
