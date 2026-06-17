@@ -251,6 +251,59 @@ export const useSubscribe = () => {
 		[isAuthenticated, queryClient, user?.id, createSubscription]
 	)
 
+	const handleLlamapayTopup = useCallback(
+		async (type: 'api' | 'llamafeed', billingInterval: 'year' | 'month' = 'month') => {
+			if (!isAuthenticated) {
+				toast.error('Please sign in to top up')
+				return
+			}
+
+			setIsPayingWithLlamapay(true)
+
+			const topupData: SubscriptionRequest = {
+				redirectUrl: `${window.location.origin}/account`,
+				cancelUrl: `${window.location.origin}/account`,
+				provider: 'llamapay',
+				subscriptionType: type,
+				billingInterval
+			}
+
+			try {
+				const response = await authorizedFetch(
+					`${AUTH_SERVER}/subscription/topup`,
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(topupData)
+					},
+					true
+				)
+
+				if (!response) {
+					throw new Error('Not authenticated')
+				}
+
+				const result: SubscriptionCreateResponse = await handleSimpleFetchResponse(response)
+					.then((res) => res.json())
+					.catch((error) => {
+						throw new Error(getErrorMessage(error, 'Failed to create top-up link'))
+					})
+
+				if (result?.checkoutUrl) {
+					window.open(result.checkoutUrl, '_blank', 'noopener,noreferrer')
+				}
+			} catch (error) {
+				console.log('Top-up error:', error)
+				toast.error(getErrorMessage(error, 'Failed to create top-up link'))
+			} finally {
+				setIsPayingWithLlamapay(false)
+			}
+		},
+		[isAuthenticated, authorizedFetch]
+	)
+
 	const subscriptionQuery = useQuery({
 		queryKey: ['subscription', user?.id],
 		queryFn: () => fetchSubscription({ isAuthenticated }),
@@ -553,6 +606,7 @@ export const useSubscribe = () => {
 
 	return {
 		handleSubscribe,
+		handleLlamapayTopup,
 		isLoading: createSubscription.isPending,
 		error: createSubscription.error,
 		subscription: subscriptionData ?? defaultInactiveSubscription,
