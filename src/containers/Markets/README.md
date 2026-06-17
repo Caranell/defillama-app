@@ -74,7 +74,7 @@ These indexes are derived from already-fetched `tokens-list.json` and `exchanges
 
 ## Server Files
 
-- `server/upstream.ts`: direct `MARKETS_SERVER_URL` fetchers.
+- `server/upstream.ts`: `MARKETS_SERVER_URL` (pro-api `/markets`) fetchers.
 - `server/dataset.builder.ts`: writes the unified `markets` dataset-cache artifacts.
 - `server/dataset.cache.ts`: reads raw Markets artifacts from `.cache/datasets/markets`.
 - `server/dataset.index.ts`: builds pure token-symbol and CEX slug lookup indexes.

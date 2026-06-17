@@ -84,7 +84,6 @@ describe('server URL constants', () => {
 			ETF_SERVER_URL: 'https://etfs.example.com/',
 			FDV_SERVER_URL: 'https://fdv.example.com/',
 			LIQUIDATIONS_SERVER_URL_V2: 'https://liquidations.example.com/',
-			MARKETS_SERVER_URL: 'https://markets.example.com/',
 			RISK_SERVER_URL: 'https://risks.example.com/',
 			RWA_PERPS_SERVER_URL: 'https://rwa-perps.example.com/',
 			RWA_SERVER_URL: 'https://rwa.example.com/',
@@ -109,7 +108,6 @@ describe('server URL constants', () => {
 		expect(constants.YIELDS_SERVER_URL).toBe('https://yields.example.com')
 		expect(constants.LIQUIDATIONS_SERVER_URL_V2).toBe('https://liquidations.example.com')
 		expect(constants.RISK_SERVER_URL).toBe('https://risks.example.com')
-		expect(constants.MARKETS_SERVER_URL).toBe('https://markets.example.com')
 	})
 
 	it('uses an explicit V2 server URL override when provided', async () => {
@@ -125,18 +123,15 @@ describe('server URL constants', () => {
 })
 
 describe('MARKETS_SERVER_URL', () => {
-	it('does not derive from the pro API key', async () => {
+	it('derives from the pro API key', async () => {
 		const constants = await importConstantsWithEnv({ API_KEY: 'secret-api-key' })
 
-		expect(constants.MARKETS_SERVER_URL).toBeUndefined()
+		expect(constants.MARKETS_SERVER_URL).toBe('https://pro-api.llama.fi/secret-api-key/markets')
 	})
 
-	it('uses the explicit markets server URL when provided', async () => {
-		const constants = await importConstantsWithEnv({
-			API_KEY: 'secret-api-key',
-			MARKETS_SERVER_URL: 'https://markets.example.com'
-		})
+	it('is undefined without an API key', async () => {
+		const constants = await importConstantsWithEnv({})
 
-		expect(constants.MARKETS_SERVER_URL).toBe('https://markets.example.com')
+		expect(constants.MARKETS_SERVER_URL).toBeUndefined()
 	})
 })
