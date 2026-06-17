@@ -4,7 +4,7 @@ import type { IBarChartProps, IChartProps } from '~/components/ECharts/types'
 import { useContentReady } from '~/containers/Investors/ContentReadyContext'
 import { FLARE_BLUE, FLARE_ORANGE, FLARE_PINK, lastNDaysZoom } from './chartDefaults'
 import { chartToData, type UpstreamChart } from './transform'
-import { ChartCard, KpiCard, SectionHeader } from './ui'
+import { ChartCard, KpiCard, NarrativeCallout, SectionHeader } from './ui'
 
 const AreaChart = lazy(() => import('~/components/ECharts/AreaChart')) as React.FC<IChartProps>
 const BarChart = lazy(() => import('~/components/ECharts/BarChart')) as React.FC<IBarChartProps>
@@ -15,9 +15,9 @@ interface FormattedValue {
 }
 
 interface TokenomicsAPIResponse {
+	narrative?: string
 	burn: {
 		burnChart: UpstreamChart
-		perTxChart: UpstreamChart
 		firePool: { status: string; note: string; burnDestination: string }
 		kpis: {
 			latestDailyBurn: FormattedValue
@@ -25,8 +25,6 @@ interface TokenomicsAPIResponse {
 			burn30d: FormattedValue
 			burnYtd: FormattedValue
 			totalGasBurned: FormattedValue
-			latestPerTx: FormattedValue
-			avgPerTxAllTime: FormattedValue
 		}
 	}
 	emissions: {
@@ -73,6 +71,45 @@ function ToggleButton({
 	)
 }
 
+const FAQ_ITEMS: { q: string; a: React.ReactNode }[] = [
+	{
+		q: 'What is FIP.16?',
+		a: 'FIP.16 is a Flare governance proposal passed in April 2026 that restructured FLR token economics. Key changes: annual inflation reduced from 5% to 3%, the base gas fee increased 20x (25 → 500 gwei), staking incentivized over delegation via a 5x signing weight multiplier, and the FIRE protocol introduced to aggregate and burn network revenues.'
+	},
+	{
+		q: 'What is the FIRE protocol?',
+		a: 'FIRE (Flare Income Reinvestment Entity) is a protocol-level pool that collects revenues from transaction fees, FDC data requests, FAsset activity, and future MEV capture. Its primary mandate is to reduce FLR supply through open-market buybacks and burns. Secondary mandates include funding ecosystem incentives and supporting Foundation sustainability.'
+	},
+	{
+		q: 'What is the 300M FLR/year burn target?',
+		a: 'Under conservative modeling, the 20x base fee increase should generate approximately 300M FLR/year in burns from transaction fees alone — enough to offset a meaningful portion of annual inflation. This is an aspirational target; actual burn rate grows proportionally with network activity. The Burn vs. Emit chart above shows real-time progress toward this goal.'
+	},
+	{
+		q: "What's the difference between gas burns and protocol burns?",
+		a: 'Gas burns happen automatically on every Flare transaction — EVM base fees are burned by the protocol. Protocol burns (tracked via TIP20) are explicit burns triggered by FDC data requests, FAsset minting/redemption fees, and FIRE pool market purchases. Both types are shown in the charts above.'
+	}
+]
+
+function FaqItem({ q, a }: { q: string; a: React.ReactNode }) {
+	return (
+		<details className="group rounded-lg border border-(--cards-border) bg-(--cards-bg)">
+			<summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 text-sm font-medium text-(--text-primary)">
+				{q}
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+					className="size-4 shrink-0 text-(--text-label) transition-transform group-open:rotate-180"
+				>
+					<path d="M6 9l6 6 6-6" />
+				</svg>
+			</summary>
+			<p className="px-4 pb-4 text-sm leading-relaxed text-(--text-secondary)">{a}</p>
+		</details>
+	)
+}
+
 export default function Tokenomics() {
 	const query = useQuery<TokenomicsAPIResponse>({
 		queryKey: ['flare-tokenomics'],
@@ -83,6 +120,20 @@ export default function Tokenomics() {
 		},
 		staleTime: 10 * 60 * 1000,
 		refetchOnWindowFocus: false
+	})
+
+	// Max Supply lived on the (now removed) Supply tab; the tokenomics endpoint
+	// doesn't carry it, so pull just that one figure from the supply endpoint.
+	const maxSupplyQuery = useQuery({
+		queryKey: ['flare-supply'],
+		queryFn: async () => {
+			const res = await fetch('/api/public/flare/supply')
+			if (!res.ok) throw new Error(`Flare supply API error: ${res.status}`)
+			return res.json() as Promise<{ kpis?: { maxSupply?: { value: number; formatted: string } } }>
+		},
+		staleTime: 10 * 60 * 1000,
+		refetchOnWindowFocus: false,
+		select: (d) => d?.kpis?.maxSupply ?? null
 	})
 
 	const onContentReady = useContentReady()
@@ -97,9 +148,9 @@ export default function Tokenomics() {
 		const b = query.data.burn
 		const e = query.data.emissions
 		return {
+			narrative: query.data.narrative,
 			burn: {
 				burnTitle: b.burnChart.title ?? 'FLR Burned (Daily Gas)',
-				perTxTitle: b.perTxChart.title ?? 'Average Burn per Transaction',
 				dailyData: chartToData({
 					...b.burnChart,
 					series: b.burnChart.series.filter((s) => s.name === 'Daily Burn')
@@ -108,7 +159,6 @@ export default function Tokenomics() {
 					...b.burnChart,
 					series: b.burnChart.series.filter((s) => s.name === 'Cumulative Burn')
 				}),
-				avgTxFeeData: chartToData(b.perTxChart),
 				kpis: b.kpis,
 				firePool: b.firePool
 			},
@@ -134,6 +184,8 @@ export default function Tokenomics() {
 
 	return (
 		<div className="flex flex-col gap-6">
+			{data.narrative && <NarrativeCallout>{data.narrative}</NarrativeCallout>}
+
 			<SectionHeader>FLR Burn</SectionHeader>
 			<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
 				<KpiCard label="Latest Daily" value={bk.latestDailyBurn.formatted} />
@@ -144,8 +196,13 @@ export default function Tokenomics() {
 			</div>
 
 			<div className="rounded-lg border border-(--cards-border) bg-(--cards-bg) p-4">
-				<div className="mb-3 flex items-center justify-between">
-					<h3 className="text-sm font-medium text-(--text-label)">{b.burnTitle}</h3>
+				<div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+					<div className="min-w-0">
+						<h3 className="text-sm font-semibold text-(--text-primary)">{b.burnTitle}</h3>
+						<p className="mt-0.5 text-xs leading-relaxed text-(--text-label)">
+							FLR removed from supply by gas burns - daily and cumulative.
+						</p>
+					</div>
 					<div className="flex gap-1 rounded-md border border-(--cards-border) p-0.5">
 						<ToggleButton active={burnView === 'daily'} onClick={() => setBurnView('daily')}>
 							Daily
@@ -176,24 +233,9 @@ export default function Tokenomics() {
 				)}
 			</div>
 
-			<SectionHeader>Burn per Transaction</SectionHeader>
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<KpiCard label="Latest" value={bk.latestPerTx.formatted} />
-				<KpiCard label="All-Time Avg" value={bk.avgPerTxAllTime.formatted} />
-			</div>
-			<ChartCard title={b.perTxTitle}>
-				<AreaChart
-					chartData={b.avgTxFeeData}
-					stacks={['Avg FLR per Tx']}
-					stackColors={{ 'Avg FLR per Tx': FLARE_ORANGE }}
-					title=""
-					height="320px"
-					chartOptions={lastNDaysZoom(b.avgTxFeeData.length)}
-				/>
-			</ChartCard>
-
 			<SectionHeader>FLR Emissions</SectionHeader>
-			<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+			<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+				{maxSupplyQuery.data && <KpiCard label="Max Supply" value={maxSupplyQuery.data.formatted} />}
 				<KpiCard label="Latest Epoch Emit" value={ek.latestEpochEmit.formatted} />
 				<KpiCard label="Emit 30d" value={ek.emit30d.formatted} />
 				<KpiCard label="Cumulative Emitted" value={ek.cumulativeEmissionsTracked.formatted} />
@@ -247,6 +289,13 @@ export default function Tokenomics() {
 					<span className="text-sm font-medium text-(--text-primary)">FIRE pool balance & burns</span>
 				</div>
 				<p className="mt-3 text-xs leading-relaxed text-(--text-label)">{b.firePool.note}</p>
+			</div>
+
+			<SectionHeader>FAQ</SectionHeader>
+			<div className="flex flex-col gap-3">
+				{FAQ_ITEMS.map((item) => (
+					<FaqItem key={item.q} q={item.q} a={item.a} />
+				))}
 			</div>
 		</div>
 	)

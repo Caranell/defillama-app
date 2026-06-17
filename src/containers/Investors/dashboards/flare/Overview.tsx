@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { lazy, useEffect, useMemo } from 'react'
 import type { IChartProps } from '~/components/ECharts/types'
 import { useContentReady } from '~/containers/Investors/ContentReadyContext'
-import { lastNDaysZoom } from './chartDefaults'
+import { FLARE_PINK, lastNDaysZoom } from './chartDefaults'
 import { chartToData, type UpstreamChart } from './transform'
 import { ChartCard, KpiCard, SectionHeader } from './ui'
 
@@ -24,6 +24,13 @@ interface OverviewAPIResponse {
 			currentCirculating: FormattedValue
 			currentMinted: FormattedValue
 			currentBridged: FormattedValue
+		}
+	}
+	fxrp?: {
+		kpis: {
+			totalFxrpSupply: FormattedValue
+			pctLockedInDefi: FormattedValue
+			valueLockedInDefiUsd: FormattedValue
 		}
 	}
 }
@@ -52,6 +59,7 @@ export default function Overview() {
 		const s = query.data.stablecoins
 		const stackSeries = s.stablecoinChart.series.filter((x) => !/total/i.test(x.name))
 		return {
+			fxrp: query.data.fxrp?.kpis ?? null,
 			tvl: {
 				title: t.tvlChart.title ?? 'Flare TVL',
 				chartData: chartToData(t.tvlChart),
@@ -73,22 +81,20 @@ export default function Overview() {
 
 	if (!data) return null
 
-	const { tvl, stables } = data
+	const { tvl, stables, fxrp } = data
 
 	return (
 		<div className="flex flex-col gap-6">
 			<SectionHeader>Chain Ecosystem</SectionHeader>
-			<div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-				<KpiCard label="Chain TVL" value={tvl.currentFormatted} />
-				<KpiCard label="Stablecoins (Total)" value={stables.kpis.total.formatted} />
-				<KpiCard label="Native Minted" value={stables.kpis.native.formatted} />
-				<KpiCard label="Bridged" value={stables.kpis.bridged.formatted} />
-			</div>
-
-			<ChartCard title={tvl.title}>
+			<ChartCard
+				title={tvl.title}
+				subtitle="Total value locked across Flare DeFi protocols."
+				value={tvl.currentFormatted}
+			>
 				<AreaChart
 					chartData={tvl.chartData}
 					stacks={tvl.stacks}
+					stackColors={Object.fromEntries(tvl.stacks.map((s) => [s, FLARE_PINK]))}
 					valueSymbol="$"
 					title=""
 					height="360px"
@@ -96,7 +102,25 @@ export default function Overview() {
 				/>
 			</ChartCard>
 
-			<ChartCard title={stables.title}>
+			{fxrp && (
+				<>
+					<SectionHeader>FXRP</SectionHeader>
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+						<KpiCard label="Total FXRP Supply" value={fxrp.totalFxrpSupply.formatted} />
+						<KpiCard label="% Locked in DeFi" value={fxrp.pctLockedInDefi.formatted} />
+						<KpiCard label="Value Locked in DeFi" value={fxrp.valueLockedInDefiUsd.formatted} />
+					</div>
+				</>
+			)}
+
+			<SectionHeader>Stablecoins</SectionHeader>
+			<div className="grid grid-cols-3 gap-4">
+				<KpiCard label="Total" value={stables.kpis.total.formatted} />
+				<KpiCard label="Native Minted" value={stables.kpis.native.formatted} />
+				<KpiCard label="Bridged" value={stables.kpis.bridged.formatted} />
+			</div>
+
+			<ChartCard title={stables.title} subtitle="Stablecoin supply circulating on Flare — native-minted vs. bridged.">
 				<AreaChart
 					chartData={stables.chartData}
 					stacks={stables.stacks}

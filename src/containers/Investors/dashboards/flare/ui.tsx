@@ -1,3 +1,5 @@
+// Design language (see design.md): numbers are the hero — large, monospaced and
+// tabular; labels are tiny, uppercase and dim. Flat, hairline-bordered, no shadows.
 export function KpiCard({
 	label,
 	value,
@@ -10,25 +12,52 @@ export function KpiCard({
 	change?: { value: number; formatted: string }
 }) {
 	return (
-		<div className="flex flex-col gap-1 rounded-lg border border-(--cards-border) bg-(--cards-bg) p-4">
-			<span className="text-xs font-medium tracking-wide text-(--text-label)">{label}</span>
-			<div className="flex items-baseline gap-2">
-				<span className="text-2xl font-semibold text-(--text-primary)">{value}</span>
+		<div className="flex flex-col gap-1.5 rounded-lg border border-(--cards-border) bg-(--cards-bg) p-4">
+			<span className="text-[11px] font-medium tracking-wider text-(--text-label) uppercase">{label}</span>
+			<div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+				<span className="font-mono text-2xl font-semibold tracking-tight text-(--text-primary) tabular-nums">
+					{value}
+				</span>
 				{change && (
-					<span className={`text-xs font-medium ${change.value >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+					<span
+						className={`flex items-center gap-0.5 font-mono text-xs font-medium tabular-nums ${
+							change.value >= 0 ? 'text-green-500' : 'text-red-500'
+						}`}
+					>
+						<span aria-hidden>{change.value >= 0 ? '▲' : '▼'}</span>
 						{change.formatted}
 					</span>
 				)}
 			</div>
-			{sub && <span className="text-xs text-(--text-label)">{sub}</span>}
+			{sub && <span className="font-mono text-[11px] text-(--text-label) tabular-nums">{sub}</span>}
 		</div>
 	)
 }
 
-export function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+// A chart card frames its viz with a prominent title, an optional one-line
+// plain-English thesis (subtitle) and an optional headline KPI on the right.
+export function ChartCard({
+	title,
+	subtitle,
+	value,
+	children
+}: {
+	title: string
+	subtitle?: string
+	value?: string
+	children: React.ReactNode
+}) {
 	return (
 		<div className="rounded-lg border border-(--cards-border) bg-(--cards-bg) p-4">
-			<h3 className="mb-3 text-sm font-medium text-(--text-label)">{title}</h3>
+			<div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+				<div className="min-w-0">
+					<h3 className="text-sm font-semibold text-(--text-primary)">{title}</h3>
+					{subtitle && <p className="mt-0.5 text-xs leading-relaxed text-(--text-label)">{subtitle}</p>}
+				</div>
+				{value && (
+					<p className="font-mono text-2xl font-semibold tracking-tight text-(--text-primary) tabular-nums">{value}</p>
+				)}
+			</div>
 			{children}
 		</div>
 	)
@@ -36,6 +65,17 @@ export function ChartCard({ title, children }: { title: string; children: React.
 
 export function SectionHeader({ children }: { children: React.ReactNode }) {
 	return <h2 className="text-xs font-semibold tracking-wider text-(--text-label) uppercase">{children}</h2>
+}
+
+export function NarrativeCallout({ children }: { children: React.ReactNode }) {
+	return (
+		<div
+			className="rounded-lg border border-(--cards-border) bg-(--cards-bg) p-4 pl-5 text-sm leading-relaxed text-(--text-secondary)"
+			style={{ borderLeft: '3px solid #FF7A1A' }}
+		>
+			{children}
+		</div>
+	)
 }
 
 export function formatNumber(n: number, decimals = 2): string {
