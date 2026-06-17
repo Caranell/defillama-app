@@ -4,9 +4,9 @@ import { CSVDownloadButton } from '~/components/ButtonStyled/CsvButton'
 import { Icon } from '~/components/Icon'
 import { TagGroup } from '~/components/TagGroup'
 import { Tooltip } from '~/components/Tooltip'
-import { abbreviateNumber } from '~/utils'
 import { pushShallowQuery, readSingleQueryValue } from '~/utils/routerQuery'
 import type { IEquitiesStatementsResponse } from './api.types'
+import { formatEquitiesStatementCellValue } from './financialsFormatting'
 import type { IEquitiesStatementTableRow } from './types'
 import { formatEquitiesDate } from './utils'
 
@@ -48,14 +48,6 @@ function getStatementTypeFromQueryValue(value?: string): StatementOption {
 function getPeriodTypeFromQueryValue(value?: string): PeriodOption {
 	const periodType = PERIOD_OPTIONS.find((option) => periodQueryValueMap[option] === value)
 	return periodType ?? 'Quarterly'
-}
-
-function formatCellValue(label: string, value: number | null): string {
-	return value == null
-		? '-'
-		: label === 'Weighted Average Shares Basic' || label === 'Weighted Average Shares Diluted'
-			? (abbreviateNumber(value, 2) ?? '0')
-			: (abbreviateNumber(value, 2, '$') ?? '$0')
 }
 
 function buildStatementRows(
@@ -176,7 +168,7 @@ function FinancialRow({
 						key={`${row.id}-${index}`}
 						className="overflow-hidden border border-black/10 p-2 text-left font-medium text-ellipsis whitespace-nowrap group-hover:bg-(--link-hover-bg) dark:border-white/10"
 					>
-						{formatCellValue(row.label, row.values[index] ?? null)}
+						{formatEquitiesStatementCellValue(row.label, row.values[index] ?? null)}
 					</td>
 				))}
 			</tr>
@@ -191,7 +183,7 @@ function FinancialRow({
 									key={`${subRow.id}-${index}`}
 									className="overflow-hidden border border-black/10 p-2 text-left font-normal text-ellipsis whitespace-nowrap group-hover:bg-(--link-hover-bg) dark:border-white/10"
 								>
-									{formatCellValue(subRow.label, subRow.values[index] ?? null)}
+									{formatEquitiesStatementCellValue(subRow.label, subRow.values[index] ?? null)}
 								</td>
 							))}
 						</tr>

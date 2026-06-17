@@ -101,7 +101,7 @@ function getDimensionPeriodFromQuery(value?: string): EquityDimensionPeriodOptio
 	return match ?? DEFAULT_EQUITY_DIMENSION_PERIOD
 }
 
-function EquityKeyMetrics({ summary }: { summary: IEquitiesSummaryResponse }) {
+export function EquityKeyMetrics({ summary }: { summary: IEquitiesSummaryResponse }) {
 	return (
 		<div className="flex flex-col">
 			<MetricRow
@@ -134,20 +134,16 @@ function EquityKeyMetrics({ summary }: { summary: IEquitiesSummaryResponse }) {
 				tooltip={defs.ebitdaTTM.description}
 				value={formatMetricValue(summary.ebitdaTTM, '$')}
 			/>
-			{summary.dividendYield != null ? (
-				<MetricRow
-					label={defs.dividendYield.label}
-					tooltip={defs.dividendYield.description}
-					value={formatMetricValue(summary.dividendYield, '%')}
-				/>
-			) : null}
-			{summary.holdersYield != null ? (
-				<MetricRow
-					label={defs.holdersYield.label}
-					tooltip={defs.holdersYield.description}
-					value={formatMetricValue(summary.holdersYield, '%')}
-				/>
-			) : null}
+			<MetricRow
+				label={defs.dividendYield.label}
+				tooltip={defs.dividendYield.description}
+				value={formatMetricValue(summary.dividendYield, '%')}
+			/>
+			<MetricRow
+				label={defs.holdersYield.label}
+				tooltip={defs.holdersYield.description}
+				value={formatMetricValue(summary.holdersYield, '%')}
+			/>
 			<MetricRow
 				label={defs.totalAssets.label}
 				tooltip={defs.totalAssets.description}
@@ -492,11 +488,11 @@ export function EquityTickerPage(props: IEquityTickerPageProps) {
 			<footer className="rounded-md border border-(--cards-border) bg-(--cards-bg) p-3">
 				<h2 className="text-sm font-semibold">Attribution</h2>
 				<p className="mt-1 text-xs text-(--text-disabled)">
-					Market data provided by{' '}
+					Market and statements data provided by{' '}
 					<a href="https://twelvedata.com" target="_blank" rel="noopener noreferrer" className="underline">
 						Twelve Data
 					</a>
-					. Filings and statements data from SEC EDGAR.
+					. Filings data from SEC EDGAR.
 				</p>
 			</footer>
 		</article>

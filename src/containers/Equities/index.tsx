@@ -781,11 +781,11 @@ export function EquitiesOverview({ companies, updatedAt }: IEquitiesListPageProp
 			</div>
 
 			<p className="px-1 text-xs text-(--text-disabled)">
-				Market data provided by{' '}
+				Market and statements data provided by{' '}
 				<a href="https://twelvedata.com" target="_blank" rel="noopener noreferrer" className="underline">
 					Twelve Data
 				</a>
-				. Filings and statements data from SEC EDGAR.
+				. Filings data from SEC EDGAR.
 				{updatedAt ? <span suppressHydrationWarning> Updated {formatEquitiesDateTime(updatedAt)}.</span> : null}
 			</p>
 		</div>
