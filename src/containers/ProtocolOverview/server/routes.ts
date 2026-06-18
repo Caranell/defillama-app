@@ -5,6 +5,8 @@ import type { IProtocolMetadata } from '~/utils/metadata/types'
 
 const EXCLUDED_OVERVIEW_CATEGORIES = new Set(['Bridge', 'Canonical Bridge', 'Staking Pool'])
 
+const isProtocolRouteMetadata = (metadata: IProtocolMetadata) => !metadata.cex
+
 export type ProtocolRoute = {
 	id: string
 	metadata: IProtocolMetadata
@@ -77,6 +79,7 @@ export function resolveProtocolParamFromMetadata(protocol: string, metadataCache
 
 	for (const protocolId in metadataCache.protocolMetadata) {
 		const metadata = metadataCache.protocolMetadata[protocolId]
+		if (!isProtocolRouteMetadata(metadata)) continue
 		if (
 			slug(metadata.displayName) === normalizedProtocol ||
 			slug(metadata.name) === normalizedProtocol ||
@@ -102,6 +105,7 @@ export function getProtocolOverviewSlugsFromMetadata(metadataCache: MetadataCach
 
 	for (const protocolId in metadataCache.protocolMetadata) {
 		const metadata = metadataCache.protocolMetadata[protocolId]
+		if (!isProtocolRouteMetadata(metadata)) continue
 		if (EXCLUDED_OVERVIEW_CATEGORIES.has(metadata.category ?? '')) continue
 
 		const name = metadata.displayName || metadata.name
@@ -137,6 +141,7 @@ export function getProtocolFeatureSlugsFromMetadata(
 
 	for (const protocolId in metadataCache.protocolMetadata) {
 		const metadata = metadataCache.protocolMetadata[protocolId]
+		if (!isProtocolRouteMetadata(metadata)) continue
 		if (!hasMetric(metadata)) continue
 
 		slugs.add(getProtocolSlug(metadata, protocolId))
@@ -154,6 +159,7 @@ export function getProtocolSitemapRoutes(metadataCache: MetadataCache): string[]
 
 	for (const protocolId in metadataCache.protocolMetadata) {
 		const metadata = metadataCache.protocolMetadata[protocolId]
+		if (!isProtocolRouteMetadata(metadata)) continue
 		if (!metadata.displayName && !metadata.name) continue
 		const protocolSlug = getProtocolSlug(metadata, protocolId)
 

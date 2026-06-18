@@ -51,14 +51,18 @@ const getArrayBodyParam = (value: unknown): string[] | null =>
 // Protocol chart pages can also render CEX-like asset pages. Resolve normal
 // protocol metadata first, then fall back to the asset route cache.
 async function resolveCanonicalProtocolOrCexParam(protocol: string): Promise<string | null> {
-	const { resolveProtocolParam } = await import('~/containers/ProtocolOverview/server/routes')
-	const protocolRoute = await resolveProtocolParam(protocol)
+	const [{ default: metadataCache }, { resolveProtocolParamFromMetadata }, { resolveCexParamFromMetadata }] =
+		await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes'),
+			import('~/containers/Cexs/server/routes')
+		])
+	const protocolRoute = resolveProtocolParamFromMetadata(protocol, metadataCache)
 	if (protocolRoute?.canonicalSlug) {
 		return protocolRoute.canonicalSlug
 	}
 
-	const { resolveCexParam } = await import('~/containers/Cexs/server/routes')
-	const cexRoute = await resolveCexParam(protocol)
+	const cexRoute = resolveCexParamFromMetadata(protocol, metadataCache)
 	return cexRoute?.canonicalSlug ?? null
 }
 

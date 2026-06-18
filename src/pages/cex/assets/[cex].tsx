@@ -45,18 +45,27 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const exchangeName = params.cex
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const cexs = metadataCache.cexs
-
-		const exchangeData = cexs.find((cex) => cex.slug && cex.slug.toLowerCase() === exchangeName.toLowerCase())
-		if (!exchangeData) {
-			console.warn(`[cex/assets/[cex]] ${exchangeName} not found in metadata cache (${cexs.length} CEX entries loaded)`)
+		const [{ default: metadataCache }, { resolveCexParamFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/Cexs/server/routes')
+		])
+		const cexRoute = resolveCexParamFromMetadata(exchangeName, metadataCache)
+		if (!cexRoute) {
+			console.warn(`[cex/assets/[cex]] ${exchangeName} not found in protocol metadata cache`)
 			return {
 				notFound: true
 			}
 		}
+		if (exchangeName !== cexRoute.canonicalSlug) {
+			return {
+				redirect: {
+					destination: `/cex/assets/${cexRoute.canonicalSlug}`,
+					permanent: true
+				}
+			}
+		}
 
-		const protocolData = await fetchProtocolOverviewMetrics(exchangeName)
+		const protocolData = await fetchProtocolOverviewMetrics(cexRoute.canonicalSlug)
 
 		if (!protocolData) {
 			console.warn(`[cex/assets/[cex]] ${exchangeName} matched metadata but protocol overview metrics were unavailable`)
@@ -69,8 +78,8 @@ export const getStaticProps = withPerformanceLogging(
 				parentProtocol: protocolData.parentProtocol ?? null,
 				otherProtocols: protocolData.otherProtocols ?? [],
 				category: protocolData.category ?? null,
-				metrics: { tvl: true, stablecoins: true },
-				ownToken: exchangeData.coin ?? null
+				metrics: { tvl: Boolean(cexRoute.metadata.tvl), stablecoins: Boolean(cexRoute.metadata.stablecoins) },
+				ownToken: cexRoute.cexMetadata?.coin ?? null
 			},
 			revalidate: maxAgeForNext([22])
 		}

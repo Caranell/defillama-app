@@ -8,10 +8,11 @@ const metadataCache = vi.hoisted(
 		},
 		protocolMetadata: {
 			aave: { name: 'aave', displayName: 'Aave', tvl: true, fees: true, emissions: true },
-			uniswap: { name: 'uniswap', displayName: 'Uniswap', dexs: true }
+			uniswap: { name: 'uniswap', displayName: 'Uniswap', dexs: true },
+			binance: { name: 'binance-cex', displayName: 'Binance CEX', tvl: true, stablecoins: true, cex: true }
 		},
 		categoriesAndTags: { categories: ['Lending'], tags: [], tagCategoryMap: {}, configs: {} },
-		cexs: [{ name: 'Binance', slug: 'binance' }],
+		cexs: [{ name: 'Binance', slug: 'binance-cex' }],
 		rwaList: {
 			canonicalMarketIds: ['ondo/usdy'],
 			platforms: ['Ondo'],
@@ -138,12 +139,18 @@ describe('cache-backed sitemap sections', () => {
 
 		expect(getSitemapSectionPath('protocols')).toBe('sitemap/protocols.xml')
 		expect(entriesBySection.get('protocols')).toEqual(expect.arrayContaining(['protocol/aave', 'protocol/fees/aave']))
+		expect(entriesBySection.get('protocols')).not.toContain('protocol/binance-cex')
 		expect(entriesBySection.get('chains')).toEqual(expect.arrayContaining(['chain/ethereum', 'fees/chain/ethereum']))
 		expect(entriesBySection.get('stablecoins')).toEqual(
 			expect.arrayContaining(['stablecoin/tether', 'stablecoins/ethereum'])
 		)
 		expect(entriesBySection.get('cexs')).toEqual(
-			expect.arrayContaining(['cex/binance', 'cex/assets/binance', 'cex/stablecoins/binance', 'cex/markets/binance'])
+			expect.arrayContaining([
+				'cex/binance-cex',
+				'cex/assets/binance-cex',
+				'cex/stablecoins/binance-cex',
+				'cex/markets/binance-cex'
+			])
 		)
 		expect(entriesBySection.get('bridges')).toEqual(expect.arrayContaining(['bridge/stargate', 'bridges/ethereum']))
 		expect(getSitemapSectionPath('protocols-by-category')).toBe('sitemap/protocols-by-category.xml')
@@ -199,7 +206,7 @@ describe('cache-backed sitemap sections', () => {
 		const section = await getSitemapSection('cexs.xml')
 
 		expect(section?.entries.map((entry) => entry.path)).toEqual(
-			expect.arrayContaining(['cex/binance', 'cex/markets/binance'])
+			expect.arrayContaining(['cex/binance-cex', 'cex/markets/binance-cex'])
 		)
 		await Promise.resolve()
 		await Promise.resolve()

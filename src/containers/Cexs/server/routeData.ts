@@ -5,7 +5,8 @@ export async function getCexMarketSlugsFromCache(): Promise<string[]> {
 	const marketsList = await fetchExchangeMarketsListFromCache()
 	const marketCexSlugs = new Set<string>()
 
-	for (const entries of Object.values(marketsList.cex)) {
+	for (const marketType in marketsList.cex) {
+		const entries = marketsList.cex[marketType]
 		for (const entry of entries) {
 			const cexSlug = slug(entry.defillama_slug ?? '')
 			if (cexSlug) marketCexSlugs.add(cexSlug)

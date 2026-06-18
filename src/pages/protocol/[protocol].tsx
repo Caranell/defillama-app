@@ -25,10 +25,24 @@ export const getStaticProps = withPerformanceLogging(
 				addRouteTelemetryAttributes({ not_found_reason: 'invalid_protocol_param', protocol_slug: normalizedName })
 				return { notFound: true }
 			}
-			const [{ default: metadataCache }, { resolveProtocolParamFromMetadata }] = await phaseTimer.time(
-				'metadata_and_routes_import',
-				() => Promise.all([import('~/utils/metadata'), import('~/containers/ProtocolOverview/server/routes')])
-			)
+			const [{ default: metadataCache }, { resolveProtocolParamFromMetadata }, { resolveCexParamFromMetadata }] =
+				await phaseTimer.time('metadata_and_routes_import', () =>
+					Promise.all([
+						import('~/utils/metadata'),
+						import('~/containers/ProtocolOverview/server/routes'),
+						import('~/containers/Cexs/server/routes')
+					])
+				)
+			const cexRoute = resolveCexParamFromMetadata(protocol, metadataCache)
+			if (cexRoute) {
+				return {
+					redirect: {
+						destination: `/cex/${cexRoute.canonicalSlug}`,
+						permanent: true
+					}
+				}
+			}
+
 			const protocolRoute = resolveProtocolParamFromMetadata(protocol, metadataCache)
 
 			if (!protocolRoute) {

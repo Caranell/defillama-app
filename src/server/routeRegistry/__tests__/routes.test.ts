@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getCexSlugsFromMetadata, resolveCexParamFromMetadata } from '~/containers/Cexs/server/routes'
+import { getCanonicalCexSlugsFromMetadata, resolveCexParamFromMetadata } from '~/containers/Cexs/server/routes'
 import {
 	getChainMetricSlugsFromMetadata,
 	getChainSlugsFromMetadata,
@@ -24,6 +24,7 @@ function metadataFixture(): MetadataCache {
 			uniswap: { name: 'uniswap-v3', displayName: 'Uniswap V3', tvl: true, dexs: true },
 			bridge: { name: 'bridge', displayName: 'Bridge Child', tvl: true, category: 'Bridge' },
 			child: { name: 'child-v2', displayName: 'Child V2', tvl: true, parentProtocol: 'parent#child' },
+			binance: { name: 'binance-cex', displayName: 'Binance CEX', tvl: true, stablecoins: true, cex: true },
 			nameless: { tvl: true }
 		},
 		categoriesAndTags: {
@@ -33,8 +34,8 @@ function metadataFixture(): MetadataCache {
 			configs: {}
 		},
 		cexs: [
-			{ name: 'Binance', slug: 'binance' },
-			{ name: 'Binance Alias', slug: 'Binance' }
+			{ name: 'Binance', slug: 'binance-cex', coin: 'BNB' },
+			{ name: 'Binance Alias', slug: 'binance-alias' }
 		],
 		rwaList: { canonicalMarketIds: [], platforms: [], chains: [], categories: [], assetGroups: [], idMap: {} },
 		rwaPerpsList: { contracts: [], venues: [], categories: [], assetGroups: [], total: 0 },
@@ -83,6 +84,15 @@ describe('route cache readers', () => {
 		expect(slugs).toEqual(['aave-v3', 'uniswap-v3', 'child'])
 	})
 
+	it('excludes CEX metadata from generic protocol routes', () => {
+		const metadata = metadataFixture()
+
+		expect(resolveProtocolParamFromMetadata('Binance CEX', metadata)).toBeNull()
+		expect(getProtocolFeatureSlugsFromMetadata(metadata, (protocol) => Boolean(protocol.tvl))).not.toContain(
+			'binance-cex'
+		)
+	})
+
 	it('falls back to protocol slugs when parent protocol normalizes empty', () => {
 		const metadata = metadataFixture()
 		metadata.protocolMetadata.emptyParent = {
@@ -121,13 +131,27 @@ describe('route cache readers', () => {
 		expect(getChainMetricSlugsFromMetadata(metadata, 'fees')).toEqual(['ethereum'])
 	})
 
-	it('resolves CEX params through slug or display name', () => {
+	it('resolves CEX params through canonical slug or aliases', () => {
 		const metadata = metadataFixture()
 
-		expect(getCexSlugsFromMetadata(metadata)).toEqual(['binance'])
+		expect(getCanonicalCexSlugsFromMetadata(metadata)).toEqual(['binance-cex'])
 		expect(resolveCexParamFromMetadata('Binance', metadata)).toEqual({
-			metadata: expect.objectContaining({ name: 'Binance' }),
-			canonicalSlug: 'binance'
+			id: 'binance',
+			metadata: expect.objectContaining({ name: 'binance-cex' }),
+			cexMetadata: expect.objectContaining({ name: 'Binance', coin: 'BNB' }),
+			canonicalSlug: 'binance-cex'
+		})
+		expect(resolveCexParamFromMetadata('Binance CEX', metadata)).toEqual({
+			id: 'binance',
+			metadata: expect.objectContaining({ name: 'binance-cex' }),
+			cexMetadata: expect.objectContaining({ name: 'Binance', coin: 'BNB' }),
+			canonicalSlug: 'binance-cex'
+		})
+		expect(resolveCexParamFromMetadata('binance-cex', metadata)).toEqual({
+			id: 'binance',
+			metadata: expect.objectContaining({ name: 'binance-cex' }),
+			cexMetadata: expect.objectContaining({ name: 'Binance', coin: 'BNB' }),
+			canonicalSlug: 'binance-cex'
 		})
 	})
 

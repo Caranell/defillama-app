@@ -3,7 +3,6 @@ import { SKIP_BUILD_STATIC_GENERATION } from '~/constants'
 import { ProtocolOverview } from '~/containers/ProtocolOverview'
 import { getProtocolOverviewPageData } from '~/containers/ProtocolOverview/queries'
 import type { IProtocolOverviewPageData } from '~/containers/ProtocolOverview/types'
-import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 
@@ -22,28 +21,30 @@ export const getStaticProps = withPerformanceLogging(
 		const cexRoute = resolveCexParamFromMetadata(exchangeName, metadataCache)
 
 		if (!cexRoute) {
-			console.warn(
-				`[cex/[cex]] ${exchangeName} not found in metadata cache (${metadataCache.cexs.length} CEX entries loaded)`
-			)
+			console.warn(`[cex/[cex]] ${exchangeName} not found in protocol metadata cache`)
 			return {
 				notFound: true
 			}
 		}
-		const exchangeData = cexRoute.metadata
+		const protocolMetadata = cexRoute.metadata
+		if (exchangeName !== cexRoute.canonicalSlug) {
+			return {
+				redirect: {
+					destination: `/cex/${cexRoute.canonicalSlug}`,
+					permanent: true
+				}
+			}
+		}
 
 		const { resolveCexMarketsByDefillamaSlug } = await import('~/containers/Markets/server/dataset')
 		const [cexMarkets, data] = await Promise.all([
-			resolveCexMarketsByDefillamaSlug(exchangeData.slug ?? '').catch((error) => {
+			resolveCexMarketsByDefillamaSlug(cexRoute.canonicalSlug).catch((error) => {
 				console.warn(`[cex/[cex]] Failed to resolve markets exchange for ${exchangeName}`, error)
 				return null
 			}),
 			getProtocolOverviewPageData({
-				protocolId: slug(exchangeData.slug),
-				currentProtocolMetadata: {
-					displayName: exchangeData.slug?.split('-')?.join(' ') ?? exchangeData.name,
-					tvl: true,
-					stablecoins: true
-				},
+				protocolId: cexRoute.id,
+				currentProtocolMetadata: protocolMetadata,
 				isCEX: true,
 				chainMetadata: metadataCache.chainMetadata,
 				tokenlist: metadataCache.tokenlist,

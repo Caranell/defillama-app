@@ -216,9 +216,9 @@ export async function buildBridgePreview(slug: string): Promise<EntityPreviewBri
 export async function buildHackPreview(slug: string): Promise<EntityPreviewHack | null> {
 	const list = await getHacks()
 	const target = slug.toLowerCase()
-	const numericId = /^\d+$/.test(slug) ? Number(slug) : null
+	const defillamaId = /^\d+$/.test(slug) ? slug : null
 	const match = list.find((h) => {
-		if (numericId !== null && h.defillamaId === numericId) return true
+		if (defillamaId !== null && h.defillamaId === defillamaId) return true
 		const name = typeof h.name === 'string' ? h.name : ''
 		return slugify(name) === target || name.toLowerCase() === target
 	})

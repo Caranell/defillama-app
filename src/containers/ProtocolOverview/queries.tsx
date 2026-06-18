@@ -8,8 +8,6 @@ import { CHART_COLORS } from '~/constants/colors'
 import { fetchAdapterProtocolMetrics } from '~/containers/AdapterMetrics/api'
 import { fetchBridgeVolumeBySlug } from '~/containers/Bridges/api'
 import { governanceIdsToApis } from '~/containers/Governance/api'
-import { fetchHacks } from '~/containers/Hacks/api'
-import type { IHackApiItem } from '~/containers/Hacks/api.types'
 import { getProtocolIncentivesFromAggregatedEmissions } from '~/containers/Incentives/queries'
 import { fetchOracleMetrics, fetchOracleProtocolChart } from '~/containers/Oracles/api'
 import type { IOracleProtocolChart } from '~/containers/Oracles/api.types'
@@ -180,7 +178,6 @@ export const getProtocolOverviewPageData = async ({
 		yieldsConfig,
 		liquidityInfo,
 		liteProtocolsData,
-		hacksData,
 		bridgeVolumeData,
 		incomeStatement,
 		oracleChartData,
@@ -215,7 +212,6 @@ export const getProtocolOverviewPageData = async ({
 		IYieldsConfigResult,
 		ProtocolLiquidityTokensResponse,
 		ProtocolsResponse,
-		IHackApiItem[],
 		IBridgeVolumeResult,
 		IProtocolOverviewPageData['incomeStatement'],
 		IOracleProtocolChart | null,
@@ -401,7 +397,6 @@ export const getProtocolOverviewPageData = async ({
 			: null,
 		currentProtocolMetadata?.liquidity ? fetchLiquidityTokensDataset() : [],
 		fetchProtocols().catch((): ProtocolsResponse => ({ protocols: [], chains: [], parentProtocols: [] })),
-		fetchHacks().catch(() => []),
 		currentProtocolMetadata.bridge
 			? fetchBridgeVolumeBySlug(slug(currentProtocolMetadata.displayName)).then((data) => data.dailyVolumes || null)
 			: null,
@@ -584,16 +579,7 @@ export const getProtocolOverviewPageData = async ({
 		competitorsList.push({ name: competitor.name, tvl: competitor.tvl })
 	}
 
-	const hacks =
-		(protocolData.id
-			? hacksData
-					?.filter((hack: IHackApiItem) =>
-						isCEX
-							? hack.name === (currentProtocolMetadata.displayName ?? '')
-							: [String(hack.defillamaId), String(hack.parentProtocolId)].includes(String(protocolId))
-					)
-					?.sort((a: IHackApiItem, b: IHackApiItem) => a.date - b.date)
-			: null) ?? null
+	const hacks = protocolData.hacks?.toSorted((a, b) => (a.date ?? 0) - (b.date ?? 0)) ?? null
 
 	const protocolMetrics = getProtocolMetricFlags({
 		protocolData,
