@@ -71,23 +71,14 @@ export function formatAdapterData({
 			total1y: data.total1y ?? null,
 			annualized1y: data.annualized1y ?? null,
 			totalAllTime: data.totalAllTime ?? null,
-			...(methodologyKey === 'HoldersRevenue'
-				? {
+			...(areMethodologiesDifferent
+				? { childMethodologies: childMethodologies.filter((entry) => !!(entry[1] || entry[2])) }
+				: {
 						methodology: methodologyKey
-							? (childMethodologies.find((entry) => entry[1] != null)?.[1] ??
-								commonMethodologyMap[methodologyKey] ??
-								null)
+							? (topChildMethodology?.[1] ?? commonMethodologyMap[methodologyKey] ?? null)
 							: null,
-						methodologyURL: childMethodologies.find((entry) => entry[2] != null)?.[2] ?? null
-					}
-				: areMethodologiesDifferent
-					? { childMethodologies: childMethodologies.filter((entry) => !!(entry[1] || entry[2])) }
-					: {
-							methodology: methodologyKey
-								? (topChildMethodology?.[1] ?? commonMethodologyMap[methodologyKey] ?? null)
-								: null,
-							methodologyURL: topChildMethodology?.[2] ?? null
-						}),
+						methodologyURL: topChildMethodology?.[2] ?? null
+					}),
 			defaultChartView: data.defaultChartView ?? 'daily',
 			chainBreakdown
 		}

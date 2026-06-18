@@ -167,4 +167,50 @@ describe('formatAdapterData', () => {
 			]
 		})
 	})
+
+	it('aggregates holders revenue across children instead of picking one', () => {
+		const result = formatAdapterData({
+			data: createAdapterMetrics({
+				childProtocols: [
+					{
+						name: 'uniswap-v1',
+						defillamaId: '1',
+						displayName: 'Uniswap V1',
+						methodologyURL: 'https://example.com/v1',
+						methodology: { HoldersRevenue: 'No revenue for UNI holders' },
+						breakdownMethodology: {},
+						defaultChartView: 'daily'
+					},
+					{
+						name: 'uniswap-v2',
+						defillamaId: '2',
+						displayName: 'Uniswap V2',
+						methodologyURL: 'https://example.com/v2',
+						methodology: { HoldersRevenue: '17% of fees buyback and burn UNI' },
+						breakdownMethodology: {},
+						defaultChartView: 'daily'
+					},
+					{
+						name: 'uniswap-v3',
+						defillamaId: '3',
+						displayName: 'Uniswap V3',
+						methodologyURL: 'https://example.com/v3',
+						methodology: { HoldersRevenue: 'Portion of fees buyback and burn UNI' },
+						breakdownMethodology: {},
+						defaultChartView: 'daily'
+					}
+				]
+			}),
+			methodologyKey: 'HoldersRevenue'
+		})
+
+		expect(result).toMatchObject({
+			childMethodologies: [
+				['Uniswap V1', 'No revenue for UNI holders', 'https://example.com/v1'],
+				['Uniswap V2', '17% of fees buyback and burn UNI', 'https://example.com/v2'],
+				['Uniswap V3', 'Portion of fees buyback and burn UNI', 'https://example.com/v3']
+			]
+		})
+		expect(result).not.toHaveProperty('methodology')
+	})
 })
