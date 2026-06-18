@@ -34,7 +34,7 @@ bun install
 cp .env.local.example .env.local
 ```
 
-Fill in any values you need. Local dev works against public APIs without `API_KEY`; set it when you want pro-api routing or full metadata/build parity.
+Fill in `API_KEY` and `CG_KEY` from your team credentials. `API_KEY` routes DefiLlama upstreams through pro-api; without it, most no-key fallbacks in `src/constants/index.ts` are invalid or rate-limited (aside from `api.llama.fi` and `coins.llama.fi`). `CG_KEY` avoids CoinGecko free-tier rate limits on token charts, unlocks, and related pages.
 
 For the **main site**, leave `NEXT_PUBLIC_INVESTORS_SITE` unset. For **investors / enterprise dashboard** work locally, see the view-selection comments in `.env.local.example`. Production deploy variables for all four profiles (main, investors, staging, enterprise) are in `.env.example`.
 
