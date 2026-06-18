@@ -58,6 +58,17 @@ function isFinancialReport(post: ParagraphPost): boolean {
 	return titleMatch || slugMatch || categoryMatch
 }
 
+function dedupePosts(posts: ParagraphPost[]): ParagraphPost[] {
+	const seen = new Set<string>()
+
+	return posts.filter((post) => {
+		const key = (post.slug || post.title).trim().toLowerCase()
+		if (seen.has(key)) return false
+		seen.add(key)
+		return true
+	})
+}
+
 function renderPressReleaseCards(posts: ParagraphPost[]) {
 	return posts.map((post) => (
 		<a
@@ -69,13 +80,8 @@ function renderPressReleaseCards(posts: ParagraphPost[]) {
 		>
 			{/* Image */}
 			{post.imageUrl && (
-				<div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-(--sl-accent-muted) to-(--cards-border)">
-					<img
-						src={post.imageUrl}
-						alt={post.title}
-						className="size-full object-cover transition-transform duration-500 group-hover:scale-110"
-						loading="lazy"
-					/>
+				<div className="relative aspect-[2/1] w-full overflow-hidden bg-gradient-to-br from-(--sl-accent-muted) to-(--cards-border)">
+					<img src={post.imageUrl} alt={post.title} className="size-full object-cover" loading="lazy" />
 					<div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
 				</div>
 			)}
@@ -134,7 +140,7 @@ export default function PressReleases() {
 		fetch('/api/public/spark/reports')
 			.then((res) => res.json())
 			.then((apiData) => {
-				const posts = apiData.items || []
+				const posts = dedupePosts(apiData.items || [])
 
 				// Separate financial reports from regular press releases
 				const reports: ParagraphPost[] = []
@@ -225,13 +231,8 @@ export default function PressReleases() {
 							>
 								{/* Image */}
 								{post.imageUrl && (
-									<div className="relative aspect-video w-full overflow-hidden">
-										<img
-											src={post.imageUrl}
-											alt={post.title}
-											className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-											loading="lazy"
-										/>
+									<div className="relative aspect-[2/1] w-full overflow-hidden">
+										<img src={post.imageUrl} alt={post.title} className="size-full object-cover" loading="lazy" />
 										<div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent"></div>
 									</div>
 								)}
