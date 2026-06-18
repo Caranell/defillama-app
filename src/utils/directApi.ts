@@ -24,6 +24,8 @@ export const DIRECT_AUTH_SECRET_ENV_NAMES = [
 	'LIQUIDATIONS_SECRET_KEY'
 ] as const
 
+type DirectAuthSecretKind = 'core' | 'equities' | 'liquidations'
+
 const DIRECT_AUTH_CONFIGS = [
 	{ envName: 'SERVER_URL', queryParamName: 'x-llama-pro-key', secretKind: 'core' },
 	{ envName: 'V2_SERVER_URL', queryParamName: 'x-llama-pro-key', secretKind: 'core' },
@@ -34,8 +36,6 @@ const DIRECT_AUTH_CONFIGS = [
 	queryParamName: string
 	secretKind: DirectAuthSecretKind
 }>
-
-type DirectAuthSecretKind = 'core' | 'equities' | 'liquidations'
 
 function normalizeDirectUrlEnv(value: string | undefined): string | undefined {
 	value = value?.trim()

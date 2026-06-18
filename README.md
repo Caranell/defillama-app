@@ -31,10 +31,12 @@ bun install
 #### 3. Configure environment variables:
 
 ```bash
-cp .env.example .env.local
+cp .env.local.example .env.local
 ```
 
-`ENABLE_LLAMASWAP_PROTOCOLS_CHAINS` is disabled by default. Set it to `true` or `1` only if you want metadata generation to build the buy-on-LlamaSwap protocol-chain dataset. When the variable is missing or set to `false`/`0`, that dataset stays empty.
+Fill in any values you need. Local dev works against public APIs without `API_KEY`; set it when you want pro-api routing or full metadata/build parity.
+
+For the **main site**, leave `NEXT_PUBLIC_INVESTORS_SITE` unset. For **investors / enterprise dashboard** work locally, see the view-selection comments in `.env.local.example`. Production deploy variables for all four profiles (main, investors, staging, enterprise) are in `.env.example`.
 
 #### 4. Start the development server:
 
