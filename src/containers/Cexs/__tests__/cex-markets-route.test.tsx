@@ -1,15 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getStaticProps as getCexStaticProps } from '~/pages/cex/[cex]'
 import { getStaticProps as getCexMarketsStaticProps } from '~/pages/cex/markets/[cex]'
+import { cryptoComCexMetadataCache } from './metadataFixture'
 
 const { resolveCexMarketsByDefillamaSlugMock } = vi.hoisted(() => ({
 	resolveCexMarketsByDefillamaSlugMock: vi.fn()
 }))
-
-const cexs = [
-	{ name: 'Crypto.com', slug: 'Crypto-com' },
-	{ name: 'No Markets', slug: 'no-markets' }
-]
 
 vi.mock('~/containers/Markets/server/dataset', () => ({
 	resolveCexMarketsByDefillamaSlug: resolveCexMarketsByDefillamaSlugMock
@@ -33,14 +29,7 @@ vi.mock('~/utils/perf', () => ({
 
 vi.mock('~/utils/metadata', () => ({
 	__esModule: true,
-	default: {
-		get cexs() {
-			return cexs
-		},
-		chainMetadata: {},
-		tokenlist: {},
-		cgExchangeIdentifiers: []
-	},
+	default: cryptoComCexMetadataCache,
 	refreshMetadataIfStale: vi.fn().mockResolvedValue(undefined)
 }))
 
@@ -57,8 +46,8 @@ vi.mock('~/containers/ProtocolOverview/queries', () => ({
 }))
 
 vi.mock('~/containers/ProtocolOverview/api', () => ({
-	fetchProtocolOverviewMetrics: vi.fn((exchangeName: string) =>
-		exchangeName === 'no-markets'
+	fetchProtocolOverviewMetrics: vi.fn((exchangeSlug: string) =>
+		exchangeSlug === 'no-markets'
 			? Promise.resolve({ name: 'No Markets', category: 'CEX', otherProtocols: [] })
 			: Promise.resolve({ name: 'Crypto.com', category: 'CEX', otherProtocols: [] })
 	)
@@ -68,7 +57,7 @@ describe('CEX markets routes', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		resolveCexMarketsByDefillamaSlugMock.mockImplementation((defillamaSlug: string) =>
-			defillamaSlug === 'Crypto-com'
+			defillamaSlug === 'crypto-com'
 				? Promise.resolve({ exchange: 'cryptocom', defillama_slug: 'Crypto-com' })
 				: Promise.resolve(null)
 		)

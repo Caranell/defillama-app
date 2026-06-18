@@ -38,7 +38,10 @@ jobs:
       - name: Lint
         run: bun run lint
 
-      - name: Build metadata cache
+      - name: Prepare build artifacts
+        # Runs metadata pull, dataset cache, llms.txt, and robots.txt via build:metadata.
+        # Requires secrets.API_KEY so production metadata refresh can run; do not set NODE_ENV=development here
+        # or failed upstream pulls would write stubs and hide breakage.
         run: bun run build:metadata
         env:
           API_KEY: ${{ secrets.API_KEY }}
