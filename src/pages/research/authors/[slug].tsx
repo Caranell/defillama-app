@@ -8,6 +8,7 @@ import { FEATURES_SERVER } from '~/constants'
 import { ArticleApiError, getAuthorBySlug, type ArticleAuthorResponse } from '~/containers/Articles/api'
 import { ArticleProxyAuthProvider } from '~/containers/Articles/ArticleProxyAuthProvider'
 import { isResearcher } from '~/containers/Articles/ArticlesAccessGate'
+import { ResearchFooter } from '~/containers/Articles/landing/ResearchFooter'
 import { articleHref, formatDate, readingMinutes } from '~/containers/Articles/landing/utils'
 import { ResearchAuthorBackground } from '~/containers/Articles/profile/ResearchAuthorBackground'
 import { ARTICLE_SECTION_LABELS, type ArticleDocument, type ArticleSection } from '~/containers/Articles/types'
@@ -303,6 +304,7 @@ function DefillamaResearchContent({ articles }: { articles: ArticleDocument[] })
 			<ResearchAuthorBackground />
 			<BrandHero />
 			<ResearchArticleLists articles={articles} />
+			<ResearchFooter maxWidthClassName="max-w-[1368px]" />
 		</div>
 	)
 }
@@ -389,198 +391,201 @@ function AuthorContent({ slug, initialData }: { slug: string; initialData: Artic
 	const authorPbUserId = 'pbUserId' in author && typeof author.pbUserId === 'string' ? author.pbUserId : undefined
 
 	return (
-		<div className="mx-auto grid w-full max-w-4xl gap-10 px-1 pt-2 pb-20 md:gap-14">
-			<div className="flex items-center justify-between gap-3">
-				<BasicLink
-					href="/research"
-					className="inline-flex items-center gap-1 text-xs text-(--text-tertiary) transition-colors hover:text-(--text-primary)"
-				>
-					<Icon name="arrow-left" className="size-3.5" />
-					<span>All research</span>
-				</BasicLink>
-				<div className="flex flex-wrap items-center gap-1.5">
-					<OwnerChips authorPbUserId={authorPbUserId} />
+		<>
+			<div className="mx-auto grid w-full max-w-4xl gap-10 px-1 pt-2 pb-10 md:gap-14">
+				<div className="flex items-center justify-between gap-3">
+					<BasicLink
+						href="/research"
+						className="inline-flex items-center gap-1 text-xs text-(--text-tertiary) transition-colors hover:text-(--text-primary)"
+					>
+						<Icon name="arrow-left" className="size-3.5" />
+						<span>All research</span>
+					</BasicLink>
+					<div className="flex flex-wrap items-center gap-1.5">
+						<OwnerChips authorPbUserId={authorPbUserId} />
+					</div>
 				</div>
-			</div>
 
-			<header className="grid gap-6 border-b border-(--cards-border) pb-10 md:grid-cols-[auto_minmax(0,1fr)] md:gap-8 md:pb-12">
-				{author.avatarUrl ? (
-					<img
-						src={author.avatarUrl}
-						alt=""
-						className="h-24 w-24 shrink-0 rounded-full border border-(--cards-border) object-cover md:h-32 md:w-32"
-					/>
-				) : (
-					<div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border border-(--cards-border) bg-(--cards-bg) text-2xl font-semibold text-(--text-secondary) md:h-32 md:w-32 md:text-3xl">
-						{author.displayName.slice(0, 2).toUpperCase()}
-					</div>
-				)}
-				<div className="grid min-w-0 gap-4">
-					<div className="grid gap-1.5">
-						<h1 className="text-3xl leading-tight font-semibold tracking-tight text-(--text-primary) md:text-5xl">
-							{author.displayName}
-						</h1>
-						<p className="font-jetbrains text-xs text-(--text-tertiary)">@{author.slug}</p>
-					</div>
-					{author.bio ? (
-						<p className="max-w-prose text-base leading-relaxed text-(--text-secondary)">{author.bio}</p>
-					) : null}
-					<div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-xs text-(--text-tertiary)">
-						<span>
-							<strong className="font-semibold text-(--text-primary)">{articles.length}</strong>{' '}
-							{articles.length === 1 ? 'piece' : 'pieces'}
-						</span>
-						{yearsLabel ? (
-							<>
-								<span aria-hidden>/</span>
-								<span className="font-jetbrains">{yearsLabel}</span>
-							</>
-						) : null}
-						{totalMinutes > 0 ? (
-							<>
-								<span aria-hidden>/</span>
-								<span>
-									<strong className="font-semibold text-(--text-primary)">{totalMinutes}</strong> min reading
-								</span>
-							</>
-						) : null}
-					</div>
-					{socialEntries.length > 0 ? (
-						<div className="flex flex-wrap gap-1.5 pt-1">
-							{socialEntries.map(([kind, value]) => (
-								<SocialLink key={kind} kind={kind} value={value} />
-							))}
+				<header className="grid gap-6 border-b border-(--cards-border) pb-10 md:grid-cols-[auto_minmax(0,1fr)] md:gap-8 md:pb-12">
+					{author.avatarUrl ? (
+						<img
+							src={author.avatarUrl}
+							alt=""
+							className="h-24 w-24 shrink-0 rounded-full border border-(--cards-border) object-cover md:h-32 md:w-32"
+						/>
+					) : (
+						<div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border border-(--cards-border) bg-(--cards-bg) text-2xl font-semibold text-(--text-secondary) md:h-32 md:w-32 md:text-3xl">
+							{author.displayName.slice(0, 2).toUpperCase()}
 						</div>
-					) : null}
-				</div>
-			</header>
+					)}
+					<div className="grid min-w-0 gap-4">
+						<div className="grid gap-1.5">
+							<h1 className="text-3xl leading-tight font-semibold tracking-tight text-(--text-primary) md:text-5xl">
+								{author.displayName}
+							</h1>
+							<p className="font-jetbrains text-xs text-(--text-tertiary)">@{author.slug}</p>
+						</div>
+						{author.bio ? (
+							<p className="max-w-prose text-base leading-relaxed text-(--text-secondary)">{author.bio}</p>
+						) : null}
+						<div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-xs text-(--text-tertiary)">
+							<span>
+								<strong className="font-semibold text-(--text-primary)">{articles.length}</strong>{' '}
+								{articles.length === 1 ? 'piece' : 'pieces'}
+							</span>
+							{yearsLabel ? (
+								<>
+									<span aria-hidden>/</span>
+									<span className="font-jetbrains">{yearsLabel}</span>
+								</>
+							) : null}
+							{totalMinutes > 0 ? (
+								<>
+									<span aria-hidden>/</span>
+									<span>
+										<strong className="font-semibold text-(--text-primary)">{totalMinutes}</strong> min reading
+									</span>
+								</>
+							) : null}
+						</div>
+						{socialEntries.length > 0 ? (
+							<div className="flex flex-wrap gap-1.5 pt-1">
+								{socialEntries.map(([kind, value]) => (
+									<SocialLink key={kind} kind={kind} value={value} />
+								))}
+							</div>
+						) : null}
+					</div>
+				</header>
 
-			{articles.length === 0 ? (
-				<div className="rounded-md border border-dashed border-(--cards-border) bg-(--cards-bg) p-10 text-center">
-					<p className="text-sm text-(--text-secondary)">No published research yet.</p>
-				</div>
-			) : (
-				<>
-					{lead ? (
-						<section>
-							<BasicLink
-								href={articleHref(lead)}
-								className="group grid overflow-hidden rounded-md border border-(--cards-border) bg-(--cards-bg) transition-colors hover:border-(--link-text)/40 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)]"
-							>
-								<div className="order-2 grid content-start gap-3 p-6 md:order-1 md:p-8">
-									<div className="flex items-center gap-2 text-xs tracking-wide text-(--text-tertiary) uppercase">
-										<span className="font-jetbrains">Latest</span>
-										<span aria-hidden>/</span>
-										<span>{formatDate(lead.displayDate ?? lead.publishedAt)}</span>
-										<span aria-hidden>/</span>
-										<span>{readingMinutes(lead)} min read</span>
+				{articles.length === 0 ? (
+					<div className="rounded-md border border-dashed border-(--cards-border) bg-(--cards-bg) p-10 text-center">
+						<p className="text-sm text-(--text-secondary)">No published research yet.</p>
+					</div>
+				) : (
+					<>
+						{lead ? (
+							<section>
+								<BasicLink
+									href={articleHref(lead)}
+									className="group grid overflow-hidden rounded-md border border-(--cards-border) bg-(--cards-bg) transition-colors hover:border-(--link-text)/40 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)]"
+								>
+									<div className="order-2 grid content-start gap-3 p-6 md:order-1 md:p-8">
+										<div className="flex items-center gap-2 text-xs tracking-wide text-(--text-tertiary) uppercase">
+											<span className="font-jetbrains">Latest</span>
+											<span aria-hidden>/</span>
+											<span>{formatDate(lead.displayDate ?? lead.publishedAt)}</span>
+											<span aria-hidden>/</span>
+											<span>{readingMinutes(lead)} min read</span>
+										</div>
+										<h2 className="text-2xl leading-[1.15] font-semibold tracking-tight text-(--text-primary) group-hover:text-(--link-text) md:text-3xl">
+											{lead.title}
+										</h2>
+										{lead.subtitle ? (
+											<p className="text-base leading-snug text-(--text-secondary)">{lead.subtitle}</p>
+										) : lead.excerpt ? (
+											<p className="line-clamp-3 text-sm leading-relaxed text-(--text-secondary)">{lead.excerpt}</p>
+										) : null}
 									</div>
-									<h2 className="text-2xl leading-[1.15] font-semibold tracking-tight text-(--text-primary) group-hover:text-(--link-text) md:text-3xl">
-										{lead.title}
-									</h2>
-									{lead.subtitle ? (
-										<p className="text-base leading-snug text-(--text-secondary)">{lead.subtitle}</p>
-									) : lead.excerpt ? (
-										<p className="line-clamp-3 text-sm leading-relaxed text-(--text-secondary)">{lead.excerpt}</p>
+									{lead.coverImage?.url ? (
+										<div className="order-1 overflow-hidden md:order-2">
+											<img
+												src={lead.coverImage.url}
+												alt=""
+												className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] md:h-full"
+											/>
+										</div>
 									) : null}
+								</BasicLink>
+							</section>
+						) : null}
+
+						{rest.length ? (
+							<section className="grid gap-4">
+								<div className="flex items-baseline justify-between gap-2 border-b border-(--cards-border) pb-3">
+									<h2 className="text-sm font-semibold tracking-[0.16em] text-(--text-tertiary) uppercase">Archive</h2>
+									<p className="font-jetbrains text-xs text-(--text-tertiary)">
+										{filteredArchive.length} {filteredArchive.length === 1 ? 'note' : 'notes'}
+									</p>
 								</div>
-								{lead.coverImage?.url ? (
-									<div className="order-1 overflow-hidden md:order-2">
-										<img
-											src={lead.coverImage.url}
-											alt=""
-											className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] md:h-full"
-										/>
+								{archiveTabs.length > 1 ? (
+									<div className="flex flex-wrap gap-1.5">
+										{archiveTabs.map((tab) => {
+											const label = tab === 'all' ? 'All' : ARTICLE_SECTION_LABELS[tab]
+											const count = tab === 'all' ? rest.length : (sectionCounts.get(tab) ?? 0)
+											const isActive = archiveFilter === tab
+											return (
+												<button
+													key={tab}
+													type="button"
+													onClick={() => setArchiveFilter(tab)}
+													className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-jetbrains text-[10px] tracking-[0.16em] uppercase transition-colors ${
+														isActive
+															? 'border-(--link-text)/60 bg-(--link-button) text-(--link-text)'
+															: 'border-(--cards-border) bg-transparent text-(--text-secondary) hover:border-(--link-text)/40 hover:text-(--link-text)'
+													}`}
+												>
+													<span>{label}</span>
+													<span className="tabular-nums">{count}</span>
+												</button>
+											)
+										})}
 									</div>
 								) : null}
-							</BasicLink>
-						</section>
-					) : null}
-
-					{rest.length ? (
-						<section className="grid gap-4">
-							<div className="flex items-baseline justify-between gap-2 border-b border-(--cards-border) pb-3">
-								<h2 className="text-sm font-semibold tracking-[0.16em] text-(--text-tertiary) uppercase">Archive</h2>
-								<p className="font-jetbrains text-xs text-(--text-tertiary)">
-									{filteredArchive.length} {filteredArchive.length === 1 ? 'note' : 'notes'}
-								</p>
-							</div>
-							{archiveTabs.length > 1 ? (
-								<div className="flex flex-wrap gap-1.5">
-									{archiveTabs.map((tab) => {
-										const label = tab === 'all' ? 'All' : ARTICLE_SECTION_LABELS[tab]
-										const count = tab === 'all' ? rest.length : (sectionCounts.get(tab) ?? 0)
-										const isActive = archiveFilter === tab
-										return (
-											<button
-												key={tab}
-												type="button"
-												onClick={() => setArchiveFilter(tab)}
-												className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-jetbrains text-[10px] tracking-[0.16em] uppercase transition-colors ${
-													isActive
-														? 'border-(--link-text)/60 bg-(--link-button) text-(--link-text)'
-														: 'border-(--cards-border) bg-transparent text-(--text-secondary) hover:border-(--link-text)/40 hover:text-(--link-text)'
-												}`}
-											>
-												<span>{label}</span>
-												<span className="tabular-nums">{count}</span>
-											</button>
-										)
-									})}
-								</div>
-							) : null}
-							<ul className="grid">
-								{filteredArchive.map((article) => (
-									<li
-										key={article.id}
-										className="grid grid-cols-[64px_72px_minmax(0,1fr)] items-start gap-4 border-b border-(--cards-border) py-5 last:border-b-0 sm:grid-cols-[88px_96px_minmax(0,1fr)] sm:gap-6"
-									>
-										<div className="pt-1 font-jetbrains text-xs tracking-tight text-(--text-tertiary) tabular-nums">
-											{formatShort(article.publishedAt)}
-										</div>
-										{article.coverImage?.url ? (
-											<BasicLink href={articleHref(article)} className="block">
-												<img
-													src={article.coverImage.url}
-													alt=""
-													loading="lazy"
-													decoding="async"
-													className="aspect-4/3 w-full rounded-sm border border-(--cards-border) object-cover"
-												/>
-											</BasicLink>
-										) : (
-											<div
-												className="aspect-4/3 w-full rounded-sm border border-(--cards-border) bg-(--app-bg)"
-												aria-hidden
-											/>
-										)}
-										<BasicLink href={articleHref(article)} className="group grid gap-1.5">
-											<h3 className="text-base leading-tight font-semibold text-(--text-primary) transition-colors group-hover:text-(--link-text) md:text-lg">
-												{article.title}
-											</h3>
-											{article.excerpt ? (
-												<p className="line-clamp-2 text-sm leading-relaxed text-(--text-secondary)">
-													{article.excerpt}
-												</p>
-											) : null}
-											<div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
-												<span>{readingMinutes(article)} min read</span>
-												{article.tags && article.tags.length > 0 ? (
-													<>
-														<span aria-hidden>/</span>
-														<span className="font-jetbrains">{article.tags[0]}</span>
-													</>
-												) : null}
+								<ul className="grid">
+									{filteredArchive.map((article) => (
+										<li
+											key={article.id}
+											className="grid grid-cols-[64px_72px_minmax(0,1fr)] items-start gap-4 border-b border-(--cards-border) py-5 last:border-b-0 sm:grid-cols-[88px_96px_minmax(0,1fr)] sm:gap-6"
+										>
+											<div className="pt-1 font-jetbrains text-xs tracking-tight text-(--text-tertiary) tabular-nums">
+												{formatShort(article.publishedAt)}
 											</div>
-										</BasicLink>
-									</li>
-								))}
-							</ul>
-						</section>
-					) : null}
-				</>
-			)}
-		</div>
+											{article.coverImage?.url ? (
+												<BasicLink href={articleHref(article)} className="block">
+													<img
+														src={article.coverImage.url}
+														alt=""
+														loading="lazy"
+														decoding="async"
+														className="aspect-4/3 w-full rounded-sm border border-(--cards-border) object-cover"
+													/>
+												</BasicLink>
+											) : (
+												<div
+													className="aspect-4/3 w-full rounded-sm border border-(--cards-border) bg-(--app-bg)"
+													aria-hidden
+												/>
+											)}
+											<BasicLink href={articleHref(article)} className="group grid gap-1.5">
+												<h3 className="text-base leading-tight font-semibold text-(--text-primary) transition-colors group-hover:text-(--link-text) md:text-lg">
+													{article.title}
+												</h3>
+												{article.excerpt ? (
+													<p className="line-clamp-2 text-sm leading-relaxed text-(--text-secondary)">
+														{article.excerpt}
+													</p>
+												) : null}
+												<div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
+													<span>{readingMinutes(article)} min read</span>
+													{article.tags && article.tags.length > 0 ? (
+														<>
+															<span aria-hidden>/</span>
+															<span className="font-jetbrains">{article.tags[0]}</span>
+														</>
+													) : null}
+												</div>
+											</BasicLink>
+										</li>
+									))}
+								</ul>
+							</section>
+						) : null}
+					</>
+				)}
+			</div>
+			<ResearchFooter maxWidthClassName="max-w-4xl" />
+		</>
 	)
 }
 

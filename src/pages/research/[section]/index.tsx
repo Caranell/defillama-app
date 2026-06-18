@@ -5,6 +5,7 @@ import { ArticleApiError, getSectionBanner, listArticles } from '~/containers/Ar
 import type { ArticleListResponse } from '~/containers/Articles/api'
 import { ArticleProxyAuthProvider } from '~/containers/Articles/ArticleProxyAuthProvider'
 import { GenericCard } from '~/containers/Articles/landing/GenericCard'
+import { ResearchFooter } from '~/containers/Articles/landing/ResearchFooter'
 import { articleHref, formatDate, readingMinutes } from '~/containers/Articles/landing/utils'
 import { ArticleBannerStrip } from '~/containers/Articles/renderer/ArticleBannerStrip'
 import { ResearchLoader } from '~/containers/Articles/ResearchLoader'
@@ -157,7 +158,7 @@ function SectionLandingContent({
 	return (
 		<>
 			<ArticleBannerStrip scope="section" section={section} initialData={{ section: initialData.sectionBanner }} />
-			<div className="mx-auto grid w-full max-w-[1180px] gap-8 px-4 pt-8 pb-24 sm:px-6">
+			<div className="mx-auto grid w-full max-w-[1180px] gap-8 px-4 pt-8 pb-10 sm:px-6">
 				<header className="grid gap-3 border-b border-(--cards-border) pb-6">
 					<div className="flex items-center justify-between gap-3">
 						<Link
@@ -199,6 +200,7 @@ function SectionLandingContent({
 					</div>
 				)}
 			</div>
+			<ResearchFooter maxWidthClassName="max-w-[1180px]" />
 		</>
 	)
 }

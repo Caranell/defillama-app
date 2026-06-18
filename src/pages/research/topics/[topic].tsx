@@ -7,6 +7,7 @@ import { ArticleApiError, listArticlesByTopic } from '~/containers/Articles/api'
 import type { ArticleListResponse } from '~/containers/Articles/api'
 import { ArticleProxyAuthProvider } from '~/containers/Articles/ArticleProxyAuthProvider'
 import { GenericCard } from '~/containers/Articles/landing/GenericCard'
+import { ResearchFooter } from '~/containers/Articles/landing/ResearchFooter'
 import { ResearchLoader } from '~/containers/Articles/ResearchLoader'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
@@ -127,30 +128,33 @@ function TopicLandingContent({ topic, initialArticles }: { topic: string; initia
 	}
 
 	return (
-		<div className="mx-auto grid w-full max-w-[1180px] gap-8 px-4 pt-8 pb-24 sm:px-6">
-			<header className="grid gap-3 border-b border-(--cards-border) pb-6">
-				<div className="flex items-center justify-between gap-3">
-					<Link
-						href="/research"
-						className="font-jetbrains text-[10px] tracking-[0.18em] text-(--text-tertiary) uppercase hover:text-(--link-text)"
-					>
-						← All research
-					</Link>
-					<span className="font-jetbrains text-[10px] tracking-[0.18em] text-(--text-tertiary) uppercase tabular-nums">
-						{total} {total === 1 ? 'story' : 'stories'}
-					</span>
-				</div>
-				<h1 className="text-3xl leading-tight font-bold tracking-tight text-(--text-primary) capitalize sm:text-4xl">
-					{topicLabel}
-				</h1>
-			</header>
+		<>
+			<div className="mx-auto grid w-full max-w-[1180px] gap-8 px-4 pt-8 pb-10 sm:px-6">
+				<header className="grid gap-3 border-b border-(--cards-border) pb-6">
+					<div className="flex items-center justify-between gap-3">
+						<Link
+							href="/research"
+							className="font-jetbrains text-[10px] tracking-[0.18em] text-(--text-tertiary) uppercase hover:text-(--link-text)"
+						>
+							← All research
+						</Link>
+						<span className="font-jetbrains text-[10px] tracking-[0.18em] text-(--text-tertiary) uppercase tabular-nums">
+							{total} {total === 1 ? 'story' : 'stories'}
+						</span>
+					</div>
+					<h1 className="text-3xl leading-tight font-bold tracking-tight text-(--text-primary) capitalize sm:text-4xl">
+						{topicLabel}
+					</h1>
+				</header>
 
-			<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-				{items.map((article) => (
-					<GenericCard key={article.id} article={article} />
-				))}
+				<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+					{items.map((article) => (
+						<GenericCard key={article.id} article={article} />
+					))}
+				</div>
 			</div>
-		</div>
+			<ResearchFooter maxWidthClassName="max-w-[1180px]" />
+		</>
 	)
 }
 

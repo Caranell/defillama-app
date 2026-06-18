@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import React from 'react'
 import { ResearchIcon } from '~/components/ResearchIcon'
-import { FEATURES_SERVER } from '~/constants'
 import { ReportsCarousel } from '~/containers/Articles/landing/ReportsCarousel'
 import type { ArticleDocument } from '~/containers/Articles/types'
 
@@ -72,28 +71,23 @@ export const ResearchHero: React.FC<ResearchHeroProps> = ({ title, subtitle, rep
 							<Link href="/research/feed" aria-label="Subscribe via RSS">
 								<ResearchIcon name="rss" width={36} height={36} aria-hidden />
 							</Link>
+							<Link
+								href="https://newsletter.defillama.com/?utm_source=defillama&utm_medium=research&utm_campaign=research_hero"
+								aria-label="Subscribe to the DefiLlama newsletter"
+								rel="noopener noreferrer"
+								target="_blank"
+							>
+								<ResearchIcon name="newsletter" width={36} height={36} className="text-white" aria-hidden />
+							</Link>
 						</div>
 					</div>
 				</div>
 
 				{reports.length > 0 ? (
-					<div className="mt-[45px] w-full pb-[24px]">
+					<div className="mt-[45px] mb-8 w-full pb-[24px]">
 						<ReportsCarousel reports={reports} showButtons={false} />
 					</div>
 				) : null}
-
-				<div className="mt-[8px] mb-8 flex justify-center">
-					<a
-						href={`${FEATURES_SERVER}/uploads/media-kit.pdf`}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="inline-flex items-center gap-x-2 text-[16px] font-semibold tracking-wide uppercase"
-						style={{ color: '#237BFF' }}
-					>
-						<span>Explore our media kit here</span>
-						<span aria-hidden>→</span>
-					</a>
-				</div>
 			</div>
 		</div>
 	)
