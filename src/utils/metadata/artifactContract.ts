@@ -313,7 +313,7 @@ function createChainDisplayNameMap(payload: CoreMetadataPayload): Map<string, st
 }
 
 function getEquityCompanySlug(company: IEquitiesCompanyRoute): string {
-	return `${company.ticker.trim().toLowerCase()}:${company.country.trim().toLowerCase()}`
+	return `${company.ticker}:${company.country}`
 }
 
 export function replaceMetadataCacheContents(metadataCache: MetadataCache, payload: CoreMetadataPayload): void {

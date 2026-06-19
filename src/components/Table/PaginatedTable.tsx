@@ -95,13 +95,10 @@ export function PaginatedTable<T extends RowData>({
 	const displayPageCount = Math.max(1, pageCount)
 	const displayPageIndex = pageCount === 0 ? 0 : Math.min(pageIndex, displayPageCount - 1)
 	const availablePageSizeOptions = useMemo(() => {
-		const filteredOptions = pageSizeOptions.filter((pageSizeOption) => pageSizeOption <= rowCount)
-		if (pageSize > rowCount && pageSizeOptions.includes(pageSize)) {
-			filteredOptions.push(pageSize)
-		}
+		if (pageSizeOptions.includes(pageSize)) return pageSizeOptions
 
-		return [...new Set(filteredOptions)].sort((a, b) => a - b)
-	}, [pageSize, pageSizeOptions, rowCount])
+		return [...pageSizeOptions, pageSize].sort((a, b) => a - b)
+	}, [pageSize, pageSizeOptions])
 	const shouldShowPaginationControls = rowCount > 10 && pageCount > 1
 	const shouldShowPageSizeSelector = rowCount > 10 && availablePageSizeOptions.length >= 2
 	const displayRowNumbers = useMemo(
@@ -252,15 +249,16 @@ export function PaginatedTable<T extends RowData>({
 								<select
 									value={pageSize}
 									disabled={interactionDisabled}
-									onChange={(event) =>
+									onChange={(event) => {
+										const nextPageSize = Number(event.currentTarget.value)
 										startTransition(() => {
 											table.setPagination((prev) => ({
 												...prev,
 												pageIndex: 0,
-												pageSize: Number(event.target.value)
+												pageSize: nextPageSize
 											}))
 										})
-									}
+									}}
 									className="rounded-md border border-(--cards-border) bg-(--cards-bg) px-2 py-1 disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									{availablePageSizeOptions.map((pageSizeOption) => (

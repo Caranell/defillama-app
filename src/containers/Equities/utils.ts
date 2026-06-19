@@ -19,24 +19,15 @@ interface IEquityTickerCountry {
 	country: string
 }
 
-export function normalizeEquityTicker(ticker: string): string {
-	return ticker.trim().toUpperCase()
-}
-
-export function normalizeEquityCountry(country: string): string {
-	return country.trim().toUpperCase()
-}
-
 export function buildEquityTickerCountrySlug(ticker: string, country: string): string {
-	return `${normalizeEquityTicker(ticker).toLowerCase()}:${normalizeEquityCountry(country).toLowerCase()}`
+	return `${ticker}:${country}`
 }
 
 export function parseEquityTickerCountrySlug(slug: string): IEquityTickerCountry | null {
-	const parts = slug.trim().split(':')
+	const parts = slug.split(':')
 	if (parts.length !== 2) return null
 
-	const ticker = normalizeEquityTicker(parts[0])
-	const country = normalizeEquityCountry(parts[1])
+	const [ticker, country] = parts
 	return ticker && country ? { ticker, country } : null
 }
 
@@ -44,8 +35,7 @@ export function parseEquityTickerCountryParam(param: string): IEquityTickerCount
 	const tickerCountry = parseEquityTickerCountrySlug(param)
 	if (tickerCountry) return tickerCountry
 
-	const ticker = normalizeEquityTicker(param)
-	return ticker ? { ticker, country: 'US' } : null
+	return param ? { ticker: param, country: 'US' } : null
 }
 
 export function formatEquitiesDate(value?: string | null): string {
