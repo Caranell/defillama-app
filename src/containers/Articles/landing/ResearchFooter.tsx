@@ -89,7 +89,7 @@ function FooterSocials() {
 				<li key={social.name}>
 					{social.href.startsWith('/') ? (
 						<Link href={social.href} aria-label={social.label} className={itemClassName}>
-							<ResearchIcon name={social.name} width={20} height={20} aria-hidden />
+							<ResearchIcon name={social.name} width={30} height={30} aria-hidden />
 						</Link>
 					) : (
 						<a
@@ -99,7 +99,7 @@ function FooterSocials() {
 							aria-label={social.label}
 							className={itemClassName}
 						>
-							<ResearchIcon name={social.name} width={20} height={20} aria-hidden />
+							<ResearchIcon name={social.name} width={30} height={30} aria-hidden />
 						</a>
 					)}
 				</li>
@@ -121,14 +121,14 @@ function FooterBrand({ className = '', wideDescription = false }: { className?: 
 					alt="DefiLlama Research"
 					width={229}
 					height={72}
-					className="h-9 w-auto dark:hidden"
+					className="h-10 w-auto dark:hidden"
 				/>
 				<img
 					src="/assets/research_logo_dark.webp"
 					alt="DefiLlama Research"
 					width={229}
 					height={72}
-					className="hidden h-9 w-auto dark:block"
+					className="hidden h-10 w-auto dark:block"
 				/>
 			</Link>
 			<p className={`${descriptionClassName} ${wideDescription ? '' : 'max-w-xs'}`}>
@@ -271,7 +271,7 @@ function FooterNewsletter() {
 
 function FooterLegalBar() {
 	return (
-		<div className="mt-10 flex flex-col items-center gap-4 border-t border-(--cards-border) pt-6 text-center sm:mt-12 sm:flex-row sm:items-center sm:justify-between sm:text-left">
+		<div className="mt-10 flex flex-col items-center gap-4 border-t border-(--cards-border) pt-6 text-center sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:text-left">
 			<p className={legalTextClassName}>© DefiLlama Research. All rights reserved.</p>
 			<ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 sm:justify-start">
 				{LEGAL_LINKS.map((link) => (
@@ -294,9 +294,9 @@ function FooterLegalBar() {
 
 export function ResearchFooter({ maxWidthClassName = 'max-w-7xl' }: { maxWidthClassName?: string }) {
 	return (
-		<footer className="mt-12 text-(--text-primary) lg:mt-20">
-			<div className={`mx-auto w-full ${maxWidthClassName} px-4 sm:px-6 lg:px-8`}>
-				<div className="border-t border-(--cards-border) py-10 lg:py-14">
+		<footer className="text-(--text-primary)">
+			<div className={`mx-auto w-full ${maxWidthClassName} px-4 sm:px-6 lg:px-6`}>
+				<div className="border-t border-(--cards-border) py-8">
 					<div className="hidden md:grid md:grid-cols-2 md:gap-x-10 md:gap-y-12 lg:grid-cols-[1.5fr_auto_2fr] lg:gap-12">
 						<div className="order-1 col-span-2 lg:order-3 lg:col-span-1">
 							<FooterNewsletter />
@@ -316,7 +316,7 @@ export function ResearchFooter({ maxWidthClassName = 'max-w-7xl' }: { maxWidthCl
 								<FooterAccordion key={col.title} title={col.title} links={col.links} />
 							))}
 						</nav>
-						<FooterBrand className="mt-10" wideDescription />
+						<FooterBrand className="mt-6" wideDescription />
 					</div>
 
 					<FooterLegalBar />
