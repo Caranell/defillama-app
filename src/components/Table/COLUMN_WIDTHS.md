@@ -18,6 +18,11 @@ actually renders.
 
 That means a column's minimum safe width is a pure sum you can compute up front.
 
+The main `VirtualTable` (`Table.tsx`) shares all of this — same `table-layout: fixed` +
+`<colgroup>` with the column's `headerClassName`, same `p-3` (24px) padding, same 10px
+`SortIcon` — so everything here applies to those tables too. The one difference:
+`VirtualTable` already truncates every cell, so wrapping isn't a concern there.
+
 ## The formula
 
 ```
@@ -30,7 +35,7 @@ width = ceil( PADDING + max(headerContent, bodyContent) ) + BUFFER
 | `headerContent` | —     | text width of the header label + (sort affordance, if sortable)         |
 | sort affordance | 14px  | 10px `SortIcon` + 4px `gap-1` — **only** when `enableSorting !== false` |
 | `bodyContent`   | —     | text width of the **widest realistic** rendered cell value              |
-| `BUFFER`        | 6px   | breathing room so glyphs never touch the padding; tune to taste         |
+| `BUFFER`        | 0px   | not needed for the gap — `px-3` already gives 12px each side (see below) |
 
 Notes:
 
@@ -45,6 +50,12 @@ Notes:
 - Fonts: the table is `text-sm` (14px) and the app font is **Inter** (`--font-inter`,
   `public/fonts/inter.woff2`). Header is `font-medium`; for Inter the advance widths are
   effectively constant across weight, so 400 vs 500 doesn't change the result.
+- **Buffer is optional, default 0.** The 24px of `px-3` padding already keeps text well
+  clear of the column edge — adding more just makes columns loose. A column whose content
+  + padding ≈ its width is already correct; don't pad it out. The only case for a few px:
+  a **body-bound numeric** column, as a hedge against a larger value sitting in rows you
+  didn't have on screen (only visible rows get measured). Header-bound columns never need
+  it — the header is fixed and can't grow.
 
 ## Measuring text width
 
@@ -59,15 +70,21 @@ the sort icon, and padding automatically:
 
 ```js
 // Reports, per visible column, the px you could shave (positive) or must add (negative).
-// Run on the live table. BUFFER is the breathing room you want to keep.
-const BUFFER = 6
+// Run on the live table. Leave BUFFER at 0 for a correct/tight fit (px-3 already pads).
+const BUFFER = 0
 const table = document.querySelector('table')
 const headers = [...table.tHead.rows[0].cells]
 const bodyRows = [...table.tBodies[0].rows]
+// True content width of a cell (padding-free, handles text, icons, mixed children alike).
+const contentWidth = (cell) => {
+	const range = document.createRange()
+	range.selectNodeContents(cell)
+	return range.getBoundingClientRect().width
+}
 headers.forEach((th, i) => {
 	// widest content across header + every body cell in this column
-	const cells = [th, ...bodyRows.map((r) => r.cells[i])]
-	const need = Math.max(...cells.map((c) => Math.ceil(c.firstElementChild?.scrollWidth ?? c.scrollWidth))) // content box
+	const cells = [th, ...bodyRows.map((r) => r.cells[i])].filter(Boolean)
+	const need = Math.max(...cells.map((c) => Math.ceil(contentWidth(c))))
 	const pad = parseFloat(getComputedStyle(th).paddingLeft) + parseFloat(getComputedStyle(th).paddingRight)
 	const suggest = need + pad + BUFFER
 	const current = th.getBoundingClientRect().width
@@ -81,6 +98,10 @@ headers.forEach((th, i) => {
 	)
 })
 ```
+
+`Range.getBoundingClientRect()` measures the rendered content box of the cell regardless
+of what's inside — plain numbers, an icon + link, a row of chain logos — so it's the one
+measurement that works for **every** column type, unlike the label-only offline method.
 
 Caveat: only the **current page of rows** is measured, so make sure large values are on
 screen (sort descending, or bump rows-per-page) before trusting the body width.
@@ -101,7 +122,7 @@ const textWidth = (str, px = 14) => {
 
 const PAD = 24,
 	SORT = 14,
-	BUFFER = 6
+	BUFFER = 0
 // widest realistic body string per format: '$' → '$999.99B', '%' → '-99.99%', plain → '999.99B'
 function width({ label, body, sortable = true }) {
 	const header = textWidth(label) + (sortable ? SORT : 0)
@@ -147,7 +168,7 @@ in the cell's real font) and reports, per column, what % overflow the current wi
 the width needed to fit 90% / all of the visible rows:
 
 ```js
-const BUFFER = 6
+const BUFFER = 0
 const table = document.querySelector('table')
 const heads = [...table.tHead.rows[0].cells]
 const rows = [...table.tBodies[0].rows]

@@ -452,7 +452,7 @@ const hacksColumns = [
 	columnHelper.accessor('language', {
 		header: 'Language',
 		meta: {
-			headerClassName: 'w-[140px]'
+			headerClassName: 'w-[148px]'
 		}
 	})
 ]
