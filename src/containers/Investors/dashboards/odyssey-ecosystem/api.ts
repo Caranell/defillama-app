@@ -512,15 +512,8 @@ export interface GrowthResponse {
 		title?: string
 		morphoMarkets: Array<ChartData & { id: string; label: string; title: string }>
 		spendVsTvl: Array<ChartData & { venue: string; title: string; latestTvl: number }>
-		kelpExploitDate?: string | null
-		siusdVsIusd: ChartData
-		siusdMarketShare: ChartData
 		morphoMarket: ChartData
 		kpis: {
-			siusdTvl: number
-			iusdTvl: number
-			siusdSharePct: number
-			morphoBorrowLatest: number
 			morphoUtilization: number
 		}
 	}
@@ -528,8 +521,6 @@ export interface GrowthResponse {
 		activeAccounts: FormattedValue
 		activePositions: FormattedValue
 		totalUsers: FormattedValue
-		siusdSharePct: FormattedValue
-		siusdTvl: FormattedValue
 		morphoUtilization: FormattedValue
 	}
 }
