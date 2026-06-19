@@ -92,7 +92,8 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 		label: categoryLabel,
 		effectiveCategory: props.effectiveCategory,
 		isTagPage: !!props.tag && !props.category,
-		chain: props.chain
+		chain: props.chain,
+		protocolCount: props.protocols.length
 	})
 	const title = presentation.seoTitle
 	const description = presentation.seoDescription

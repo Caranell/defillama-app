@@ -29,12 +29,12 @@ The main `VirtualTable` (`Table.tsx`) shares all of this — same `table-layout:
 width = ceil( PADDING + max(headerContent, bodyContent) ) + BUFFER
 ```
 
-| term            | value | where it comes from                                                     |
-| --------------- | ----- | ----------------------------------------------------------------------- |
-| `PADDING`       | 24px  | `px-3` on both `<th>` and `<td>` = 12px × 2 (`helpers.tsx`)             |
-| `headerContent` | —     | text width of the header label + (sort affordance, if sortable)         |
-| sort affordance | 14px  | 10px `SortIcon` + 4px `gap-1` — **only** when `enableSorting !== false` |
-| `bodyContent`   | —     | text width of the **widest realistic** rendered cell value              |
+| term            | value | where it comes from                                                      |
+| --------------- | ----- | ------------------------------------------------------------------------ |
+| `PADDING`       | 24px  | `px-3` on both `<th>` and `<td>` = 12px × 2 (`helpers.tsx`)              |
+| `headerContent` | —     | text width of the header label + (sort affordance, if sortable)          |
+| sort affordance | 14px  | 10px `SortIcon` + 4px `gap-1` — **only** when `enableSorting !== false`  |
+| `bodyContent`   | —     | text width of the **widest realistic** rendered cell value               |
 | `BUFFER`        | 0px   | not needed for the gap — `px-3` already gives 12px each side (see below) |
 
 Notes:
@@ -52,10 +52,10 @@ Notes:
   effectively constant across weight, so 400 vs 500 doesn't change the result.
 - **Buffer is optional, default 0.** The 24px of `px-3` padding already keeps text well
   clear of the column edge — adding more just makes columns loose. A column whose content
-  + padding ≈ its width is already correct; don't pad it out. The only case for a few px:
-  a **body-bound numeric** column, as a hedge against a larger value sitting in rows you
-  didn't have on screen (only visible rows get measured). Header-bound columns never need
-  it — the header is fixed and can't grow.
+  - padding ≈ its width is already correct; don't pad it out. The only case for a few px:
+    a **body-bound numeric** column, as a hedge against a larger value sitting in rows you
+    didn't have on screen (only visible rows get measured). Header-bound columns never need
+    it — the header is fixed and can't grow.
 
 ## Measuring text width
 
