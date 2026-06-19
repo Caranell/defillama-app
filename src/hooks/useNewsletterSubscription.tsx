@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { errorToast } from '~/components/Toast'
+import { errorToast, successToast } from '~/components/Toast'
 import { AUTH_SERVER } from '~/constants'
 import { handleSimpleFetchResponse } from '~/utils/async'
 import pb, { type AuthModel } from '~/utils/pocketbase'
@@ -40,7 +40,18 @@ const getUserFacingErrorMessage = (error: unknown, fallbackMessage: string): str
 	return details || fallbackMessage
 }
 
-export function useNewsletterSubscription() {
+export interface NewsletterSuccessToast {
+	title: string
+	description?: string
+}
+
+const DEFAULT_SUCCESS_TOAST: NewsletterSuccessToast = {
+	title: 'Subscribed! Check your inbox to confirm.'
+}
+
+export function useNewsletterSubscription({
+	successMessage = DEFAULT_SUCCESS_TOAST
+}: { successMessage?: NewsletterSuccessToast } = {}) {
 	return useMutation<NewsletterSubscribeResponse, Error, SubscribeArgs>({
 		mutationFn: async ({ email, newsletters }) => {
 			const allSelected = newsletters.length === NEWSLETTERS.length
@@ -60,7 +71,7 @@ export function useNewsletterSubscription() {
 			}
 			const failed = newsletters.filter((key) => data.result?.[key] !== 'ok')
 			if (failed.length === 0) {
-				toast.success('Subscribed! Check your inbox to confirm.')
+				successToast(successMessage)
 				return
 			}
 			const ok = newsletters.filter((key) => data.result?.[key] === 'ok')

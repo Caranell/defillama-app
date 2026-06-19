@@ -22,7 +22,7 @@ const SECTION_LINKS: FooterLink[] = [
 ]
 
 const ABOUT_LINKS: FooterLink[] = [
-	{ label: 'Research Center', href: '/research' },
+	{ label: 'Who we are', href: '/research/authors/defillama-research' },
 	{ label: 'Contact us', href: 'mailto:research@defillama.com', external: true },
 	{ label: 'Book a call', href: 'https://calendly.com/research-defillama/30min', external: true },
 	{ label: 'Brand kit', href: BRAND_KIT_URL, external: true },
@@ -194,24 +194,27 @@ function FooterAccordion({ title, links }: FooterColumnDef) {
 }
 
 function FooterNewsletter() {
-	const mutation = useNewsletterSubscription()
+	const mutation = useNewsletterSubscription({
+		successMessage: { title: 'Subscribed to our mailing list!' }
+	})
 	const [email, setEmail] = useState('')
-	const [succeeded, setSucceeded] = useState(false)
+	const [isSubscribed, setIsSubscribed] = useState(false)
 
 	const isPending = mutation.isPending
-	const canSubmit = !isPending && email.trim().length > 0
+	const trimmedEmail = email.trim()
+	const canSubmit = !isPending && !isSubscribed && trimmedEmail.length > 0
 
-	const onEmailChange = (e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)
+	const onEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+		setEmail(e.target.value)
+		if (isSubscribed) setIsSubscribed(false)
+	}
 
 	const handleSubmit = (e: FormEvent) => {
 		e.preventDefault()
 		if (!canSubmit) return
-		// The email is captured on any successful response, so unlock the media kit
-		// download as soon as the request succeeds. The hook owns the toast feedback
-		// (success / partial / error), so we don't repeat it inline here.
 		mutation.mutate(
-			{ email: email.trim(), newsletters: ['newsletter', 'research'] },
-			{ onSuccess: () => setSucceeded(true) }
+			{ email: trimmedEmail, newsletters: ['newsletter', 'research'] },
+			{ onSuccess: () => setIsSubscribed(true) }
 		)
 	}
 
@@ -221,36 +224,42 @@ function FooterNewsletter() {
 			<p className={`max-w-sm ${descriptionClassName}`}>
 				Join DefiLlama Research and instantly unlock our full media kit.
 			</p>
-			{succeeded ? (
-				<a href={MEDIA_KIT_URL} target="_blank" rel="noopener noreferrer" className={`${primaryButtonClassName} w-fit`}>
-					<ResearchIcon name="research-media-kit" width={18} height={18} aria-hidden />
-					Download media kit
-				</a>
-			) : (
-				<form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-					<input
-						type="email"
-						required
-						aria-label="Email address"
-						value={email}
-						onChange={onEmailChange}
-						placeholder="Email address"
-						className="min-w-0 flex-1 appearance-none border-x-0 border-t-0 border-b border-(--cards-border) bg-transparent pb-2 text-sm text-(--text-primary) placeholder:text-(--text-tertiary) focus:border-(--link-text) focus:outline-none"
-					/>
-					<button
-						type="submit"
-						aria-busy={isPending}
-						disabled={isPending}
-						className={`${primaryButtonClassName} shrink-0 disabled:cursor-wait disabled:opacity-70`}
-					>
-						{isPending ? (
-							<span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-						) : (
-							'Subscribe'
-						)}
-					</button>
-				</form>
-			)}
+			<form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+				<input
+					type="email"
+					required
+					aria-label="Email address"
+					value={email}
+					onChange={onEmailChange}
+					placeholder="Email address"
+					className="min-w-0 flex-1 appearance-none border-x-0 border-t-0 border-b border-(--cards-border) bg-transparent pb-2 text-sm text-(--text-primary) placeholder:text-(--text-tertiary) focus:border-(--link-text) focus:outline-none"
+				/>
+				<button
+					type="submit"
+					aria-busy={isPending}
+					disabled={isPending || isSubscribed}
+					className={`${primaryButtonClassName} shrink-0 disabled:opacity-70 ${
+						isPending ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed'
+					}`}
+				>
+					{isPending ? (
+						<span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+					) : isSubscribed ? (
+						'Subscribed'
+					) : (
+						'Subscribe'
+					)}
+				</button>
+			</form>
+			<a
+				href={MEDIA_KIT_URL}
+				target="_blank"
+				rel="noopener noreferrer"
+				className={`${descriptionClassName} inline-flex w-fit items-center gap-2 underline underline-offset-4 transition-opacity hover:opacity-60`}
+			>
+				<ResearchIcon name="research-media-kit" width={16} height={16} aria-hidden />
+				Download media kit
+			</a>
 			<a
 				href={NEWSLETTER_URL}
 				target="_blank"
@@ -297,15 +306,13 @@ export function ResearchFooter({ maxWidthClassName = 'max-w-7xl' }: { maxWidthCl
 		<footer className="text-(--text-primary)">
 			<div className={`mx-auto w-full ${maxWidthClassName} px-4 sm:px-6 lg:px-6`}>
 				<div className="border-t border-(--cards-border) py-8">
-					<div className="hidden md:grid md:grid-cols-2 md:gap-x-10 md:gap-y-12 lg:grid-cols-[1.5fr_auto_2fr] lg:gap-12">
-						<div className="order-1 col-span-2 lg:order-3 lg:col-span-1">
+					<div className="hidden gap-x-10 gap-y-12 md:flex md:flex-wrap md:justify-between">
+						<FooterBrand />
+						{FOOTER_COLUMNS.map((col) => (
+							<FooterColumn key={col.title} title={col.title} links={col.links} />
+						))}
+						<div className="w-full lg:w-auto lg:max-w-sm">
 							<FooterNewsletter />
-						</div>
-						<FooterBrand className="order-2 lg:order-1" />
-						<div className="order-3 flex flex-wrap gap-12 sm:gap-16 lg:order-2 lg:gap-12">
-							{FOOTER_COLUMNS.map((col) => (
-								<FooterColumn key={col.title} title={col.title} links={col.links} />
-							))}
 						</div>
 					</div>
 
