@@ -7,7 +7,6 @@ import type {
 	NextApiRequest,
 	NextApiResponse
 } from 'next'
-import { flushAxiom, logOutboundToAxiom } from '~/utils/axiom'
 import { readCacheJitterMeta } from '~/utils/maxAgeForNext'
 
 type TelemetryRuntime = 'node' | 'browser' | 'lambda' | 'build'
@@ -1184,7 +1183,6 @@ export async function withOutboundTelemetry(
 		const response = await run()
 		const durationMs = Date.now() - started
 		const status = outboundStatus(response, durationMs)
-		const responseBytesValue = responseContentLengthBytes(response)
 
 		if (context) {
 			const { apiGroup: apiGroupValue, ...parts } = urlParts(sanitizedUrl)
@@ -1208,15 +1206,6 @@ export async function withOutboundTelemetry(
 				attributes: outboundAttributes(response, apiGroupValue, method, urlString, options)
 			})
 		}
-
-		logOutboundToAxiom({
-			sanitizedUrl,
-			method,
-			durationMs,
-			...(responseBytesValue !== undefined ? { responseBytes: responseBytesValue } : null),
-			httpStatus: response.status,
-			status
-		})
 
 		return response
 	} catch (error) {
@@ -1384,7 +1373,6 @@ export function withServerSidePropsTelemetry<T extends { [key: string]: any }>(
 if (typeof process !== 'undefined') {
 	process.once('beforeExit', () => {
 		void flushTelemetry({ timeoutMs: getEnvNumber('OPS_TELEMETRY_BEFORE_EXIT_FLUSH_MS', 2000), runtime: 'build' })
-		void flushAxiom()
 	})
 }
 
