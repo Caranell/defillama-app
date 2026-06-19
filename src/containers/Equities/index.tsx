@@ -802,7 +802,6 @@ function EquitiesRankingsTable({
 						className="absolute top-0 bottom-0 left-2 my-auto text-(--text-tertiary)"
 					/>
 					<input
-						value={searchValue}
 						onInput={(event) => setSearchValue(event.currentTarget.value)}
 						placeholder="Search companies or tickers"
 						className="w-full rounded-md border border-(--form-control-border) bg-white p-1 pl-7 text-black dark:bg-black dark:text-white"

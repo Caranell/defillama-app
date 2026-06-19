@@ -242,8 +242,7 @@ function MyArticlesContent() {
 							/>
 							<input
 								type="search"
-								value={searchInput}
-								onChange={(e) => setSearchInput(e.target.value)}
+								onInput={(e) => setSearchInput(e.currentTarget.value)}
 								placeholder="Search title, slug…"
 								className="w-44 rounded-md border border-(--cards-border) bg-(--cards-bg) py-1.5 pr-2 pl-8 text-sm text-(--text-primary) placeholder:text-(--text-tertiary) focus:border-(--link-text)/50 focus:outline-none sm:w-56"
 							/>

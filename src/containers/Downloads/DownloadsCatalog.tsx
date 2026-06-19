@@ -235,8 +235,7 @@ export function DownloadsCatalog({ chartOptionsMap }: { chartOptionsMap: ChartOp
 						type="text"
 						inputMode="search"
 						placeholder="Search..."
-						value={searchValue}
-						onChange={(e) => setSearchValue(e.currentTarget.value)}
+						onInput={(e) => setSearchValue(e.currentTarget.value)}
 						className="min-h-8 w-full rounded-md border-(--bg-input) bg-(--bg-input) p-1.5 pl-7 text-base text-black placeholder:text-[#666] dark:text-white dark:placeholder-[#919296]"
 					/>
 				</label>

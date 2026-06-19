@@ -22,7 +22,6 @@ interface UnifiedTableHeaderProps {
 	rowHeaders?: UnifiedRowHeaderType[]
 	isExportDisabled?: boolean
 	isLoading?: boolean
-	searchTerm: string
 	onSearchChange: (value: string) => void
 	filterChips: ActiveFilterChip[]
 	onFilterRemove?: (chip: ActiveFilterChip) => void
@@ -45,7 +44,6 @@ export const UnifiedTableHeader = React.memo(function UnifiedTableHeader({
 	rowHeaders,
 	isExportDisabled = false,
 	isLoading = false,
-	searchTerm,
 	onSearchChange,
 	filterChips,
 	onFilterRemove,
@@ -86,13 +84,6 @@ export const UnifiedTableHeader = React.memo(function UnifiedTableHeader({
 		if (csvDisabled) return
 		onCsvExport?.()
 	}, [csvDisabled, onCsvExport])
-
-	const handleSearchChange = React.useCallback(
-		(event: React.ChangeEvent<HTMLInputElement>) => {
-			onSearchChange(event.target.value)
-		},
-		[onSearchChange]
-	)
 
 	return (
 		<div className="mb-3 flex flex-col gap-2">
@@ -192,8 +183,7 @@ export const UnifiedTableHeader = React.memo(function UnifiedTableHeader({
 					/>
 					<input
 						type="search"
-						value={searchTerm}
-						onChange={handleSearchChange}
+						onInput={(event) => onSearchChange(event.currentTarget.value)}
 						placeholder="Search protocols, chains, categories..."
 						className="w-full rounded-md border border-(--divider) bg-(--cards-bg) py-2 pr-3 pl-9 text-sm text-(--text-primary) focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/30 focus:outline-hidden"
 					/>
