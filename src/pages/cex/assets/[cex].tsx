@@ -19,6 +19,7 @@ import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 import { pushShallowQuery } from '~/utils/routerQuery'
 
 const MultiSeriesChart2 = React.lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
@@ -57,12 +58,7 @@ export const getStaticProps = withPerformanceLogging(
 			}
 		}
 		if (exchangeName !== cexRoute.canonicalSlug) {
-			return {
-				redirect: {
-					destination: `/cex/assets/${cexRoute.canonicalSlug}`,
-					permanent: true
-				}
-			}
+			return canonicalRouteRedirect(`/cex/assets/${cexRoute.canonicalSlug}`, true)
 		}
 
 		const protocolData = await fetchProtocolOverviewMetrics(cexRoute.canonicalSlug)

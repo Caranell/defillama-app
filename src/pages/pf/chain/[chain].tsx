@@ -10,6 +10,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const adapterType = ADAPTER_TYPES.FEES
 const type = 'P/F'
@@ -32,8 +33,12 @@ export const getStaticProps = withPerformanceLogging(
 	`fees/pf/chain/[chain]`,
 	async ({ params }: GetStaticPropsContext<{ chain: string }>) => {
 		const chain = slug(params.chain)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const metadata = metadataCache.chainMetadata[chain]
+		const [{ default: metadataCache }, { getChainRouteRedirectDestination, resolveChainFeatureParamFromMetadata }] =
+			await Promise.all([import('~/utils/metadata'), import('~/containers/ChainOverview/server/routes')])
+		const chainRoute = resolveChainFeatureParamFromMetadata(params.chain, metadataCache, (metadata) =>
+			Boolean(metadata.fees)
+		)
+		const metadata = chainRoute?.metadata
 
 		addDimensionChainRouteTelemetry({
 			adapterType,
@@ -42,8 +47,12 @@ export const getStaticProps = withPerformanceLogging(
 			metadataFlag: 'fees'
 		})
 
-		if (!metadata?.fees) {
+		if (!chainRoute) {
 			return { notFound: true }
+		}
+		const redirectDestination = getChainRouteRedirectDestination(params.chain, chainRoute, 'pf/chain')
+		if (redirectDestination) {
+			return canonicalRouteRedirect(redirectDestination)
 		}
 
 		const data = await getAdapterByChainPageData({

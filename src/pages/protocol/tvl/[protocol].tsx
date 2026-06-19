@@ -19,8 +19,8 @@ import { TVL_SETTINGS_KEYS_SET, useLocalStorageSettingsManager } from '~/context
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
-import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const MultiSeriesChart2 = React.lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
 
@@ -38,28 +38,33 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 		const { protocol } = params
-		const normalizedName = slug(protocol)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const { protocolMetadata } = metadataCache
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata || !metadata[1].tvl) {
+		const [{ default: metadataCache }, { resolveProtocolFeatureRouteFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
+		const protocolRoute = resolveProtocolFeatureRouteFromMetadata({
+			cexRoutePrefix: 'cex/assets',
+			hasMetric: (metadata) => Boolean(metadata.tvl),
+			metadataCache,
+			protocol,
+			routePrefix: 'protocol/tvl'
+		})
+		if (!protocolRoute) {
 			return { notFound: true }
 		}
+		if (protocolRoute.type === 'redirect') {
+			return canonicalRouteRedirect(protocolRoute.destination)
+		}
+		const metadata = protocolRoute.route.metadata
+		const canonicalProtocol = protocolRoute.route.canonicalSlug
 
-		const protocolData = await fetchProtocolOverviewMetrics(protocol)
+		const protocolData = await fetchProtocolOverviewMetrics(canonicalProtocol)
 
 		if (!protocolData) {
 			return { notFound: true }
 		}
 
-		const metrics = getProtocolMetricFlags({ protocolData, metadata: metadata[1] })
+		const metrics = getProtocolMetricFlags({ protocolData, metadata })
 		const seoTitle = `${protocolData.name} Total Value Locked (TVL) - DefiLlama`
 		const seoDescription = `Track ${protocolData.name} Total Value Locked across all chains with historical charts and breakdowns on DefiLlama.`
 

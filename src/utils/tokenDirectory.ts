@@ -1,3 +1,5 @@
+import { safeDecodeURIComponent } from './route'
+
 export type TokenDirectoryRecord = {
 	name: string
 	symbol: string
@@ -12,6 +14,32 @@ export type TokenDirectoryRecord = {
 }
 
 export type TokenDirectory = Record<string, TokenDirectoryRecord>
+export type TokenDirectoryRecordByRouteSegment = Record<string, TokenDirectoryRecord>
+
+const TOKEN_ROUTE_PREFIX = '/token/'
+
+export function getCanonicalTokenRoute(record: TokenDirectoryRecord): string {
+	return record.route ?? `${TOKEN_ROUTE_PREFIX}${encodeURIComponent(record.symbol)}`
+}
+
+export function getCanonicalTokenRouteSegment(record: TokenDirectoryRecord): string | null {
+	const route = getCanonicalTokenRoute(record)
+	return route.startsWith(TOKEN_ROUTE_PREFIX) ? route.slice(TOKEN_ROUTE_PREFIX.length) : null
+}
+
+export function createTokenDirectoryRecordByRouteSegment(tokens: TokenDirectory): TokenDirectoryRecordByRouteSegment {
+	const records = Object.create(null) as TokenDirectoryRecordByRouteSegment
+
+	for (const key in tokens) {
+		const token = tokens[key]
+		const routeSegment = getCanonicalTokenRouteSegment(token)
+		if (!routeSegment) continue
+		const decodedSegment = safeDecodeURIComponent(routeSegment)
+		if (!Object.prototype.hasOwnProperty.call(records, decodedSegment)) records[decodedSegment] = token
+	}
+
+	return records
+}
 
 export function findTokenDirectoryRecordByGeckoId(
 	tokens: TokenDirectory,

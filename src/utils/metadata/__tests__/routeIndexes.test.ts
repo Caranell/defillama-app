@@ -51,7 +51,7 @@ describe('metadata route indexes', () => {
 		})
 	})
 
-	it('builds DAT asset and company slugs using route slug semantics', () => {
+	it('builds DAT asset and company slugs in API display order', () => {
 		expect(
 			buildDigitalAssetTreasuryRoutesMetadata({
 				assetMetadata: {
@@ -61,7 +61,16 @@ describe('metadata route indexes', () => {
 						geckoId: 'bitcoin-cash',
 						companies: 1,
 						totalAmount: 1,
-						totalUsdValue: 1,
+						totalUsdValue: 10,
+						circSupplyPerc: 1
+					},
+					Ethereum: {
+						name: 'Ethereum',
+						ticker: 'ETH',
+						geckoId: 'ethereum',
+						companies: 1,
+						totalAmount: 1,
+						totalUsdValue: 100,
 						circSupplyPerc: 1
 					}
 				},
@@ -83,17 +92,113 @@ describe('metadata route indexes', () => {
 						totalUsdValue: 1,
 						totalCost: 1,
 						holdings: {}
+					},
+					2: {
+						institutionId: 2,
+						ticker: 'BMNR',
+						name: 'BitMine',
+						type: 'Public',
+						price: 1,
+						priceChange24h: null,
+						volume24h: 1,
+						mcapRealized: null,
+						mcapRealistic: null,
+						mcapMax: null,
+						realized_mNAV: null,
+						realistic_mNAV: null,
+						max_mNAV: null,
+						totalUsdValue: 100,
+						totalCost: 1,
+						holdings: {}
+					},
+					3: {
+						institutionId: 3,
+						ticker: 'MARA',
+						name: 'MARA',
+						type: 'Public',
+						price: 1,
+						priceChange24h: null,
+						volume24h: 1,
+						mcapRealized: null,
+						mcapRealistic: null,
+						mcapMax: null,
+						realized_mNAV: null,
+						realistic_mNAV: null,
+						max_mNAV: null,
+						totalUsdValue: 50,
+						totalCost: 1,
+						holdings: {}
 					}
 				},
-				institutions: [],
+				institutions: [
+					{ institutionId: 2, totalUsdValue: 100, totalCost: 1 },
+					{ institutionId: 1, totalUsdValue: 1, totalCost: 1 }
+				],
 				assets: {},
 				totalCompanies: 1,
 				flows: {},
 				mNAV: {}
 			})
 		).toEqual({
-			assetSlugs: ['bitcoin-cash'],
-			companySlugs: ['mstr']
+			assetSlugs: ['ethereum', 'bitcoin-cash'],
+			companySlugs: ['BMNR', 'MSTR', 'MARA']
+		})
+	})
+
+	it('dedupes DAT company routes by normalized ticker while preserving the first API value', () => {
+		expect(
+			buildDigitalAssetTreasuryRoutesMetadata({
+				assetMetadata: {},
+				institutionMetadata: {
+					1: {
+						institutionId: 1,
+						ticker: 'MSTR',
+						name: 'Strategy',
+						type: 'Public',
+						price: 1,
+						priceChange24h: null,
+						volume24h: 1,
+						mcapRealized: null,
+						mcapRealistic: null,
+						mcapMax: null,
+						realized_mNAV: null,
+						realistic_mNAV: null,
+						max_mNAV: null,
+						totalUsdValue: 100,
+						totalCost: 1,
+						holdings: {}
+					},
+					2: {
+						institutionId: 2,
+						ticker: 'mstr',
+						name: 'Strategy duplicate',
+						type: 'Public',
+						price: 1,
+						priceChange24h: null,
+						volume24h: 1,
+						mcapRealized: null,
+						mcapRealistic: null,
+						mcapMax: null,
+						realized_mNAV: null,
+						realistic_mNAV: null,
+						max_mNAV: null,
+						totalUsdValue: 1,
+						totalCost: 1,
+						holdings: {}
+					}
+				},
+				institutions: [
+					{ institutionId: 1, totalUsdValue: 100, totalCost: 1 },
+					{ institutionId: 2, totalUsdValue: 1, totalCost: 1 }
+				],
+				assets: {},
+				totalCompanies: 2,
+				flows: {},
+				mNAV: {}
+			})
+		).toEqual({
+			assetSlugs: [],
+			companySlugs: ['MSTR']
 		})
 	})
 

@@ -9,7 +9,7 @@ export type ChainRoute = {
 	canonicalName: string
 }
 
-type ChainMetric =
+export type ChainMetric =
 	| 'stablecoins'
 	| 'chainAssets'
 	| 'fees'
@@ -20,6 +20,7 @@ type ChainMetric =
 	| 'bridgeAggregators'
 	| 'openInterest'
 	| 'normalizedVolume'
+	| 'optionsPremiumVolume'
 	| 'optionsNotionalVolume'
 
 const chainFlaggedRoutes = [
@@ -38,29 +39,38 @@ const chainFlaggedRoutes = [
 	{ prefix: 'open-interest/chain', flag: 'openInterest' },
 	{ prefix: 'normalized-volume/chain', flag: 'normalizedVolume' },
 	{ prefix: 'options/notional-volume/chain', flag: 'optionsNotionalVolume' },
-	{ prefix: 'options/premium-volume/chain', flag: 'optionsNotionalVolume' }
+	{ prefix: 'options/premium-volume/chain', flag: 'optionsPremiumVolume' }
 ] as const
 
 export function resolveChainParamFromMetadata(chain: string, metadataCache: MetadataCache): ChainRoute | null {
 	const normalizedChain = slug(chain)
 	if (!normalizedChain) return null
 
-	for (const chainSlug in metadataCache.chainMetadata) {
-		const metadata = metadataCache.chainMetadata[chainSlug]
-		if (
-			chainSlug === normalizedChain ||
-			slug(metadata.name) === normalizedChain ||
-			slug(metadata.id) === normalizedChain
-		) {
-			return {
-				metadata,
-				canonicalSlug: slug(metadata.name),
-				canonicalName: metadata.name
-			}
-		}
-	}
+	const chainKey = metadataCache.chainRouteKeyBySlug[normalizedChain]
+	if (!chainKey) return null
 
-	return null
+	const metadata = metadataCache.chainMetadata[chainKey]
+	return {
+		metadata,
+		canonicalSlug: slug(metadata.name),
+		canonicalName: metadata.name
+	}
+}
+
+export function resolveChainFeatureParamFromMetadata(
+	chain: string,
+	metadataCache: MetadataCache,
+	hasFeature?: (metadata: IChainMetadata) => boolean
+): ChainRoute | null {
+	const chainRoute = resolveChainParamFromMetadata(chain, metadataCache)
+	if (!chainRoute) return null
+	if (hasFeature && !hasFeature(chainRoute.metadata)) return null
+
+	return chainRoute
+}
+
+export function getChainRouteRedirectDestination(chain: string, chainRoute: ChainRoute, prefix: string): string | null {
+	return chain === chainRoute.canonicalSlug ? null : `/${prefix}/${chainRoute.canonicalSlug}`
 }
 
 export async function resolveChainParam(chain: string): Promise<ChainRoute | null> {

@@ -39,6 +39,7 @@ import { buildHallmarksWithGenuineSpikes } from '~/utils/hallmarks'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const MultiSeriesChart2 = lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
 
@@ -73,24 +74,29 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 		const { protocol } = params
-		const normalizedName = slug(protocol)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
+		const [{ default: metadataCache }, { resolveProtocolFeatureRouteFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
 		const { protocolMetadata } = metadataCache
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata || !metadata[1].fees) {
+		const protocolRoute = resolveProtocolFeatureRouteFromMetadata({
+			hasMetric: (metadata) => Boolean(metadata.fees),
+			metadataCache,
+			protocol,
+			routePrefix: 'protocol/fees'
+		})
+		if (!protocolRoute) {
 			return { notFound: true }
 		}
+		if (protocolRoute.type === 'redirect') {
+			return canonicalRouteRedirect(protocolRoute.destination)
+		}
+		const metadata = [protocolRoute.route.id, protocolRoute.route.metadata] as const
+		const canonicalProtocol = protocolRoute.route.canonicalSlug
 
 		const [protocolData, feesData, revenueResult, holdersRevenueResult, bribeRevenueResult, tokenTaxResult] =
 			await Promise.all([
-				fetchProtocolOverviewMetrics(protocol),
+				fetchProtocolOverviewMetrics(canonicalProtocol),
 				getAdapterProtocolOverview({
 					adapterType: 'fees',
 					protocol: metadata[1].displayName,

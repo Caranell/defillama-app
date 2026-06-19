@@ -258,12 +258,12 @@ export const protocolCharts = defineApiRoute({
 				if (!protocol) {
 					return badRequest('protocol parameter is required')
 				}
-				const [{ default: metadataCache }, { resolveProtocolParam }] = await Promise.all([
+				const [{ default: metadataCache }, { resolveProtocolParamFromMetadata }] = await Promise.all([
 					import('~/utils/metadata'),
 					import('~/containers/ProtocolOverview/server/routes')
 				])
-				const protocolRoute = await resolveProtocolParam(protocol)
-				if (!protocolRoute || !metadataCache.emissionsProtocolsList.includes(protocolRoute.canonicalSlug)) {
+				const protocolRoute = resolveProtocolParamFromMetadata(protocol, metadataCache)
+				if (!protocolRoute || !metadataCache.emissionsProtocolBySlug[protocolRoute.canonicalSlug]) {
 					return notFound('protocol emissions not found')
 				}
 

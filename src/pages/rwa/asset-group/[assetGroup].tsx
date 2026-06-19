@@ -8,6 +8,7 @@ import { RWATabNav } from '~/containers/RWA/TabNav'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export async function getStaticPaths() {
 	if (SKIP_BUILD_STATIC_GENERATION) {
@@ -52,12 +53,7 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		if (params.assetGroup !== assetGroupSlug) {
-			return {
-				redirect: {
-					destination: `/rwa/asset-group/${assetGroupSlug}`,
-					permanent: false
-				}
-			}
+			return canonicalRouteRedirect(`/rwa/asset-group/${assetGroupSlug}`)
 		}
 
 		const props = await getRWAAssetsOverview({ assetGroup: assetGroupSlug, rwaList })

@@ -8,6 +8,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export const getStaticProps = withPerformanceLogging(
 	'protocols/[category]/[chain]',
@@ -17,44 +18,45 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const category = params.category
-		const chain = params.chain
+		const chain = slug(params.chain)
 
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
+		const [{ default: metadataCache }, { resolveChainParamFromMetadata }, { resolveProtocolListingParamFromMetadata }] =
+			await Promise.all([
+				import('~/utils/metadata'),
+				import('~/containers/ChainOverview/server/routes'),
+				import('~/containers/ProtocolTaxonomy/server/routes')
+			])
 		const { categoriesAndTags } = metadataCache
-		const categoryName = categoriesAndTags.categories.find((c) => slug(c) === slug(category))
-		let tagName = null
-		let tagCategory = null
-		if (!categoryName) {
-			tagName = categoriesAndTags.tags.find((t) => slug(t) === slug(category))
-			tagCategory = categoriesAndTags.tagCategoryMap[tagName]
-		}
+		const categoryRoute = resolveProtocolListingParamFromMetadata(category, metadataCache)
+		const chainRoute = resolveChainParamFromMetadata(params.chain, metadataCache)
 
-		if (!categoryName && !tagName) {
+		if (!categoryRoute || !chainRoute) {
 			return {
 				notFound: true
 			}
 		}
 
-		if (tagName && !tagCategory) {
-			return { notFound: true }
+		if (category !== categoryRoute.canonicalSlug || params.chain !== chainRoute.canonicalSlug) {
+			return canonicalRouteRedirect(`/protocols/${categoryRoute.canonicalSlug}/${chainRoute.canonicalSlug}`)
 		}
 
-		const props = categoryName
-			? await getProtocolTaxonomyPageData({
-					kind: 'category',
-					category: categoryName,
-					chain,
-					categoriesAndTags,
-					chainMetadata: metadataCache.chainMetadata
-				})
-			: await getProtocolTaxonomyPageData({
-					kind: 'tag',
-					tag: tagName,
-					tagCategory,
-					chain,
-					categoriesAndTags,
-					chainMetadata: metadataCache.chainMetadata
-				})
+		const props =
+			categoryRoute.kind === 'category'
+				? await getProtocolTaxonomyPageData({
+						kind: 'category',
+						category: categoryRoute.value,
+						chain,
+						categoriesAndTags,
+						chainMetadata: metadataCache.chainMetadata
+					})
+				: await getProtocolTaxonomyPageData({
+						kind: 'tag',
+						tag: categoryRoute.value,
+						tagCategory: categoryRoute.tagCategory,
+						chain,
+						categoriesAndTags,
+						chainMetadata: metadataCache.chainMetadata
+					})
 
 		if (!props)
 			return {
@@ -94,12 +96,12 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 	})
 	const title = presentation.seoTitle
 	const description = presentation.seoDescription
-	const canonicalChainSuffix = props.chain ? `/${props.chain}` : ''
+	const canonicalChainSuffix = props.chain ? `/${slug(props.chain)}` : ''
 	return (
 		<Layout
 			title={title}
 			description={description}
-			canonicalUrl={`/protocols/${props.category ? props.category : props.tag}${canonicalChainSuffix}`}
+			canonicalUrl={`/protocols/${slug(props.category ? props.category : props.tag)}${canonicalChainSuffix}`}
 			metricFilters={toggleOptions}
 		>
 			<ProtocolTaxonomyPage {...props} />

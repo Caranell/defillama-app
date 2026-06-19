@@ -4,23 +4,35 @@ import { RWAAssetPage } from '~/containers/RWA/Asset'
 import { getRWAAssetData } from '~/containers/RWA/queries'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
+import type { IRWAList } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect, safeDecodeURIComponent } from '~/utils/route'
 
-function safeDecodeAssetParam(value: string): string {
-	try {
-		return decodeURIComponent(value)
-	} catch {
-		return value
-	}
+type RWAAssetRoute = {
+	assetId: string
+	canonicalMarketId: string
 }
 
-function resolveCanonicalMarketId(assetParam: string, idMap: Record<string, string>): string | null {
+function resolveRWAAssetRoute(assetParam: string, rwaList: IRWAList): RWAAssetRoute | null {
 	const normalizedAssetParam = assetParam.toLowerCase()
 
-	for (const canonicalMarketId of Object.keys(idMap)) {
+	for (const canonicalMarketId of rwaList.canonicalMarketIds) {
 		if (canonicalMarketId.toLowerCase() === normalizedAssetParam) {
-			return canonicalMarketId
+			const assetId = getRWAAssetId(canonicalMarketId, rwaList.idMap)
+			return assetId ? { assetId, canonicalMarketId } : null
 		}
+	}
+
+	return null
+}
+
+function getRWAAssetId(canonicalMarketId: string, idMap: Record<string, string>): string | null {
+	const exactAssetId = idMap[canonicalMarketId]
+	if (exactAssetId) return exactAssetId
+
+	const normalizedMarketId = canonicalMarketId.toLowerCase()
+	for (const marketId in idMap) {
+		if (marketId.toLowerCase() === normalizedMarketId) return idMap[marketId]
 	}
 
 	return null
@@ -54,37 +66,27 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
-		const assetParam = safeDecodeAssetParam(params.asset)
+		const assetParam = safeDecodeURIComponent(params.asset)
 
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
 		const rwaList = metadataCache.rwaList
-		const canonicalMarketId = resolveCanonicalMarketId(assetParam, rwaList.idMap)
-		if (!canonicalMarketId) {
+		const assetRoute = resolveRWAAssetRoute(assetParam, rwaList)
+		if (!assetRoute) {
 			return { notFound: true }
 		}
 
-		if (assetParam !== canonicalMarketId) {
-			return {
-				redirect: {
-					destination: `/rwa/asset/${encodeURIComponent(canonicalMarketId)}`,
-					permanent: false
-				}
-			}
+		if (assetParam !== assetRoute.canonicalMarketId) {
+			return canonicalRouteRedirect(`/rwa/asset/${encodeURIComponent(assetRoute.canonicalMarketId)}`)
 		}
 
-		const assetId = rwaList.idMap[canonicalMarketId] ?? null
-		if (!assetId) {
-			return { notFound: true }
-		}
-
-		const asset = await getRWAAssetData({ assetId })
+		const asset = await getRWAAssetData({ assetId: assetRoute.assetId })
 
 		if (!asset) {
 			return { notFound: true }
 		}
 
 		return {
-			props: { asset },
+			props: { asset, canonicalMarketId: assetRoute.canonicalMarketId },
 			revalidate: maxAgeForNext([22])
 		}
 	}
@@ -92,7 +94,7 @@ export const getStaticProps = withPerformanceLogging(
 
 const pageName = ['RWA']
 
-export default function RWAAssetDetailPage({ asset }) {
+export default function RWAAssetDetailPage({ asset, canonicalMarketId }) {
 	const displayName =
 		asset.assetName && asset.ticker
 			? `${asset.assetName} (${asset.ticker})`
@@ -103,7 +105,7 @@ export default function RWAAssetDetailPage({ asset }) {
 			title={`${displayName} - RWA Dashboard & Analytics - DefiLlama`}
 			description={`Overview of the tokenized real-world asset ${displayName}, including supply, blockchain distribution, and platform data. DefiLlama provides transparent, ad-free RWA analytics.`}
 			pageName={pageName}
-			canonicalUrl={`/rwa/asset/${encodeURIComponent(asset.slug)}`}
+			canonicalUrl={`/rwa/asset/${encodeURIComponent(canonicalMarketId)}`}
 		>
 			<RWAAssetPage asset={asset} />
 		</Layout>

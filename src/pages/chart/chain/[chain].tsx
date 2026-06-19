@@ -12,9 +12,9 @@ import { useFetchChainChartData } from '~/containers/ChainOverview/useFetchChain
 import { TVL_SETTINGS } from '~/contexts/LocalStorage'
 import { useIsClient } from '~/hooks/useIsClient'
 import { FEE_EXTRA_CONFIGS } from '~/metrics/feeExtras'
-import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 import { isTruthyQueryParam } from '~/utils/routerQuery'
 
 const ChainCoreChart: any = lazy(() => import('~/containers/ChainOverview/Chart'))
@@ -29,11 +29,25 @@ const normalizeChartInterval = (value: string | null | undefined): LowercaseDwmc
 export const getStaticProps = withPerformanceLogging(
 	'chart/chain/[chain]',
 	async ({ params }: GetStaticPropsContext<{ chain: string }>) => {
-		const chain = !params.chain || params.chain === 'all' ? 'All' : params.chain
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
+		let chain = !params.chain || params.chain === 'all' ? 'All' : params.chain
+		const [{ default: metadataCache }, { resolveChainParamFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ChainOverview/server/routes')
+		])
 
-		if (chain !== 'All' && !metadataCache.chainMetadata[slug(chain)]) {
-			return { notFound: true }
+		if (chain === 'All') {
+			if (params.chain !== 'all') {
+				return canonicalRouteRedirect('/chart/chain/all')
+			}
+		} else {
+			const chainRoute = resolveChainParamFromMetadata(chain, metadataCache)
+			if (!chainRoute) {
+				return { notFound: true }
+			}
+			if (chain !== chainRoute.canonicalSlug) {
+				return canonicalRouteRedirect(`/chart/chain/${chainRoute.canonicalSlug}`)
+			}
+			chain = chainRoute.canonicalName
 		}
 
 		const data = await getChainOverviewData({

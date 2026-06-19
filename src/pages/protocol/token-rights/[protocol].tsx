@@ -9,10 +9,9 @@ import { getProtocolWarningBanners } from '~/containers/ProtocolOverview/utils'
 import type { ITokenRightsData } from '~/containers/TokenRights/api.types'
 import { TokenRightsByProtocol } from '~/containers/TokenRights/TokenRightsByProtocol'
 import { parseTokenRightsEntry } from '~/containers/TokenRights/utils'
-import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
-import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const EMPTY_OTHER_PROTOCOLS: string[] = []
 type TokenRightsPageProps = {
@@ -38,28 +37,30 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const { protocol } = params
-		const normalizedName = slug(protocol)
-		const metadataModule = await import('~/utils/metadata')
-		const metadataCache = metadataModule.default
-		const { protocolMetadata } = metadataCache
-
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata || !metadata[1].tokenRights) {
+		const [{ default: metadataCache }, { resolveProtocolFeatureRouteFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
+		const protocolRoute = resolveProtocolFeatureRouteFromMetadata({
+			hasMetric: (metadata) => Boolean(metadata.tokenRights),
+			metadataCache,
+			protocol,
+			routePrefix: 'protocol/token-rights'
+		})
+		if (!protocolRoute) {
 			return { notFound: true }
 		}
+		if (protocolRoute.type === 'redirect') {
+			return canonicalRouteRedirect(protocolRoute.destination)
+		}
+		const metadata = protocolRoute.route.metadata
+		const canonicalProtocol = protocolRoute.route.canonicalSlug
 
-		const defillamaId = metadata[0]
+		const defillamaId = protocolRoute.route.id
 		const { fetchTokenRightsEntryByDefillamaId } = await import('~/containers/TokenRights/server/dataset')
 		const [rawEntry, protocolData] = await Promise.all([
 			fetchTokenRightsEntryByDefillamaId(defillamaId),
-			fetchProtocolOverviewMetrics(protocol)
+			fetchProtocolOverviewMetrics(canonicalProtocol)
 		])
 
 		if (!rawEntry) {
@@ -73,7 +74,7 @@ export const getStaticProps = withPerformanceLogging(
 			: undefined
 		const symbol = tokenlistSymbol ?? (protocolData?.symbol && protocolData.symbol !== '-' ? protocolData.symbol : null)
 
-		const computedMetrics = protocolData ? getProtocolMetricFlags({ protocolData, metadata: metadata[1] }) : null
+		const computedMetrics = protocolData ? getProtocolMetricFlags({ protocolData, metadata }) : null
 		const name = protocolData?.name ?? rawEntry['Protocol Name']
 		const seoTitle = `${name}${symbol ? ` (${symbol})` : ''} Token Rights & Governance`
 		const seoDescription = `Explore ${name}${symbol ? ` (${symbol})` : ''} token rights, holder benefits, governance power, and revenue distribution on DefiLlama.`

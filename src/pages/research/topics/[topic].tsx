@@ -12,6 +12,7 @@ import { ResearchLoader } from '~/containers/Articles/ResearchLoader'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { safeDecodeURIComponent } from '~/utils/route'
 
 type TopicRouteParams = {
 	topic: string
@@ -62,7 +63,8 @@ export const getStaticProps = withPerformanceLogging<TopicLandingPageProps, Topi
 			}
 		}
 
-		const topic = normalizeTopicSlug(decodeURIComponent(topicParam))
+		const decodedTopicParam = safeDecodeURIComponent(topicParam)
+		const topic = normalizeTopicSlug(decodedTopicParam)
 		if (!topic) {
 			return {
 				notFound: true,
@@ -70,7 +72,7 @@ export const getStaticProps = withPerformanceLogging<TopicLandingPageProps, Topi
 			}
 		}
 
-		const canonicalParam = decodeURIComponent(topicParam).trim()
+		const canonicalParam = decodedTopicParam.trim()
 		if (canonicalParam !== topic && normalizeTopicSlug(canonicalParam) === topic) {
 			return {
 				redirect: {

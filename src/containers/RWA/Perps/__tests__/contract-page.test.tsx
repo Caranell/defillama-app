@@ -133,8 +133,30 @@ describe('rwa perps contract page', () => {
 		const page = await setupPageModule({ contracts: ['xyz:META'], contractData: TEST_CONTRACT })
 
 		await expect(page.getStaticProps({ params: { contract: 'xyz:META' } } as never)).resolves.toEqual({
-			props: { contract: TEST_CONTRACT },
+			props: { contract: TEST_CONTRACT, canonicalContract: 'xyz:META' },
 			revalidate: 123
+		})
+	})
+
+	it('getStaticProps keeps lowercase API contracts as canonical', async () => {
+		const lowercaseContract = {
+			...TEST_CONTRACT,
+			contract: {
+				...TEST_CONTRACT.contract,
+				contract: 'xyz:sp500'
+			}
+		}
+		const page = await setupPageModule({ contracts: ['xyz:sp500'], contractData: lowercaseContract })
+
+		await expect(page.getStaticProps({ params: { contract: 'xyz:sp500' } } as never)).resolves.toEqual({
+			props: { contract: lowercaseContract, canonicalContract: 'xyz:sp500' },
+			revalidate: 123
+		})
+		await expect(page.getStaticProps({ params: { contract: 'XYZ:SP500' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/rwa/perps/contract/xyz%3Asp500',
+				permanent: false
+			}
 		})
 	})
 
@@ -182,7 +204,9 @@ describe('rwa perps contract page', () => {
 	it('uses the raw contract identifier in the SEO title', async () => {
 		const page = await setupPageModule({ contracts: ['xyz:META'], contractData: TEST_CONTRACT })
 
-		const element = page.default({ contract: TEST_CONTRACT } as never) as ReactElement<{ title: string }>
+		const element = page.default({ contract: TEST_CONTRACT, canonicalContract: 'xyz:META' } as never) as ReactElement<{
+			title: string
+		}>
 
 		expect(element.props.title).toBe('xyz:META - RWA Perps Analytics - DefiLlama')
 	})

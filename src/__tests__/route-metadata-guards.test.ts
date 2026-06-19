@@ -1,5 +1,6 @@
 import type { NextApiRequest } from 'next'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { MetadataCache } from '~/utils/metadata/artifactContract'
 import { createMockNextApiResponse } from '~/utils/test/nextApiMocks'
 
 const {
@@ -12,6 +13,8 @@ const {
 	getOraclesListPageDataMock,
 	getDATOverviewDataByAssetMock,
 	getDATCompanyDataMock,
+	getProtocolOverviewPageDataMock,
+	fetchEntityQuestionsMock,
 	fetchStablecoinAssetsApiMock,
 	getStablecoinAssetPageDataMock,
 	metadataCache
@@ -25,23 +28,53 @@ const {
 	getOraclesListPageDataMock: vi.fn(),
 	getDATOverviewDataByAssetMock: vi.fn(),
 	getDATCompanyDataMock: vi.fn(),
+	getProtocolOverviewPageDataMock: vi.fn(),
+	fetchEntityQuestionsMock: vi.fn(),
 	fetchStablecoinAssetsApiMock: vi.fn(),
 	getStablecoinAssetPageDataMock: vi.fn(),
 	metadataCache: {
 		chainMetadata: {},
+		chainRouteKeyBySlug: {},
 		categoriesAndTags: { categories: [], tags: [], tagCategoryMap: {}, configs: {} },
+		protocolCategoryBySlug: {},
+		protocolTagBySlug: {},
 		protocolMetadata: {},
+		protocolRouteIdBySlug: {},
+		cexs: [],
+		cexRouteIdBySlug: {},
+		cexMetadataBySlug: {},
+		rwaList: { canonicalMarketIds: [], platforms: [], chains: [], categories: [], assetGroups: [], idMap: {} },
+		rwaPerpsList: { contracts: [], venues: [], categories: [], assetGroups: [], total: 0 },
+		tokenlist: {},
+		tokenDirectory: {},
+		tokenDirectoryRecordByRouteSegment: {},
+		protocolDisplayNames: new Map(),
+		chainDisplayNames: new Map(),
+		chainCategories: [],
+		liquidationsTokenSymbols: [],
+		liquidationsTokenSymbolsSet: new Set<string>(),
+		emissionsProtocolsList: [],
+		emissionsProtocolBySlug: {},
+		emissionsSupplyMetrics: {},
+		emissionsHistoricalPrices: {},
+		cgExchangeIdentifiers: [],
+		bridgeProtocolSlugs: [],
+		bridgeProtocolSlugsSet: new Set<string>(),
+		bridgeChainSlugs: [],
+		bridgeChainSlugsSet: new Set<string>(),
+		bridgeChainSlugToName: {},
+		protocolLlamaswapDataset: {},
 		narrativeCategories: { ids: [], nameById: {} },
 		narrativeCategoryIdsSet: new Set<string>(),
 		oracleRoutes: { oracleNameBySlug: {}, chainNameBySlug: {}, chainSlugsByOracleSlug: {} },
 		digitalAssetTreasuryRoutes: { assetSlugs: [], companySlugs: [] },
 		digitalAssetTreasuryAssetSlugsSet: new Set<string>(),
-		digitalAssetTreasuryCompanySlugsSet: new Set<string>(),
+		digitalAssetTreasuryCompanyRouteBySlug: {},
 		stablecoinPeggedAssetSlugs: [],
 		stablecoinPeggedAssetSlugsSet: new Set<string>(),
 		equitiesCompanyRoutes: [],
 		equitiesCompanySlugsSet: new Set<string>()
-	}
+	} as MetadataCache
 }))
 
 vi.mock('~/constants', async (importOriginal) => ({
@@ -102,6 +135,18 @@ vi.mock('~/containers/DAT/queries', () => ({
 	getDATCompanyData: getDATCompanyDataMock
 }))
 
+vi.mock('~/containers/ProtocolOverview', () => ({
+	ProtocolOverview: () => null
+}))
+
+vi.mock('~/containers/ProtocolOverview/queries', () => ({
+	getProtocolOverviewPageData: getProtocolOverviewPageDataMock
+}))
+
+vi.mock('~/containers/LlamaAI/api', () => ({
+	fetchEntityQuestions: fetchEntityQuestionsMock
+}))
+
 vi.mock('~/containers/Stablecoins/api', () => ({
 	fetchStablecoinAssetsApi: fetchStablecoinAssetsApiMock
 }))
@@ -114,6 +159,11 @@ vi.mock('~/containers/Stablecoins/StablecoinOverview', () => ({
 	default: () => null
 }))
 
+import {
+	getChainRouteRedirectDestination,
+	resolveChainParamFromMetadata
+} from '~/containers/ChainOverview/server/routes'
+import { resolveProtocolFeatureRouteFromMetadata } from '~/containers/ProtocolOverview/server/routes'
 import { chainCacheHandler } from '~/pages/api/dynamic/cache/chain/[chain]'
 import * as datAssetPage from '~/pages/digital-asset-treasuries/[asset]'
 import * as datCompanyPage from '~/pages/digital-asset-treasury/[company]'
@@ -121,11 +171,20 @@ import * as narrativePage from '~/pages/narrative-tracker/[category]'
 import * as oraclePage from '~/pages/oracles/[oracle]'
 import * as oracleChainPage from '~/pages/oracles/[oracle]/[chain]'
 import * as oraclesByChainPage from '~/pages/oracles/chain/[chain]'
+import * as protocolPage from '~/pages/protocol/[protocol]'
 import * as stablecoinPage from '~/pages/stablecoin/[peggedasset]'
 
 beforeEach(() => {
 	vi.clearAllMocks()
 	metadataCache.chainMetadata = { ethereum: { name: 'Ethereum', id: 'ethereum' } }
+	metadataCache.chainRouteKeyBySlug = { ethereum: 'ethereum' }
+	metadataCache.protocolMetadata = {
+		aave: { name: 'aave-v3', displayName: 'Aave', tvl: true, fees: true }
+	}
+	metadataCache.protocolRouteIdBySlug = { aave: 'aave', 'aave-v3': 'aave' }
+	metadataCache.cexs = []
+	metadataCache.cexRouteIdBySlug = {}
+	metadataCache.cexMetadataBySlug = {}
 	metadataCache.narrativeCategories = { ids: ['ai'], nameById: { ai: 'AI' } }
 	metadataCache.narrativeCategoryIdsSet = new Set(['ai'])
 	metadataCache.oracleRoutes = {
@@ -133,9 +192,9 @@ beforeEach(() => {
 		chainNameBySlug: { ethereum: 'Ethereum' },
 		chainSlugsByOracleSlug: { chainlink: ['ethereum'] }
 	}
-	metadataCache.digitalAssetTreasuryRoutes = { assetSlugs: ['bitcoin'], companySlugs: ['mstr'] }
+	metadataCache.digitalAssetTreasuryRoutes = { assetSlugs: ['bitcoin'], companySlugs: ['MSTR'] }
 	metadataCache.digitalAssetTreasuryAssetSlugsSet = new Set(['bitcoin'])
-	metadataCache.digitalAssetTreasuryCompanySlugsSet = new Set(['mstr'])
+	metadataCache.digitalAssetTreasuryCompanyRouteBySlug = { mstr: 'MSTR' }
 	metadataCache.stablecoinPeggedAssetSlugs = ['tether']
 	metadataCache.stablecoinPeggedAssetSlugsSet = new Set(['tether'])
 	getObjectCacheMock.mockResolvedValue(null)
@@ -151,6 +210,8 @@ beforeEach(() => {
 	getOraclesListPageDataMock.mockResolvedValue({ chain: 'Ethereum' })
 	getDATOverviewDataByAssetMock.mockResolvedValue({ asset: 'bitcoin', metadata: { name: 'Bitcoin', ticker: 'BTC' } })
 	getDATCompanyDataMock.mockResolvedValue({ name: 'Strategy', ticker: 'MSTR' })
+	getProtocolOverviewPageDataMock.mockResolvedValue({ name: 'Aave' })
+	fetchEntityQuestionsMock.mockResolvedValue({ questions: [] })
 	getStablecoinAssetPageDataMock.mockResolvedValue({
 		props: {
 			peggedAssetData: { name: 'Tether', symbol: 'USDT' }
@@ -249,9 +310,9 @@ describe('route metadata guards', () => {
 				permanent: false
 			}
 		})
-		await expect(datCompanyPage.getStaticProps({ params: { company: 'MSTR' } } as never)).resolves.toEqual({
+		await expect(datCompanyPage.getStaticProps({ params: { company: 'mstr' } } as never)).resolves.toEqual({
 			redirect: {
-				destination: '/digital-asset-treasury/mstr',
+				destination: '/digital-asset-treasury/MSTR',
 				permanent: false
 			}
 		})
@@ -259,15 +320,125 @@ describe('route metadata guards', () => {
 		expect(getDATCompanyDataMock).not.toHaveBeenCalled()
 	})
 
+	it('DAT company route does not redirect away from the metadata slug when detail ticker differs', async () => {
+		getDATCompanyDataMock.mockResolvedValueOnce({ name: 'Strategy', ticker: 'MSTR.US' })
+
+		const result = await datCompanyPage.getStaticProps({ params: { company: 'MSTR' } } as never)
+
+		expect('redirect' in result).toBe(false)
+		expect(result).toMatchObject({
+			props: {
+				name: 'Strategy',
+				ticker: 'MSTR.US',
+				canonicalCompanyRoute: 'MSTR'
+			}
+		})
+		expect(getDATCompanyDataMock).toHaveBeenCalledWith('mstr')
+	})
+
 	it('DAT getStaticPaths uses blocking fallback so canonical redirects can run', async () => {
+		metadataCache.digitalAssetTreasuryRoutes = {
+			assetSlugs: Array.from({ length: 12 }, (_, index) => `asset-${index + 1}`),
+			companySlugs: Array.from({ length: 12 }, (_, index) => `COMPANY-${index + 1}`)
+		}
+		metadataCache.digitalAssetTreasuryCompanyRouteBySlug = Object.fromEntries(
+			metadataCache.digitalAssetTreasuryRoutes.companySlugs.map((company) => [company.toLowerCase(), company])
+		)
+
 		await expect(datAssetPage.getStaticPaths()).resolves.toEqual({
-			paths: [{ params: { asset: 'bitcoin' } }],
+			paths: Array.from({ length: 10 }, (_, index) => ({ params: { asset: `asset-${index + 1}` } })),
 			fallback: 'blocking'
 		})
 		await expect(datCompanyPage.getStaticPaths()).resolves.toEqual({
-			paths: [{ params: { company: 'mstr' } }],
+			paths: Array.from({ length: 10 }, (_, index) => ({ params: { company: `COMPANY-${index + 1}` } })),
 			fallback: 'blocking'
 		})
+	})
+
+	it('protocol route redirects noncanonical aliases before page data fetches', async () => {
+		await expect(protocolPage.getStaticProps({ params: { protocol: 'aave-v3' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/protocol/aave',
+				permanent: false
+			}
+		})
+		expect(getProtocolOverviewPageDataMock).not.toHaveBeenCalled()
+		expect(fetchEntityQuestionsMock).not.toHaveBeenCalled()
+	})
+
+	it('protocol route keeps structural CEX redirects permanent', async () => {
+		metadataCache.protocolMetadata.binance = {
+			name: 'binance-cex',
+			displayName: 'Binance CEX',
+			tvl: true,
+			cex: true
+		}
+		metadataCache.cexs = [{ name: 'Binance', slug: 'binance-cex' }]
+		metadataCache.cexRouteIdBySlug = { binance: 'binance', 'binance-cex': 'binance' }
+		metadataCache.cexMetadataBySlug = { 'binance-cex': { name: 'Binance', slug: 'binance-cex' } }
+
+		await expect(protocolPage.getStaticProps({ params: { protocol: 'binance-cex' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/cex/binance-cex',
+				permanent: true
+			}
+		})
+		expect(getProtocolOverviewPageDataMock).not.toHaveBeenCalled()
+		expect(fetchEntityQuestionsMock).not.toHaveBeenCalled()
+	})
+
+	it('chain route resolver redirects valid case aliases to the canonical display slug', () => {
+		const chainRoute = resolveChainParamFromMetadata('Ethereum', metadataCache)
+
+		expect(chainRoute?.canonicalSlug).toBe('ethereum')
+		if (!chainRoute) throw new Error('Expected Ethereum chain route')
+		expect(getChainRouteRedirectDestination('Ethereum', chainRoute, 'chain')).toBe('/chain/ethereum')
+		expect(getChainRouteRedirectDestination('ethereum', chainRoute, 'chain')).toBe(null)
+	})
+
+	it('protocol feature resolver redirects valid aliases and preserves CEX feature redirects', () => {
+		metadataCache.protocolMetadata.binance = {
+			name: 'binance-cex',
+			displayName: 'Binance CEX',
+			stablecoins: true,
+			tvl: true,
+			cex: true
+		}
+		metadataCache.cexs = [{ name: 'Binance', slug: 'binance-cex' }]
+		metadataCache.cexRouteIdBySlug = { binance: 'binance', 'binance-cex': 'binance' }
+		metadataCache.cexMetadataBySlug = { 'binance-cex': { name: 'Binance', slug: 'binance-cex' } }
+
+		expect(
+			resolveProtocolFeatureRouteFromMetadata({
+				hasMetric: (metadata) => Boolean(metadata.fees),
+				metadataCache,
+				protocol: 'Aave',
+				routePrefix: 'protocol/fees'
+			})
+		).toEqual({
+			type: 'redirect',
+			destination: '/protocol/fees/aave'
+		})
+		expect(
+			resolveProtocolFeatureRouteFromMetadata({
+				cexRoutePrefix: 'cex/stablecoins',
+				hasMetric: (metadata) => Boolean(metadata.stablecoins),
+				metadataCache,
+				protocol: 'binance-cex',
+				routePrefix: 'protocol/stablecoins'
+			})
+		).toEqual({
+			type: 'redirect',
+			destination: '/cex/stablecoins/binance-cex'
+		})
+		expect(
+			resolveProtocolFeatureRouteFromMetadata({
+				hasMetric: (metadata) => Boolean(metadata.fees),
+				metadataCache,
+				protocol: 'binance-cex',
+				routePrefix: 'protocol/fees'
+			})
+		).toBe(null)
 	})
 
 	it('stablecoin route returns notFound before data fetch for indexed invalid slugs', async () => {

@@ -289,6 +289,19 @@ describe('research ISR data loading', () => {
 		).resolves.toMatchObject({ notFound: true })
 	})
 
+	it('safely redirects malformed encoded topic slugs to a normalized path', async () => {
+		await expect(
+			getTopicLandingStaticProps({
+				params: { topic: '%E0%A4%A' }
+			} as never)
+		).resolves.toMatchObject({
+			redirect: {
+				destination: '/research/topics/e0-a4-a',
+				permanent: true
+			}
+		})
+	})
+
 	it('returns notFound when a topic has fewer than four articles', async () => {
 		vi.mocked(listArticlesByTopic).mockResolvedValueOnce(topicArticleList(3))
 

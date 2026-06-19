@@ -1,5 +1,12 @@
 export const binanceCexMetadataCache = {
 	cexs: [{ name: 'Binance', slug: 'binance-cex', coin: 'BNB' }],
+	cexRouteIdBySlug: {
+		binance: 'binance',
+		'binance-cex': 'binance'
+	},
+	cexMetadataBySlug: {
+		'binance-cex': { name: 'Binance', slug: 'binance-cex', coin: 'BNB' }
+	},
 	protocolMetadata: {
 		binance: {
 			name: 'binance-cex',
@@ -16,6 +23,15 @@ export const cryptoComCexMetadataCache = {
 		{ name: 'Crypto.com', slug: 'crypto-com' },
 		{ name: 'No Markets', slug: 'no-markets' }
 	],
+	cexRouteIdBySlug: {
+		'crypto.com': 'crypto-com',
+		'crypto-com': 'crypto-com',
+		'no-markets': 'no-markets'
+	},
+	cexMetadataBySlug: {
+		'crypto-com': { name: 'Crypto.com', slug: 'crypto-com' },
+		'no-markets': { name: 'No Markets', slug: 'no-markets' }
+	},
 	protocolMetadata: {
 		'crypto-com': {
 			name: 'crypto-com',

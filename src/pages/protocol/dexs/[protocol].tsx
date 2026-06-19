@@ -26,8 +26,8 @@ import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { formattedNum, slug } from '~/utils'
 import { buildHallmarksWithGenuineSpikes } from '~/utils/hallmarks'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
-import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const EMPTY_TOGGLE_OPTIONS = []
 
@@ -40,23 +40,28 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 		const { protocol } = params
-		const normalizedName = slug(protocol)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
+		const [{ default: metadataCache }, { resolveProtocolFeatureRouteFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
 		const { protocolMetadata } = metadataCache
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata || (!metadata[1].dexs && !metadata[1].dexsNotionalVolume)) {
+		const protocolRoute = resolveProtocolFeatureRouteFromMetadata({
+			hasMetric: (metadata) => Boolean(metadata.dexs || metadata.dexsNotionalVolume),
+			metadataCache,
+			protocol,
+			routePrefix: 'protocol/dexs'
+		})
+		if (!protocolRoute) {
 			return { notFound: true }
 		}
+		if (protocolRoute.type === 'redirect') {
+			return canonicalRouteRedirect(protocolRoute.destination)
+		}
+		const metadata = [protocolRoute.route.id, protocolRoute.route.metadata] as const
+		const canonicalProtocol = protocolRoute.route.canonicalSlug
 
 		const [protocolData, volumeData, notionalVolumeData] = await Promise.all([
-			fetchProtocolOverviewMetrics(protocol),
+			fetchProtocolOverviewMetrics(canonicalProtocol),
 			metadata[1].dexs
 				? getAdapterProtocolOverview({
 						adapterType: 'dexs',

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getStaticProps as getCexStaticProps } from '~/pages/cex/[cex]'
+import { getStaticProps as getCexAssetsStaticProps } from '~/pages/cex/assets/[cex]'
 import { getStaticProps as getCexMarketsStaticProps } from '~/pages/cex/markets/[cex]'
+import { getStaticProps as getCexStablecoinsStaticProps } from '~/pages/cex/stablecoins/[cex]'
 import { cryptoComCexMetadataCache } from './metadataFixture'
 
 const { resolveCexMarketsByDefillamaSlugMock } = vi.hoisted(() => ({
@@ -71,6 +73,33 @@ describe('CEX markets routes', () => {
 				cexMarketsSlug: 'Crypto-com'
 			},
 			revalidate: 123
+		})
+	})
+
+	it('redirects CEX aliases to canonical slugs permanently', async () => {
+		await expect(getCexStaticProps({ params: { cex: 'Crypto.com' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/cex/crypto-com',
+				permanent: true
+			}
+		})
+		await expect(getCexAssetsStaticProps({ params: { cex: 'Crypto.com' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/cex/assets/crypto-com',
+				permanent: true
+			}
+		})
+		await expect(getCexMarketsStaticProps({ params: { cex: 'Crypto.com' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/cex/markets/crypto-com',
+				permanent: true
+			}
+		})
+		await expect(getCexStablecoinsStaticProps({ params: { cex: 'Crypto.com' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/cex/stablecoins/crypto-com',
+				permanent: true
+			}
 		})
 	})
 

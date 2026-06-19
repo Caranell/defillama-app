@@ -6,6 +6,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const pageName = ['Digital Asset Treasuries', 'by', 'Institution']
 
@@ -23,27 +24,13 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		if (params.asset !== asset) {
-			return {
-				redirect: {
-					destination: `/digital-asset-treasuries/${asset}`,
-					permanent: false
-				}
-			}
+			return canonicalRouteRedirect(`/digital-asset-treasuries/${asset}`)
 		}
 
 		const props = await getDATOverviewDataByAsset(asset)
 
 		if (!props) {
 			return { notFound: true }
-		}
-
-		if (asset !== props.asset) {
-			return {
-				redirect: {
-					destination: `/digital-asset-treasuries/${props.asset}`,
-					permanent: false
-				}
-			}
 		}
 
 		return {

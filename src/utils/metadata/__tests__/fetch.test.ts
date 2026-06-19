@@ -95,7 +95,7 @@ describe('fetchCoreMetadata', () => {
 		fetchMetadataRouteIndexesMock.mockResolvedValue({
 			narrativeCategories: { ids: ['ai'], nameById: { ai: 'AI' } },
 			oracleRoutes: { oracleNameBySlug: {}, chainNameBySlug: {}, chainSlugsByOracleSlug: {} },
-			digitalAssetTreasuryRoutes: { assetSlugs: ['bitcoin'], companySlugs: ['mstr'] },
+			digitalAssetTreasuryRoutes: { assetSlugs: ['bitcoin'], companySlugs: ['MSTR'] },
 			stablecoinPeggedAssetSlugs: ['tether']
 		})
 	})

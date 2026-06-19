@@ -5,6 +5,7 @@ import { getProtocolOverviewPageData } from '~/containers/ProtocolOverview/queri
 import type { IProtocolOverviewPageData } from '~/containers/ProtocolOverview/types'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export const getStaticProps = withPerformanceLogging(
 	'cex/[cex]',
@@ -28,12 +29,7 @@ export const getStaticProps = withPerformanceLogging(
 		}
 		const protocolMetadata = cexRoute.metadata
 		if (exchangeName !== cexRoute.canonicalSlug) {
-			return {
-				redirect: {
-					destination: `/cex/${cexRoute.canonicalSlug}`,
-					permanent: true
-				}
-			}
+			return canonicalRouteRedirect(`/cex/${cexRoute.canonicalSlug}`, true)
 		}
 
 		const { resolveCexMarketsByDefillamaSlug } = await import('~/containers/Markets/server/dataset')

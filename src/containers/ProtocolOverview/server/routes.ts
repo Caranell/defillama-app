@@ -1,3 +1,4 @@
+import { resolveCexParamFromMetadata } from '~/containers/Cexs/server/routes'
 import { getMetadataCache } from '~/server/routeRegistry/common'
 import { slug } from '~/utils'
 import type { MetadataCache } from '~/utils/metadata/artifactContract'
@@ -12,6 +13,16 @@ export type ProtocolRoute = {
 	metadata: IProtocolMetadata
 	canonicalSlug: string
 }
+
+export type ProtocolFeatureRouteResolution =
+	| {
+			type: 'route'
+			route: ProtocolRoute
+	  }
+	| {
+			type: 'redirect'
+			destination: string
+	  }
 
 type ProtocolMetric =
 	| 'tvl'
@@ -77,23 +88,54 @@ export function resolveProtocolParamFromMetadata(protocol: string, metadataCache
 	const normalizedProtocol = slug(protocol)
 	if (!normalizedProtocol || normalizedProtocol === 'null' || normalizedProtocol === 'undefined') return null
 
-	for (const protocolId in metadataCache.protocolMetadata) {
-		const metadata = metadataCache.protocolMetadata[protocolId]
-		if (!isProtocolRouteMetadata(metadata)) continue
-		if (
-			slug(metadata.displayName) === normalizedProtocol ||
-			slug(metadata.name) === normalizedProtocol ||
-			slug(protocolId) === normalizedProtocol
-		) {
+	const protocolId = metadataCache.protocolRouteIdBySlug[normalizedProtocol]
+	if (!protocolId) return null
+
+	const metadata = metadataCache.protocolMetadata[protocolId]
+	return {
+		id: protocolId,
+		metadata,
+		canonicalSlug: getProtocolSlug(metadata, protocolId)
+	}
+}
+
+export function resolveProtocolFeatureRouteFromMetadata({
+	cexRoutePrefix,
+	hasMetric,
+	metadataCache,
+	protocol,
+	routePrefix
+}: {
+	cexRoutePrefix?: string
+	hasMetric: (metadata: IProtocolMetadata) => boolean
+	metadataCache: MetadataCache
+	protocol: string
+	routePrefix: string
+}): ProtocolFeatureRouteResolution | null {
+	if (cexRoutePrefix) {
+		const cexRoute = resolveCexParamFromMetadata(protocol, metadataCache)
+		if (cexRoute) {
 			return {
-				id: protocolId,
-				metadata,
-				canonicalSlug: getProtocolSlug(metadata, protocolId)
+				type: 'redirect',
+				destination: `/${cexRoutePrefix}/${cexRoute.canonicalSlug}`
 			}
 		}
 	}
 
-	return null
+	const protocolRoute = resolveProtocolParamFromMetadata(protocol, metadataCache)
+	if (!protocolRoute || !hasMetric(protocolRoute.metadata)) return null
+
+	if (protocol !== protocolRoute.canonicalSlug) {
+		return {
+			type: 'redirect',
+			destination: `/${routePrefix}/${protocolRoute.canonicalSlug}`
+		}
+	}
+
+	return {
+		type: 'route',
+		route: protocolRoute
+	}
 }
 
 export async function resolveProtocolParam(protocol: string): Promise<ProtocolRoute | null> {

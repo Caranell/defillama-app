@@ -61,7 +61,7 @@ function createDATResponse() {
 				holdings: {}
 			}
 		},
-		institutions: [],
+		institutions: [{ institutionId: 1, totalUsdValue: 1, totalCost: 1 }],
 		assets: {},
 		totalCompanies: 1,
 		flows: {},
@@ -91,7 +91,7 @@ describe('fetchMetadataRouteIndexes', () => {
 				chainNameBySlug: { ethereum: 'Ethereum' },
 				chainSlugsByOracleSlug: { chainlink: ['ethereum'] }
 			},
-			digitalAssetTreasuryRoutes: { assetSlugs: ['bitcoin'], companySlugs: ['mstr'] },
+			digitalAssetTreasuryRoutes: { assetSlugs: ['bitcoin'], companySlugs: ['MSTR'] },
 			stablecoinPeggedAssetSlugs: ['tether']
 		})
 	})

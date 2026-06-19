@@ -15,35 +15,17 @@ export function resolveCexParamFromMetadata(cex: string, metadataCache: Metadata
 	const normalizedCex = slug(cex)
 	if (!normalizedCex) return null
 
-	const cexMetadataBySlug: Record<string, ICexItem> = {}
-	let requestedCexSlug = ''
-	for (const cexMetadata of metadataCache.cexs) {
-		if (!cexMetadata.slug) continue
-		const cexSlug = slug(cexMetadata.slug)
-		cexMetadataBySlug[cexSlug] = cexMetadata
-		if (slug(cexMetadata.name) === normalizedCex) requestedCexSlug = cexSlug
-	}
+	const protocolId = metadataCache.cexRouteIdBySlug[normalizedCex]
+	if (!protocolId) return null
 
-	for (const protocolId in metadataCache.protocolMetadata) {
-		const metadata = metadataCache.protocolMetadata[protocolId]
-		if (!metadata.cex || !metadata.name) continue
-		const canonicalSlug = slug(metadata.name)
-		if (
-			canonicalSlug === normalizedCex ||
-			canonicalSlug === requestedCexSlug ||
-			slug(metadata.displayName) === normalizedCex ||
-			slug(protocolId) === normalizedCex
-		) {
-			return {
-				id: protocolId,
-				metadata,
-				cexMetadata: cexMetadataBySlug[canonicalSlug],
-				canonicalSlug
-			}
-		}
+	const metadata = metadataCache.protocolMetadata[protocolId]
+	const canonicalSlug = slug(metadata.name)
+	return {
+		id: protocolId,
+		metadata,
+		cexMetadata: metadataCache.cexMetadataBySlug[canonicalSlug],
+		canonicalSlug
 	}
-
-	return null
 }
 
 export function getCanonicalCexSlugsFromMetadata(metadataCache: MetadataCache): string[] {

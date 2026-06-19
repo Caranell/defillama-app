@@ -6,10 +6,9 @@ import { fetchProtocolOverviewMetrics } from '~/containers/ProtocolOverview/api'
 import { ProtocolOverviewLayout } from '~/containers/ProtocolOverview/Layout'
 import { getProtocolMetricFlags } from '~/containers/ProtocolOverview/queries'
 import { getProtocolWarningBanners } from '~/containers/ProtocolOverview/utils'
-import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
-import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export const getStaticProps = withPerformanceLogging(
 	'protocol/forks/[protocol]',
@@ -18,26 +17,30 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 		const { protocol } = params
-		const normalizedName = slug(protocol)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const { protocolMetadata } = metadataCache
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata || !metadata[1].forks) {
+		const [{ default: metadataCache }, { resolveProtocolFeatureRouteFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
+		const protocolRoute = resolveProtocolFeatureRouteFromMetadata({
+			hasMetric: (metadata) => Boolean(metadata.forks),
+			metadataCache,
+			protocol,
+			routePrefix: 'protocol/forks'
+		})
+		if (!protocolRoute) {
 			return { notFound: true }
 		}
+		if (protocolRoute.type === 'redirect') {
+			return canonicalRouteRedirect(protocolRoute.destination)
+		}
+		const metadata = protocolRoute.route.metadata
+		const canonicalProtocol = protocolRoute.route.canonicalSlug
 
-		const protocolData = await fetchProtocolOverviewMetrics(protocol)
+		const protocolData = await fetchProtocolOverviewMetrics(canonicalProtocol)
 		const { getForksByProtocolPageData } = await import('~/containers/Forks/queries')
 		const forksData = await getForksByProtocolPageData({ fork: protocolData.name })
 
-		const metrics = getProtocolMetricFlags({ protocolData, metadata: metadata[1] })
+		const metrics = getProtocolMetricFlags({ protocolData, metadata })
 		const seoTitle = `${protocolData.name} Protocol Forks & Derivatives - DefiLlama`
 		const seoDescription = `Track ${protocolData.name} protocol forks, their total TVL, and how derivative projects compare on DefiLlama.`
 

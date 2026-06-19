@@ -53,6 +53,20 @@ export const EMPTY_ROUTE_INDEXES: RouteIndexesMetadata = {
 	stablecoinPeggedAssetSlugs: []
 }
 
+function dedupeRouteValuesBySlug(values: string[]): string[] {
+	const slugs = new Set<string>()
+	const routes: string[] = []
+
+	for (const value of values) {
+		const valueSlug = slug(value)
+		if (!valueSlug || slugs.has(valueSlug)) continue
+		slugs.add(valueSlug)
+		routes.push(value)
+	}
+
+	return routes
+}
+
 export function buildNarrativeCategoriesMetadata(info: ICategoryInfoApiItem[]): NarrativeCategoriesMetadata {
 	const ids: string[] = []
 	const nameById: Record<string, string> = {}
@@ -113,19 +127,27 @@ export function buildOracleRoutesMetadata({
 export function buildDigitalAssetTreasuryRoutesMetadata(
 	data: Awaited<ReturnType<typeof fetchDATInstitutions>>
 ): DigitalAssetTreasuryRoutesMetadata {
-	const assetSlugs: string[] = []
-	for (const asset in data.assetMetadata) {
-		assetSlugs.push(slug(asset))
-	}
+	const assetSlugs = Object.entries(data.assetMetadata)
+		.sort(([, a], [, b]) => (b.totalUsdValue ?? 0) - (a.totalUsdValue ?? 0))
+		.map(([asset]) => slug(asset))
 
 	const companySlugs: string[] = []
+	const includedInstitutionIds = new Set<number>()
+	for (const institution of data.institutions) {
+		includedInstitutionIds.add(institution.institutionId)
+		const ticker = data.institutionMetadata[institution.institutionId]?.ticker
+		if (ticker) companySlugs.push(ticker)
+	}
 	for (const institutionId in data.institutionMetadata) {
-		companySlugs.push(slug(data.institutionMetadata[institutionId].ticker))
+		const numericInstitutionId = Number(institutionId)
+		if (includedInstitutionIds.has(numericInstitutionId)) continue
+		const ticker = data.institutionMetadata[institutionId].ticker
+		if (ticker) companySlugs.push(ticker)
 	}
 
 	return {
 		assetSlugs: dedupeNonEmpty(assetSlugs),
-		companySlugs: dedupeNonEmpty(companySlugs)
+		companySlugs: dedupeRouteValuesBySlug(companySlugs)
 	}
 }
 

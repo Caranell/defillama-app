@@ -7,6 +7,7 @@ import { ProtocolOverviewLayout } from '~/containers/ProtocolOverview/Layout'
 import type { IProtocolPageMetrics } from '~/containers/ProtocolOverview/types'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 interface CexMarketsPageProps {
 	name: string
@@ -70,12 +71,7 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 		if (exchangeName !== cexRoute.canonicalSlug) {
-			return {
-				redirect: {
-					destination: `/cex/markets/${cexRoute.canonicalSlug}`,
-					permanent: true
-				}
-			}
+			return canonicalRouteRedirect(`/cex/markets/${cexRoute.canonicalSlug}`, true)
 		}
 
 		const { resolveCexMarketsByDefillamaSlug } = await import('~/containers/Markets/server/dataset')

@@ -4,9 +4,9 @@ import { SKIP_BUILD_STATIC_GENERATION } from '~/constants'
 import { BridgedTVLByChain } from '~/containers/BridgedTVL/BridgedTVLByChain'
 import { getBridgedTVLByChain } from '~/containers/BridgedTVL/queries'
 import Layout from '~/layout'
-import { capitalizeFirstLetter, slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export const getStaticProps = withPerformanceLogging(
 	'bridged/[chain]',
@@ -16,16 +16,26 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const { chain } = params
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const currentChainMetadata = metadataCache.chainMetadata[slug(chain)]
-		if (!currentChainMetadata || !currentChainMetadata.chainAssets) {
+		const [{ default: metadataCache }, { getChainRouteRedirectDestination, resolveChainFeatureParamFromMetadata }] =
+			await Promise.all([import('~/utils/metadata'), import('~/containers/ChainOverview/server/routes')])
+		const chainRoute = resolveChainFeatureParamFromMetadata(chain, metadataCache, (metadata) =>
+			Boolean(metadata.chainAssets)
+		)
+		if (!chainRoute) {
 			return { notFound: true }
 		}
+		const redirectDestination = getChainRouteRedirectDestination(chain, chainRoute, 'bridged')
+		if (redirectDestination) {
+			return canonicalRouteRedirect(redirectDestination)
+		}
 
-		const data = await getBridgedTVLByChain({ chain, chainMetadata: metadataCache.chainMetadata })
+		const data = await getBridgedTVLByChain({
+			chain: chainRoute.canonicalName,
+			chainMetadata: metadataCache.chainMetadata
+		})
 
 		return {
-			props: { ...data, chain, chainName: capitalizeFirstLetter(chain) },
+			props: { ...data, chain: chainRoute.canonicalSlug, chainName: chainRoute.canonicalName },
 			revalidate: maxAgeForNext([22])
 		}
 	}

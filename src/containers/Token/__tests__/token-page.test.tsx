@@ -433,6 +433,16 @@ vi.mock('~/utils/metadata', () => ({
 		get tokenDirectory() {
 			return state.tokensJson
 		},
+		get tokenDirectoryRecordByRouteSegment() {
+			const records: Record<string, TokenDirectory[string]> = {}
+			for (const key in state.tokensJson) {
+				const token = state.tokensJson[key]
+				const route = token.route ?? `/token/${encodeURIComponent(token.symbol)}`
+				if (!route.startsWith('/token/')) continue
+				records[decodeURIComponent(route.slice('/token/'.length))] = token
+			}
+			return records
+		},
 		get tokenlist() {
 			return state.tokenlist
 		},
@@ -681,6 +691,7 @@ describe('token page', () => {
 				mcap_rank: 30
 			},
 			link: { name: 'Chainlink', symbol: 'LINK', token_nk: 'coingecko:chainlink', route: '/token/LINK', mcap_rank: 31 },
+			proto: { name: 'Protocol Token', symbol: 'PROTO', route: '/protocol/proto', mcap_rank: 3 },
 			aave: { name: 'Aave', symbol: 'AAVE', token_nk: 'coingecko:aave' }
 		}
 
@@ -734,6 +745,45 @@ describe('token page', () => {
 			redirect: {
 				destination: '/token/BTC',
 				permanent: false
+			}
+		})
+	})
+
+	it('getStaticProps does not resolve arbitrary non-token routes during alias lookup', async () => {
+		state.tokensJson = {
+			proto: { name: 'Protocol Token', symbol: 'PROTO', route: '/protocol/proto' }
+		}
+
+		await expect(getStaticProps({ params: { token: 'missing-token' } } as never)).resolves.toEqual({
+			notFound: true,
+			revalidate: 123
+		})
+	})
+
+	it('getStaticProps treats API-provided mixed-case and spaced token routes as canonical', async () => {
+		state.tokensJson = {
+			tbtc: { name: 'Threshold Bitcoin', symbol: 'TBTC', route: '/token/tBTC' },
+			'velodrome-finance': {
+				name: 'Velodrome Finance',
+				symbol: 'VELO',
+				route: '/token/Velodrome%20Finance'
+			}
+		}
+
+		await expect(getStaticProps({ params: { token: 'tbtc' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/token/tBTC',
+				permanent: false
+			}
+		})
+		await expect(getStaticProps({ params: { token: 'tBTC' } } as never)).resolves.toMatchObject({
+			props: {
+				canonicalUrl: '/token/tBTC'
+			}
+		})
+		await expect(getStaticProps({ params: { token: 'Velodrome Finance' } } as never)).resolves.toMatchObject({
+			props: {
+				canonicalUrl: '/token/Velodrome%20Finance'
 			}
 		})
 	})
@@ -801,7 +851,7 @@ describe('token page', () => {
 		})
 	})
 
-	it('getStaticProps falls back to an encoded symbol when metadata route is missing', async () => {
+	it('getStaticProps redirects to an encoded symbol when metadata route is missing', async () => {
 		state.tokensJson = {
 			swing: { name: 'Swing.xyz', symbol: '$SWING', token_nk: 'coingecko:swing-xyz' }
 		}
@@ -824,10 +874,41 @@ describe('token page', () => {
 			}
 		}
 
-		await expect(getStaticProps({ params: { token: 'swing' } } as never)).resolves.toMatchObject({
+		await expect(getStaticProps({ params: { token: 'swing' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/token/%24SWING',
+				permanent: false
+			}
+		})
+	})
+
+	it('getStaticProps renders an encoded symbol canonical route when metadata route is missing', async () => {
+		state.tokensJson = {
+			swing: { name: 'Swing.xyz', symbol: '$SWING', token_nk: 'coingecko:swing-xyz' }
+		}
+		state.tokenlist = {
+			'swing-xyz': {
+				symbol: '$swing',
+				current_price: 1,
+				price_change_24h: 0,
+				price_change_percentage_24h: 0,
+				ath: null,
+				ath_date: null,
+				atl: null,
+				atl_date: null,
+				market_cap: 10,
+				fully_diluted_valuation: 10,
+				total_volume: 1,
+				total_supply: null,
+				circulating_supply: 10,
+				max_supply: 10
+			}
+		}
+
+		await expect(getStaticProps({ params: { token: '$SWING' } } as never)).resolves.toMatchObject({
 			props: {
-				seoTitle: 'Swing.xyz Price, Market Cap, Supply & Trading Volume',
-				seoDescription: 'Track Swing.xyz price, market cap, circulating supply, max supply, and trading volume.',
+				seoTitle: '$SWING Price, Market Cap, Supply & Trading Volume',
+				seoDescription: 'Track $SWING price, market cap, circulating supply, max supply, and trading volume.',
 				canonicalUrl: '/token/%24SWING',
 				sections: [
 					{
@@ -891,7 +972,7 @@ describe('token page', () => {
 				max_supply: 1000
 			}
 		}
-		const result = await getStaticProps({ params: { token: 'link' } } as never)
+		const result = await getStaticProps({ params: { token: 'LINK' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -1032,7 +1113,7 @@ describe('token page', () => {
 			}
 		}
 
-		const result = await getStaticProps({ params: { token: 'bp' } } as never)
+		const result = await getStaticProps({ params: { token: 'BP' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -1069,7 +1150,7 @@ describe('token page', () => {
 			}
 		}
 
-		const result = await getStaticProps({ params: { token: 'link' } } as never)
+		const result = await getStaticProps({ params: { token: 'LINK' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -1105,7 +1186,7 @@ describe('token page', () => {
 			}
 		}
 
-		const result = await getStaticProps({ params: { token: 'sol' } } as never)
+		const result = await getStaticProps({ params: { token: 'SOL' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -1165,7 +1246,7 @@ describe('token page', () => {
 			}
 		}
 
-		const result = await getStaticProps({ params: { token: 'aave' } } as never)
+		const result = await getStaticProps({ params: { token: 'AAVE' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -1221,7 +1302,7 @@ describe('token page', () => {
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 		vi.mocked(getTokenRiskData).mockRejectedValueOnce(new Error('risk failed'))
 
-		const result = await getStaticProps({ params: { token: 'link' } } as never)
+		const result = await getStaticProps({ params: { token: 'LINK' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -1276,7 +1357,7 @@ describe('token page', () => {
 			}))
 		}
 
-		const result = await getStaticProps({ params: { token: 'link' } } as never)
+		const result = await getStaticProps({ params: { token: 'LINK' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -1333,7 +1414,7 @@ describe('token page', () => {
 		vi.mocked(getTokenBorrowRoutes).mockRejectedValueOnce(new Error('borrow routes failed'))
 		vi.mocked(getTokenRiskData).mockRejectedValueOnce(new Error('risk failed'))
 
-		const result = await getStaticProps({ params: { token: 'link' } } as never)
+		const result = await getStaticProps({ params: { token: 'LINK' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -1391,7 +1472,7 @@ describe('token page', () => {
 			}
 		}
 
-		const withoutRisk = await getStaticProps({ params: { token: 'link' } } as never)
+		const withoutRisk = await getStaticProps({ params: { token: 'LINK' } } as never)
 		if (!('props' in withoutRisk)) throw new Error('expected props')
 
 		renderToStaticMarkup(<TokenPage {...withoutRisk.props} />)
@@ -1438,7 +1519,7 @@ describe('token page', () => {
 			limitations: ['limit']
 		}
 
-		const withRisk = await getStaticProps({ params: { token: 'link' } } as never)
+		const withRisk = await getStaticProps({ params: { token: 'LINK' } } as never)
 		if (!('props' in withRisk)) throw new Error('expected props')
 
 		renderedTokenSections.length = 0

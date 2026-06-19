@@ -4,21 +4,11 @@ import { DEFAULT_CHART_VIEW } from '~/containers/RWA/Perps/chartState'
 import { RWAPerpsDashboard } from '~/containers/RWA/Perps/Dashboard'
 import { getRWAPerpsAssetGroupPage } from '~/containers/RWA/Perps/queries'
 import { RWAPerpsTabNav } from '~/containers/RWA/Perps/TabNav'
-import { rwaSlug } from '~/containers/RWA/rwaSlug'
+import { resolveCanonicalRwaSlug, rwaSlug } from '~/containers/RWA/rwaSlug'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
-
-function resolveCanonicalAssetGroupSlug(assetGroupParam: string, assetGroups: string[]): string | null {
-	const assetGroupSlug = rwaSlug(assetGroupParam)
-
-	for (const assetGroup of assetGroups) {
-		const canonicalSlug = rwaSlug(assetGroup)
-		if (canonicalSlug === assetGroupSlug) return canonicalSlug
-	}
-
-	return null
-}
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export async function getStaticPaths() {
 	if (SKIP_BUILD_STATIC_GENERATION) {
@@ -45,18 +35,13 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const assetGroup = resolveCanonicalAssetGroupSlug(params.assetGroup, metadataCache.rwaPerpsList.assetGroups)
+		const assetGroup = resolveCanonicalRwaSlug(params.assetGroup, metadataCache.rwaPerpsList.assetGroups)
 		if (!assetGroup) {
 			return { notFound: true }
 		}
 
 		if (params.assetGroup !== assetGroup) {
-			return {
-				redirect: {
-					destination: `/rwa/perps/asset-group/${assetGroup}`,
-					permanent: false
-				}
-			}
+			return canonicalRouteRedirect(`/rwa/perps/asset-group/${assetGroup}`)
 		}
 
 		const data = await getRWAPerpsAssetGroupPage({

@@ -10,6 +10,7 @@ import { buildEquityTickerCountrySlug, parseEquityTickerCountrySlug } from '~/co
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 function getCanonicalEquityTickerSlug(
 	ticker: string,
@@ -42,12 +43,7 @@ export const getStaticProps = withPerformanceLogging(
 			const redirectSlug = await getEquitiesTickerRedirectSlug(params.ticker, metadata.equitiesCompanyRoutes)
 			if (!redirectSlug) return { notFound: true }
 
-			return {
-				redirect: {
-					destination: `/equities/${redirectSlug}`,
-					permanent: false
-				}
-			}
+			return canonicalRouteRedirect(`/equities/${redirectSlug}`)
 		}
 
 		const inputSlug = buildEquityTickerCountrySlug(tickerCountry.ticker, tickerCountry.country)
@@ -60,12 +56,7 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		if (params.ticker !== canonicalSlug) {
-			return {
-				redirect: {
-					destination: `/equities/${canonicalSlug}`,
-					permanent: false
-				}
-			}
+			return canonicalRouteRedirect(`/equities/${canonicalSlug}`)
 		}
 
 		const props = await getEquitiesTickerPageData(tickerCountry.ticker, tickerCountry.country, {

@@ -8,6 +8,7 @@ import type { PeggedOverviewPageData } from '~/containers/Stablecoins/types'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 type StablecoinsByChainRouteParams = {
 	chain: string
@@ -27,14 +28,16 @@ export const getStaticProps = withPerformanceLogging<StablecoinsByChainPageProps
 			return { notFound: true }
 		}
 
-		const [{ default: metadataCache }, { resolveChainParamFromMetadata }] = await Promise.all([
-			import('~/utils/metadata'),
-			import('~/containers/ChainOverview/server/routes')
-		])
+		const [{ default: metadataCache }, { getChainRouteRedirectDestination, resolveChainParamFromMetadata }] =
+			await Promise.all([import('~/utils/metadata'), import('~/containers/ChainOverview/server/routes')])
 		const chainRoute = resolveChainParamFromMetadata(chain, metadataCache)
 
 		if (!chainRoute?.metadata.stablecoins) {
 			return { notFound: true }
+		}
+		const redirectDestination = getChainRouteRedirectDestination(chain, chainRoute, 'stablecoins')
+		if (redirectDestination) {
+			return canonicalRouteRedirect(redirectDestination)
 		}
 		const metadata = chainRoute.metadata
 

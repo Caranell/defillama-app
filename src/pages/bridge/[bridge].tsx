@@ -28,10 +28,8 @@ export const getStaticProps = withPerformanceLogging(
 
 		const bridge = slug(params.bridge)
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const supportedBridgeSlugs = metadataCache.bridgeProtocolSlugs ?? []
-		const isKnownBridgeRoute = supportedBridgeSlugs.includes(bridge)
 
-		if (!isKnownBridgeRoute) {
+		if (!metadataCache.bridgeProtocolSlugsSet.has(bridge)) {
 			return {
 				notFound: true,
 				revalidate: maxAgeForNext([22])
