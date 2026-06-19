@@ -10,6 +10,7 @@ import { Switch } from '~/components/Switch'
 import { TokenLogo } from '~/components/TokenLogo'
 import { SKIP_BUILD_STATIC_GENERATION } from '~/constants'
 import { fetchProtocolOverviewMetrics } from '~/containers/ProtocolOverview/api'
+import { reconcileChartSelection } from '~/containers/ProtocolOverview/chartSeries.utils'
 import { ProtocolOverviewLayout } from '~/containers/ProtocolOverview/Layout'
 import { getProtocolMetricFlags } from '~/containers/ProtocolOverview/queries'
 import type { IProtocolPageMetrics } from '~/containers/ProtocolOverview/types'
@@ -41,13 +42,6 @@ interface TreasuryPageProps {
 	seoDescription: string
 }
 
-function updateSelectionOnListChange(selected: string[], all: string[]) {
-	if (all.length === 0) return []
-	if (selected.length === 0) return all
-	const next = selected.filter((x) => all.includes(x))
-	return next.length > 0 ? next : all
-}
-
 function TokensBreakdownPieChartCard({
 	protocolName,
 	chartData
@@ -58,7 +52,7 @@ function TokensBreakdownPieChartCard({
 	const allTokens = React.useMemo(() => chartData.map((d) => d.name), [chartData])
 	const [selectedTokensRaw, setSelectedTokensRaw] = React.useState<string[]>(() => allTokens)
 	const selectedTokens = React.useMemo(
-		() => updateSelectionOnListChange(selectedTokensRaw, allTokens),
+		() => reconcileChartSelection(selectedTokensRaw, allTokens),
 		[selectedTokensRaw, allTokens]
 	)
 
@@ -151,7 +145,7 @@ function TokensMultiSeriesChartCard({
 }) {
 	const [selectedTokensRaw, setSelectedTokensRaw] = React.useState<string[]>(() => allTokens)
 	const selectedTokens = React.useMemo(
-		() => updateSelectionOnListChange(selectedTokensRaw, allTokens),
+		() => reconcileChartSelection(selectedTokensRaw, allTokens),
 		[selectedTokensRaw, allTokens]
 	)
 

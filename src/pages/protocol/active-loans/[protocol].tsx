@@ -8,6 +8,7 @@ import { SelectWithCombobox } from '~/components/Select/SelectWithCombobox'
 import { TokenLogo } from '~/components/TokenLogo'
 import { SKIP_BUILD_STATIC_GENERATION } from '~/constants'
 import { fetchProtocolOverviewMetrics } from '~/containers/ProtocolOverview/api'
+import { reconcileChartSelection } from '~/containers/ProtocolOverview/chartSeries.utils'
 import { ProtocolOverviewLayout } from '~/containers/ProtocolOverview/Layout'
 import { getProtocolMetricFlags } from '~/containers/ProtocolOverview/queries'
 import { useProtocolBreakdownCharts } from '~/containers/ProtocolOverview/useProtocolBreakdownCharts'
@@ -26,13 +27,6 @@ const PieChart = React.lazy(() => import('~/components/ECharts/PieChart')) as Re
 const EMPTY_OTHER_PROTOCOLS: string[] = []
 
 type MultiSeriesCharts = NonNullable<IMultiSeriesChart2Props['charts']>
-
-function updateSelectionOnListChange(selected: string[], all: string[]) {
-	if (all.length === 0) return []
-	if (selected.length === 0) return all
-	const next = selected.filter((x) => all.includes(x))
-	return next.length > 0 ? next : all
-}
 
 function MultiSeriesChartCard({
 	title,
@@ -55,7 +49,7 @@ function MultiSeriesChartCard({
 }) {
 	const [selectedSeriesRaw, setSelectedSeriesRaw] = React.useState<string[]>(() => allSeries)
 	const selectedSeries = React.useMemo(
-		() => updateSelectionOnListChange(selectedSeriesRaw, allSeries),
+		() => reconcileChartSelection(selectedSeriesRaw, allSeries),
 		[selectedSeriesRaw, allSeries]
 	)
 
@@ -104,7 +98,7 @@ function TokensBreakdownPieChartCard({
 	const allTokens = React.useMemo(() => chartData.map((d) => d.name), [chartData])
 	const [selectedTokensRaw, setSelectedTokensRaw] = React.useState<string[]>(() => allTokens)
 	const selectedTokens = React.useMemo(
-		() => updateSelectionOnListChange(selectedTokensRaw, allTokens),
+		() => reconcileChartSelection(selectedTokensRaw, allTokens),
 		[selectedTokensRaw, allTokens]
 	)
 
