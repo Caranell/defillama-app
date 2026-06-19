@@ -1,6 +1,7 @@
 import * as Ariakit from '@ariakit/react'
-import { startTransition, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Icon } from '~/components/Icon'
+import { SelectWithCombobox } from '~/components/Select/SelectWithCombobox'
 import { Tooltip } from '~/components/Tooltip'
 import { useMedia } from '~/hooks/useMedia'
 import {
@@ -325,118 +326,6 @@ function NumericFilterEditor({
 	)
 }
 
-// A purpose-built combobox multiselect for use *inside* the filters dialog. It intentionally
-// does not reuse the shared `SelectWithCombobox`: that component's popover is z-10 (it renders
-// behind this z-50 dialog) and it has its own mobile-sheet sizing and "See more" pagination.
-// This variant uses z-100 + portal to stack above the dialog, renders the full option list
-// (no pagination), and is tuned for the dialog's bottom-sheet sizing.
-function CategoricalValuesSelect({
-	label,
-	options,
-	values,
-	onChange
-}: {
-	label: string
-	options: string[]
-	values: string[]
-	onChange: (values: string[]) => void
-}) {
-	const [search, setSearch] = useState('')
-	const normalizedSearch = search.trim().toLowerCase()
-	const matches = useMemo(
-		() => (normalizedSearch ? options.filter((option) => option.toLowerCase().includes(normalizedSearch)) : options),
-		[options, normalizedSearch]
-	)
-
-	return (
-		<Ariakit.ComboboxProvider resetValueOnHide setValue={(value) => startTransition(() => setSearch(value))}>
-			<Ariakit.SelectProvider
-				value={values}
-				setValue={(next) => onChange(Array.isArray(next) ? next : next ? [next] : [])}
-			>
-				<Ariakit.Select
-					aria-label={`${label} values`}
-					className="flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md border border-(--form-control-border) bg-(--bg-input) px-2.5 text-xs text-(--text-primary) outline-hidden hover:bg-(--btn-hover-bg) focus:border-(--old-blue)"
-				>
-					<span className="flex min-w-4 items-center justify-center rounded-full border border-(--form-control-border) px-1 py-0.25 text-[10px] leading-none">
-						{values.length}
-					</span>
-					<span className="mr-auto truncate">{label}</span>
-					<Ariakit.SelectArrow />
-				</Ariakit.Select>
-				<Ariakit.SelectPopover
-					unmountOnHide
-					portal
-					autoFocusOnShow={false}
-					hideOnInteractOutside
-					gutter={4}
-					wrapperProps={{
-						className: 'max-sm:fixed! max-sm:bottom-0! max-sm:top-[unset]! max-sm:transform-none! max-sm:w-full!'
-					}}
-					className="z-100 flex max-h-[min(360px,60dvh)] flex-col overflow-hidden rounded-md border border-(--cards-border) bg-(--bg-main) shadow-lg max-sm:h-[88dvh] max-sm:max-h-[88dvh] max-sm:w-full max-sm:drawer max-sm:rounded-b-none sm:min-w-[260px]"
-				>
-					<div className="flex shrink-0 items-center gap-2 border-b border-(--cards-border) p-2">
-						<span className="relative flex-1">
-							<Icon
-								name="search"
-								height={14}
-								width={14}
-								className="pointer-events-none absolute top-0 bottom-0 left-2 my-auto text-(--text-tertiary)"
-							/>
-							<Ariakit.Combobox
-								autoSelect
-								placeholder={`Search ${label.toLowerCase()}...`}
-								className="h-8 w-full rounded-md border border-(--form-control-border) bg-(--bg-input) pr-2 pl-7 text-xs text-(--text-primary) placeholder:text-(--text-tertiary) focus:border-(--old-blue) focus:outline-none"
-							/>
-						</span>
-						<Ariakit.PopoverDismiss className="shrink-0 rounded p-1.5 text-(--text-tertiary) hover:bg-(--btn-hover-bg) hover:text-(--text-primary) sm:hidden">
-							<Icon name="x" className="size-4" />
-							<span className="sr-only">Close</span>
-						</Ariakit.PopoverDismiss>
-					</div>
-					<div className="flex shrink-0 items-center justify-between border-b border-(--cards-border) px-2.5 py-1.5 text-[11px]">
-						<button
-							type="button"
-							onClick={() => onChange([])}
-							className="text-(--text-tertiary) hover:text-(--text-primary)"
-						>
-							Clear
-						</button>
-						<button
-							type="button"
-							onClick={() => onChange(Array.from(new Set(values.concat(matches))))}
-							className="text-(--link)"
-						>
-							{normalizedSearch ? 'Select shown' : 'Select all'}
-						</button>
-					</div>
-					<Ariakit.ComboboxList className="flex thin-scrollbar min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
-						{matches.length === 0 ? (
-							<p className="px-2.5 py-6 text-center text-xs text-(--text-tertiary)">No matches for "{search}".</p>
-						) : (
-							matches.map((option) => (
-								<Ariakit.SelectItem
-									key={option}
-									value={option}
-									render={<Ariakit.ComboboxItem />}
-									className="group flex shrink-0 cursor-pointer items-center gap-2 px-2.5 py-2 text-xs text-(--text-primary) hover:bg-(--btn-hover-bg) data-active-item:bg-(--btn-hover-bg)"
-								>
-									<span className="flex size-4 shrink-0 items-center justify-center rounded border border-(--form-control-border) group-aria-selected:border-(--old-blue) group-aria-selected:bg-(--old-blue) group-aria-selected:text-white">
-										<Ariakit.SelectItemCheck>
-											<Icon name="check" className="size-3" />
-										</Ariakit.SelectItemCheck>
-									</span>
-									<span className="min-w-0 flex-1 truncate">{option}</span>
-								</Ariakit.SelectItem>
-							))
-						)}
-					</Ariakit.ComboboxList>
-				</Ariakit.SelectPopover>
-			</Ariakit.SelectProvider>
-		</Ariakit.ComboboxProvider>
-	)
-}
-
 function CategoricalFilterEditor({
 	config,
 	filter,
@@ -474,11 +363,23 @@ function CategoricalFilterEditor({
 			</div>
 			<div className="flex items-center gap-2">
 				<ModeToggle value={mode} onChange={(nextMode) => onUpdate({ ...filter, mode: nextMode })} />
-				<CategoricalValuesSelect
+				<SelectWithCombobox
+					allValues={options}
+					selectedValues={values}
+					setSelectedValues={(next) => onUpdate({ ...filter, values: next })}
 					label={valueLabel}
-					options={options}
-					values={values}
-					onChange={(next) => onUpdate({ ...filter, values: next })}
+					labelType="smol"
+					portal
+					visibleOptionLimit={null}
+					selectAllScope="matches"
+					searchPlaceholder={`Search ${valueLabel.toLowerCase()}...`}
+					emptyLabel="No matches found"
+					popoverClassName="z-100 shadow-lg max-sm:h-[88dvh]! max-sm:max-h-[88dvh] max-sm:w-full sm:min-w-[260px] sm:max-h-[min(360px,60dvh)]! lg:max-h-[min(360px,60dvh)]!"
+					triggerProps={{
+						'aria-label': `${valueLabel} values`,
+						className:
+							'flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md border border-(--form-control-border) bg-(--bg-input) px-2.5 text-xs text-(--text-primary) outline-hidden hover:bg-(--btn-hover-bg) focus:border-(--old-blue)'
+					}}
 				/>
 			</div>
 		</div>
