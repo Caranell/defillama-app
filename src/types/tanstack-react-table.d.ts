@@ -5,6 +5,8 @@ declare module '@tanstack/react-table' {
 		align?: 'start' | 'end' | 'center'
 		headerHelperText?: string
 		headerClassName?: string
+		/** Extra classes for this column's body `<td>` (e.g. `truncate` to ellipsis long text). */
+		cellClassName?: string
 		hidden?: boolean
 		csvHeader?: string
 		/**

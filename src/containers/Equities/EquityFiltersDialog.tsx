@@ -1,0 +1,768 @@
+import * as Ariakit from '@ariakit/react'
+import { startTransition, useMemo, useState } from 'react'
+import { Icon } from '~/components/Icon'
+import { Tooltip } from '~/components/Tooltip'
+import { useMedia } from '~/hooks/useMedia'
+import {
+	activeEquityFiltersToDraft,
+	countActiveEquityFilters,
+	countDraftEquityFilters,
+	createDefaultEquityDraftFilter,
+	draftEquityFiltersToActive,
+	EQUITY_FILTER_CATEGORIES,
+	EQUITY_FILTER_CONFIGS,
+	formatEquityActiveFilter,
+	getEquityCategoricalFilterConfig,
+	getEquityDraftNumericOperator,
+	getEquityNumericFilterConfig,
+	parseEquityFilterNumber,
+	type EquityActiveFilter,
+	type EquityCategoricalFilterConfig,
+	type EquityCategoricalFilterField,
+	type EquityCategoricalMode,
+	type EquityDraftCategoricalFilter,
+	type EquityDraftFilter,
+	type EquityDraftNumericFilter,
+	type EquityFilterCategory,
+	type EquityFilterConfig,
+	type EquityNumericFilterConfig,
+	type EquityNumericOperator
+} from './filters'
+import type { IEquitiesListCompanyRow } from './types'
+
+const OPERATOR_OPTIONS: Array<{ value: EquityNumericOperator; label: string }> = [
+	{ value: '>=', label: '>=' },
+	{ value: '>', label: '>' },
+	{ value: '<=', label: '<=' },
+	{ value: '<', label: '<' },
+	{ value: 'between', label: 'between' }
+]
+
+const CATEGORICAL_VALUE_LABELS: Record<EquityCategoricalFilterField, string> = {
+	country: 'Countries',
+	sector: 'Sectors',
+	industry: 'Industries'
+}
+
+const CATEGORY_LABELS: Record<EquityFilterCategory, string> = EQUITY_FILTER_CATEGORIES.reduce(
+	(acc, category) => {
+		acc[category.key] = category.label
+		return acc
+	},
+	{} as Record<EquityFilterCategory, string>
+)
+
+function getUniqueValues(companies: IEquitiesListCompanyRow[], key: 'country' | 'sector' | 'industry'): string[] {
+	const values = new Set<string>()
+	for (const company of companies) {
+		if (company[key]) values.add(company[key])
+	}
+	return Array.from(values).sort((a, b) => a.localeCompare(b))
+}
+
+function replaceFilter(filters: EquityDraftFilter[], nextFilter: EquityDraftFilter): EquityDraftFilter[] {
+	const next = filters.slice()
+	const index = next.findIndex((filter) => filter.id === nextFilter.id)
+	if (index === -1) next.push(nextFilter)
+	else next[index] = nextFilter
+	return next
+}
+
+function removeFilter(filters: EquityDraftFilter[], id: string): EquityDraftFilter[] {
+	return filters.filter((filter) => filter.id !== id)
+}
+
+function FilterDescription({ config }: { config: EquityFilterConfig }) {
+	if (!config.description) return null
+
+	return (
+		<Tooltip content={config.description} placement="top">
+			<Icon name="circle-help" className="size-3 text-(--text-tertiary)" />
+		</Tooltip>
+	)
+}
+
+function OperatorSelect({
+	value,
+	onChange
+}: {
+	value: EquityNumericOperator
+	onChange: (operator: EquityNumericOperator) => void
+}) {
+	return (
+		<Ariakit.SelectProvider value={value} setValue={(nextValue) => onChange(nextValue as EquityNumericOperator)}>
+			<Ariakit.Select className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-(--form-control-border) bg-(--bg-input) px-2.5 text-xs text-(--text-primary) outline-hidden hover:bg-(--btn-hover-bg) focus:border-(--old-blue)">
+				<Ariakit.SelectValue />
+				<Ariakit.SelectArrow />
+			</Ariakit.Select>
+			<Ariakit.SelectPopover
+				portal
+				gutter={4}
+				sameWidth
+				className="z-100 rounded-md border border-(--cards-border) bg-(--bg-main) py-1 shadow-lg"
+			>
+				{OPERATOR_OPTIONS.map((operator) => (
+					<Ariakit.SelectItem
+						key={operator.value}
+						value={operator.value}
+						className="cursor-pointer px-2.5 py-1.5 text-xs text-(--text-primary) hover:bg-(--btn-hover-bg) data-active-item:bg-(--btn-hover-bg)"
+					>
+						{operator.label}
+					</Ariakit.SelectItem>
+				))}
+			</Ariakit.SelectPopover>
+		</Ariakit.SelectProvider>
+	)
+}
+
+const MODE_OPTIONS: Array<{ value: EquityCategoricalMode; label: string }> = [
+	{ value: 'include', label: 'Include' },
+	{ value: 'exclude', label: 'Exclude' }
+]
+
+function ModeToggle({
+	value,
+	onChange
+}: {
+	value: EquityCategoricalMode
+	onChange: (mode: EquityCategoricalMode) => void
+}) {
+	return (
+		<div
+			role="group"
+			aria-label="Match mode"
+			className="flex h-8 shrink-0 items-center gap-0.5 rounded-md border border-(--form-control-border) bg-(--bg-input) p-0.5 text-xs"
+		>
+			{MODE_OPTIONS.map((option) => (
+				<button
+					key={option.value}
+					type="button"
+					onClick={() => onChange(option.value)}
+					data-active={value === option.value}
+					aria-pressed={value === option.value}
+					className="flex h-full cursor-pointer items-center rounded-sm px-2.5 font-medium text-(--text-tertiary) hover:text-(--text-primary) data-[active=true]:bg-(--old-blue) data-[active=true]:text-white"
+				>
+					{option.label}
+				</button>
+			))}
+		</div>
+	)
+}
+
+function NumericInput({
+	value,
+	onChange,
+	placeholder,
+	prefix,
+	suffix
+}: {
+	value: string
+	onChange: (value: string) => void
+	placeholder: string
+	prefix?: string
+	suffix?: string
+}) {
+	return (
+		<label className="flex h-8 min-w-0 flex-1 items-center gap-1 rounded-md border border-(--form-control-border) bg-(--bg-input) px-2 text-xs text-(--text-primary) focus-within:border-(--old-blue)">
+			{prefix ? <span className="text-(--text-tertiary)">{prefix}</span> : null}
+			<input
+				type="text"
+				inputMode="decimal"
+				value={value}
+				onChange={(event) => onChange(event.currentTarget.value)}
+				placeholder={placeholder}
+				className="min-w-0 flex-1 bg-transparent outline-hidden placeholder:text-(--text-tertiary)"
+			/>
+			{suffix ? <span className="text-(--text-tertiary)">{suffix}</span> : null}
+		</label>
+	)
+}
+
+function getInitialNumericInputs(filter: EquityDraftNumericFilter) {
+	if (filter.kind === 'numericRange') {
+		return {
+			value: '',
+			minValue: filter.minValue?.toString() ?? '',
+			maxValue: filter.maxValue?.toString() ?? ''
+		}
+	}
+
+	return {
+		value: filter.value?.toString() ?? '',
+		minValue: '',
+		maxValue: ''
+	}
+}
+
+function NumericFilterEditor({
+	config,
+	filter,
+	onUpdate,
+	onRemove
+}: {
+	config: EquityNumericFilterConfig
+	filter: EquityDraftNumericFilter
+	onUpdate: (filter: EquityDraftFilter) => void
+	onRemove: () => void
+}) {
+	const [inputs, setInputs] = useState(() => getInitialNumericInputs(filter))
+	const operator = getEquityDraftNumericOperator(filter)
+	const isBetween = operator === 'between'
+	const prefix = config.format === 'currency' ? '$' : undefined
+	const suffix = config.format === 'percent' ? '%' : undefined
+
+	const updateValue = (input: string) => {
+		setInputs((prev) => ({ ...prev, value: input }))
+		const value = parseEquityFilterNumber(input)
+		const comparisonOperator = operator === 'between' ? '>=' : operator
+		onUpdate(
+			value === undefined
+				? { kind: 'numeric', id: filter.id, operator: comparisonOperator }
+				: { kind: 'numeric', id: filter.id, operator: comparisonOperator, value }
+		)
+	}
+
+	const updateMinValue = (input: string) => {
+		setInputs((prev) => ({ ...prev, minValue: input }))
+		const value = parseEquityFilterNumber(input)
+		onUpdate({
+			kind: 'numericRange',
+			id: filter.id,
+			...(value === undefined ? {} : { minValue: value }),
+			...(filter.kind === 'numericRange' && filter.maxValue !== undefined ? { maxValue: filter.maxValue } : {})
+		})
+	}
+
+	const updateMaxValue = (input: string) => {
+		setInputs((prev) => ({ ...prev, maxValue: input }))
+		const value = parseEquityFilterNumber(input)
+		onUpdate({
+			kind: 'numericRange',
+			id: filter.id,
+			...(filter.kind === 'numericRange' && filter.minValue !== undefined ? { minValue: filter.minValue } : {}),
+			...(value === undefined ? {} : { maxValue: value })
+		})
+	}
+
+	const updateOperator = (nextOperator: EquityNumericOperator) => {
+		const currentValue = filter.kind === 'numericRange' ? (filter.minValue ?? filter.maxValue) : filter.value
+		if (nextOperator === 'between') {
+			onUpdate({
+				kind: 'numericRange',
+				id: filter.id,
+				...(filter.kind === 'numericRange' && filter.minValue !== undefined
+					? { minValue: filter.minValue }
+					: currentValue !== undefined
+						? { minValue: currentValue }
+						: {}),
+				...(filter.kind === 'numericRange' && filter.maxValue !== undefined ? { maxValue: filter.maxValue } : {})
+			})
+			setInputs((prev) => ({
+				...prev,
+				minValue: prev.minValue || prev.value,
+				value: ''
+			}))
+			return
+		}
+
+		onUpdate(
+			currentValue === undefined
+				? { kind: 'numeric', id: filter.id, operator: nextOperator }
+				: { kind: 'numeric', id: filter.id, operator: nextOperator, value: currentValue }
+		)
+		setInputs((prev) => ({ ...prev, value: prev.value || prev.minValue || prev.maxValue }))
+	}
+
+	return (
+		<div className="flex flex-col gap-2 rounded-md border border-(--cards-border) bg-(--cards-bg) p-2">
+			<div className="flex items-center justify-between gap-2">
+				<div className="flex min-w-0 items-center gap-1.5">
+					<span className="truncate text-xs font-semibold text-(--text-primary)">{config.label}</span>
+					<FilterDescription config={config} />
+					<span className="rounded-full bg-(--btn-bg) px-1.5 py-0.5 text-[9px] font-medium text-(--text-tertiary) uppercase">
+						{CATEGORY_LABELS[config.category]}
+					</span>
+				</div>
+				<button
+					type="button"
+					onClick={onRemove}
+					className="rounded p-1 text-(--text-tertiary) hover:bg-(--btn-hover-bg) hover:text-(--text-primary)"
+				>
+					<Icon name="x" className="size-3.5" />
+					<span className="sr-only">Remove {config.label} filter</span>
+				</button>
+			</div>
+			<div className="flex items-center gap-2">
+				<OperatorSelect value={operator} onChange={updateOperator} />
+				{isBetween ? (
+					<>
+						<NumericInput
+							value={inputs.minValue}
+							onChange={updateMinValue}
+							placeholder="Min"
+							prefix={prefix}
+							suffix={suffix}
+						/>
+						<NumericInput
+							value={inputs.maxValue}
+							onChange={updateMaxValue}
+							placeholder="Max"
+							prefix={prefix}
+							suffix={suffix}
+						/>
+					</>
+				) : (
+					<NumericInput
+						value={inputs.value}
+						onChange={updateValue}
+						placeholder="10b, 500m, 20"
+						prefix={prefix}
+						suffix={suffix}
+					/>
+				)}
+			</div>
+		</div>
+	)
+}
+
+// A purpose-built combobox multiselect for use *inside* the filters dialog. It intentionally
+// does not reuse the shared `SelectWithCombobox`: that component's popover is z-10 (it renders
+// behind this z-50 dialog) and it has its own mobile-sheet sizing and "See more" pagination.
+// This variant uses z-100 + portal to stack above the dialog, renders the full option list
+// (no pagination), and is tuned for the dialog's bottom-sheet sizing.
+function CategoricalValuesSelect({
+	label,
+	options,
+	values,
+	onChange
+}: {
+	label: string
+	options: string[]
+	values: string[]
+	onChange: (values: string[]) => void
+}) {
+	const [search, setSearch] = useState('')
+	const normalizedSearch = search.trim().toLowerCase()
+	const matches = useMemo(
+		() => (normalizedSearch ? options.filter((option) => option.toLowerCase().includes(normalizedSearch)) : options),
+		[options, normalizedSearch]
+	)
+
+	return (
+		<Ariakit.ComboboxProvider resetValueOnHide setValue={(value) => startTransition(() => setSearch(value))}>
+			<Ariakit.SelectProvider
+				value={values}
+				setValue={(next) => onChange(Array.isArray(next) ? next : next ? [next] : [])}
+			>
+				<Ariakit.Select
+					aria-label={`${label} values`}
+					className="flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md border border-(--form-control-border) bg-(--bg-input) px-2.5 text-xs text-(--text-primary) outline-hidden hover:bg-(--btn-hover-bg) focus:border-(--old-blue)"
+				>
+					<span className="flex min-w-4 items-center justify-center rounded-full border border-(--form-control-border) px-1 py-0.25 text-[10px] leading-none">
+						{values.length}
+					</span>
+					<span className="mr-auto truncate">{label}</span>
+					<Ariakit.SelectArrow />
+				</Ariakit.Select>
+				<Ariakit.SelectPopover
+					unmountOnHide
+					portal
+					autoFocusOnShow={false}
+					hideOnInteractOutside
+					gutter={4}
+					wrapperProps={{
+						className: 'max-sm:fixed! max-sm:bottom-0! max-sm:top-[unset]! max-sm:transform-none! max-sm:w-full!'
+					}}
+					className="z-100 flex max-h-[min(360px,60dvh)] flex-col overflow-hidden rounded-md border border-(--cards-border) bg-(--bg-main) shadow-lg max-sm:h-[88dvh] max-sm:max-h-[88dvh] max-sm:w-full max-sm:drawer max-sm:rounded-b-none sm:min-w-[260px]"
+				>
+					<div className="flex shrink-0 items-center gap-2 border-b border-(--cards-border) p-2">
+						<span className="relative flex-1">
+							<Icon
+								name="search"
+								height={14}
+								width={14}
+								className="pointer-events-none absolute top-0 bottom-0 left-2 my-auto text-(--text-tertiary)"
+							/>
+							<Ariakit.Combobox
+								autoSelect
+								placeholder={`Search ${label.toLowerCase()}...`}
+								className="h-8 w-full rounded-md border border-(--form-control-border) bg-(--bg-input) pr-2 pl-7 text-xs text-(--text-primary) placeholder:text-(--text-tertiary) focus:border-(--old-blue) focus:outline-none"
+							/>
+						</span>
+						<Ariakit.PopoverDismiss className="shrink-0 rounded p-1.5 text-(--text-tertiary) hover:bg-(--btn-hover-bg) hover:text-(--text-primary) sm:hidden">
+							<Icon name="x" className="size-4" />
+							<span className="sr-only">Close</span>
+						</Ariakit.PopoverDismiss>
+					</div>
+					<div className="flex shrink-0 items-center justify-between border-b border-(--cards-border) px-2.5 py-1.5 text-[11px]">
+						<button
+							type="button"
+							onClick={() => onChange([])}
+							className="text-(--text-tertiary) hover:text-(--text-primary)"
+						>
+							Clear
+						</button>
+						<button
+							type="button"
+							onClick={() => onChange(Array.from(new Set(values.concat(matches))))}
+							className="text-(--link)"
+						>
+							{normalizedSearch ? 'Select shown' : 'Select all'}
+						</button>
+					</div>
+					<Ariakit.ComboboxList className="flex thin-scrollbar min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
+						{matches.length === 0 ? (
+							<p className="px-2.5 py-6 text-center text-xs text-(--text-tertiary)">No matches for "{search}".</p>
+						) : (
+							matches.map((option) => (
+								<Ariakit.SelectItem
+									key={option}
+									value={option}
+									render={<Ariakit.ComboboxItem />}
+									className="group flex shrink-0 cursor-pointer items-center gap-2 px-2.5 py-2 text-xs text-(--text-primary) hover:bg-(--btn-hover-bg) data-active-item:bg-(--btn-hover-bg)"
+								>
+									<span className="flex size-4 shrink-0 items-center justify-center rounded border border-(--form-control-border) group-aria-selected:border-(--old-blue) group-aria-selected:bg-(--old-blue) group-aria-selected:text-white">
+										<Ariakit.SelectItemCheck>
+											<Icon name="check" className="size-3" />
+										</Ariakit.SelectItemCheck>
+									</span>
+									<span className="min-w-0 flex-1 truncate">{option}</span>
+								</Ariakit.SelectItem>
+							))
+						)}
+					</Ariakit.ComboboxList>
+				</Ariakit.SelectPopover>
+			</Ariakit.SelectProvider>
+		</Ariakit.ComboboxProvider>
+	)
+}
+
+function CategoricalFilterEditor({
+	config,
+	filter,
+	options,
+	onUpdate,
+	onRemove
+}: {
+	config: EquityCategoricalFilterConfig
+	filter: EquityDraftCategoricalFilter
+	options: string[]
+	onUpdate: (filter: EquityDraftFilter) => void
+	onRemove: () => void
+}) {
+	const values = filter.values
+	const mode = filter.mode
+	const valueLabel = CATEGORICAL_VALUE_LABELS[config.field]
+
+	return (
+		<div className="flex flex-col gap-2 rounded-md border border-(--cards-border) bg-(--cards-bg) p-2">
+			<div className="flex items-center justify-between gap-2">
+				<div className="flex min-w-0 items-center gap-1.5">
+					<span className="truncate text-xs font-semibold text-(--text-primary)">{config.label}</span>
+					<span className="rounded-full bg-(--btn-bg) px-1.5 py-0.5 text-[9px] font-medium text-(--text-tertiary) uppercase">
+						{CATEGORY_LABELS[config.category]}
+					</span>
+				</div>
+				<button
+					type="button"
+					onClick={onRemove}
+					className="rounded p-1 text-(--text-tertiary) hover:bg-(--btn-hover-bg) hover:text-(--text-primary)"
+				>
+					<Icon name="x" className="size-3.5" />
+					<span className="sr-only">Remove {config.label} filter</span>
+				</button>
+			</div>
+			<div className="flex items-center gap-2">
+				<ModeToggle value={mode} onChange={(nextMode) => onUpdate({ ...filter, mode: nextMode })} />
+				<CategoricalValuesSelect
+					label={valueLabel}
+					options={options}
+					values={values}
+					onChange={(next) => onUpdate({ ...filter, values: next })}
+				/>
+			</div>
+		</div>
+	)
+}
+
+function ActiveFilterEditor({
+	filter,
+	categoricalOptions,
+	onUpdate,
+	onRemove
+}: {
+	filter: EquityDraftFilter
+	categoricalOptions: Record<string, string[]>
+	onUpdate: (filter: EquityDraftFilter) => void
+	onRemove: () => void
+}) {
+	if (filter.kind === 'categorical') {
+		const config = getEquityCategoricalFilterConfig(filter.id)
+		return (
+			<CategoricalFilterEditor
+				config={config}
+				filter={filter}
+				options={categoricalOptions[config.field] ?? []}
+				onUpdate={onUpdate}
+				onRemove={onRemove}
+			/>
+		)
+	}
+
+	const config = getEquityNumericFilterConfig(filter.id)
+	return <NumericFilterEditor config={config} filter={filter} onUpdate={onUpdate} onRemove={onRemove} />
+}
+
+interface EquitiesFiltersDialogProps {
+	companies: IEquitiesListCompanyRow[]
+	filters: EquityActiveFilter[]
+	onFiltersChange: (filters: EquityActiveFilter[]) => void
+}
+
+export function EquitiesFiltersDialog({ companies, filters, onFiltersChange }: EquitiesFiltersDialogProps) {
+	const [open, setOpen] = useState(false)
+	const [search, setSearch] = useState('')
+	const [draftFilters, setDraftFilters] = useState<EquityDraftFilter[]>(() => activeEquityFiltersToDraft(filters))
+	const isSmallScreen = useMedia('(max-width: 639px)')
+
+	const activeCount = countActiveEquityFilters(filters)
+	const draftActiveCount = countDraftEquityFilters(draftFilters)
+
+	const categoricalOptions = useMemo(
+		() => ({
+			country: getUniqueValues(companies, 'country'),
+			sector: getUniqueValues(companies, 'sector'),
+			industry: getUniqueValues(companies, 'industry')
+		}),
+		[companies]
+	)
+
+	const groupedAvailableFilters = useMemo(() => {
+		const activeIds = new Set(draftFilters.map((filter) => filter.id))
+		const normalizedSearch = search.trim().toLowerCase()
+		const groups = new Map<EquityFilterCategory, EquityFilterConfig[]>()
+		for (const category of EQUITY_FILTER_CATEGORIES) {
+			groups.set(category.key, [])
+		}
+
+		for (const config of EQUITY_FILTER_CONFIGS) {
+			if (activeIds.has(config.id)) continue
+			if (
+				normalizedSearch &&
+				!config.label.toLowerCase().includes(normalizedSearch) &&
+				!config.id.toLowerCase().includes(normalizedSearch)
+			) {
+				continue
+			}
+			groups.get(config.category)!.push(config)
+		}
+
+		return EQUITY_FILTER_CATEGORIES.map((category) => ({
+			...category,
+			filters: groups.get(category.key) ?? []
+		})).filter((category) => category.filters.length > 0)
+	}, [draftFilters, search])
+
+	const handleOpenChange = (nextOpen: boolean) => {
+		if (nextOpen) {
+			setDraftFilters(activeEquityFiltersToDraft(filters))
+			setSearch('')
+		}
+		setOpen(nextOpen)
+	}
+
+	const addFilter = (config: EquityFilterConfig) => {
+		setDraftFilters((currentFilters) =>
+			currentFilters.some((filter) => filter.id === config.id)
+				? currentFilters
+				: currentFilters.concat(createDefaultEquityDraftFilter(config))
+		)
+	}
+
+	const commitFilters = () => {
+		onFiltersChange(draftEquityFiltersToActive(draftFilters))
+		setOpen(false)
+	}
+
+	return (
+		<Ariakit.DialogProvider open={open} setOpen={handleOpenChange}>
+			<Ariakit.DialogDisclosure className="flex cursor-pointer flex-nowrap items-center justify-between gap-2 rounded-md border border-(--form-control-border) px-2 py-1.5 text-xs font-medium text-(--text-form) hover:bg-(--link-hover-bg) focus-visible:bg-(--link-hover-bg)">
+				<span className="flex min-w-4 items-center justify-center rounded-full border border-(--form-control-border) px-1 py-0.25 text-[10px] leading-none">
+					{activeCount}
+				</span>
+				<span>Filters</span>
+				<Icon name="settings" className="size-3.5 text-(--text-tertiary)" />
+			</Ariakit.DialogDisclosure>
+			<Ariakit.Dialog
+				className="fixed inset-(--inset) top-0 right-0 bottom-0 left-0 z-50 m-auto mb-0 flex max-h-[85dvh] min-h-[40dvh] w-full max-w-full flex-col overflow-hidden rounded-t-xl border border-[color-mix(in_oklch,black_8%,transparent)] bg-(--app-bg) pb-[max(0px,env(safe-area-inset-bottom))] shadow-[0_24px_64px_-16px_rgb(0_0_0/0.45),0_0_0_1px_color-mix(in_oklch,black_4%,transparent)] max-sm:drawer sm:mb-auto sm:h-fit sm:max-h-[min(760px,calc(100%-32px))] sm:min-h-[initial] sm:max-w-[min(calc(100%-32px),860px)] sm:rounded-xl sm:pb-0 dark:border-[color-mix(in_oklch,white_9%,transparent)] dark:shadow-[0_24px_64px_-16px_rgb(0_0_0/0.6),0_0_0_1px_color-mix(in_oklch,white_3%,transparent)_inset]"
+				unmountOnHide
+			>
+				<div className="flex items-center justify-between gap-3 border-b border-(--cards-border) px-4 py-3">
+					<div className="flex items-baseline gap-2.5">
+						<Ariakit.DialogHeading className="text-[15px] font-semibold tracking-tight text-(--text-primary)">
+							Filters
+						</Ariakit.DialogHeading>
+						<span className="text-xs text-(--text-tertiary) tabular-nums">
+							{draftActiveCount}/{EQUITY_FILTER_CONFIGS.length}
+						</span>
+					</div>
+					<Ariakit.DialogDismiss className="-mr-1 rounded-md p-1.5 text-(--text-tertiary) hover:bg-(--link-hover-bg) hover:text-(--text-primary) focus-visible:bg-(--link-hover-bg)">
+						<Icon name="x" className="size-4" />
+						<span className="sr-only">Close</span>
+					</Ariakit.DialogDismiss>
+				</div>
+
+				<div className="border-b border-(--cards-border) px-4 py-3">
+					<label className="relative block">
+						<span className="sr-only">Search filters</span>
+						<Icon
+							name="search"
+							height={16}
+							width={16}
+							className="pointer-events-none absolute top-0 bottom-0 left-2.5 my-auto text-(--text-tertiary)"
+						/>
+						<input
+							type="text"
+							name="search"
+							inputMode="search"
+							placeholder={`Search ${EQUITY_FILTER_CONFIGS.length} filters...`}
+							autoFocus={!isSmallScreen}
+							value={search}
+							className="min-h-9 w-full rounded-md border border-(--cards-border) bg-(--bg-input) py-1.5 pr-9 pl-8 text-sm text-(--text-primary) placeholder:text-(--text-tertiary) focus:border-(--old-blue) focus:outline-none"
+							onChange={(event) => setSearch(event.currentTarget.value)}
+						/>
+						{search ? (
+							<button
+								type="button"
+								onClick={() => setSearch('')}
+								className="absolute top-0 right-2 bottom-0 my-auto flex size-5 items-center justify-center rounded text-(--text-tertiary) hover:bg-(--link-hover-bg) hover:text-(--text-primary)"
+							>
+								<Icon name="x" className="size-3.5" />
+								<span className="sr-only">Clear search</span>
+							</button>
+						) : null}
+					</label>
+				</div>
+
+				<div className="flex min-h-0 flex-1 flex-col overflow-y-auto sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] sm:overflow-hidden">
+					<section className="order-2 flex min-h-0 flex-col border-t border-(--cards-border) max-sm:shrink-0 sm:order-1 sm:border-t-0 sm:border-r">
+						<div className="border-b border-(--cards-border) px-4 py-2">
+							<h3 className="text-xs font-medium text-(--text-secondary)">Browse filters</h3>
+						</div>
+						<div className="flex thin-scrollbar flex-1 flex-col gap-5 overflow-y-auto p-4 max-sm:overflow-visible">
+							{groupedAvailableFilters.map((group) => (
+								<section key={group.key} className="flex flex-col gap-2">
+									<div className="flex items-baseline gap-1.5">
+										<span className="text-[10px] font-medium tracking-[0.08em] text-(--text-tertiary) uppercase">
+											{group.label}
+										</span>
+										<span className="text-[10px] text-(--text-tertiary)/70 tabular-nums">· {group.filters.length}</span>
+									</div>
+									<div className="flex flex-wrap gap-1">
+										{group.filters.map((config) => (
+											<button
+												key={config.id}
+												type="button"
+												onClick={() => addFilter(config)}
+												className="group flex items-center gap-1.5 rounded-full border border-(--cards-border) bg-transparent px-2.5 py-1 text-xs text-(--text-primary) transition-[background-color,border-color,color] duration-150 ease-out hover:border-(--old-blue) hover:bg-(--link-hover-bg) focus-visible:border-(--old-blue) focus-visible:bg-(--link-hover-bg)"
+											>
+												<Icon name="plus" className="size-3 text-(--text-tertiary) group-hover:text-(--old-blue)" />
+												<span>{config.label}</span>
+											</button>
+										))}
+									</div>
+								</section>
+							))}
+
+							{groupedAvailableFilters.length === 0 ? (
+								<div className="flex flex-col items-center gap-1 py-8 text-center">
+									<p className="text-sm text-(--text-secondary)">No filters match "{search}".</p>
+									<button
+										type="button"
+										onClick={() => setSearch('')}
+										className="text-xs text-(--text-tertiary) underline-offset-2 hover:text-(--text-primary) hover:underline"
+									>
+										Clear search
+									</button>
+								</div>
+							) : null}
+						</div>
+					</section>
+
+					<section className="order-1 flex min-h-0 flex-col max-sm:shrink-0 sm:order-2">
+						<div className="border-b border-(--cards-border) px-4 py-2">
+							<h3 className="text-xs font-medium text-(--text-secondary)">Active filters</h3>
+						</div>
+						<div className="flex thin-scrollbar flex-1 flex-col gap-2 overflow-y-auto p-4 max-sm:overflow-visible">
+							{draftFilters.length > 0 ? (
+								draftFilters.map((filter) => (
+									<ActiveFilterEditor
+										key={filter.id}
+										filter={filter}
+										categoricalOptions={categoricalOptions}
+										onUpdate={(nextFilter) =>
+											setDraftFilters((currentFilters) => replaceFilter(currentFilters, nextFilter))
+										}
+										onRemove={() => setDraftFilters((currentFilters) => removeFilter(currentFilters, filter.id))}
+									/>
+								))
+							) : (
+								<div className="rounded-md border border-dashed border-(--cards-border) bg-(--cards-bg) p-4 text-sm text-(--text-tertiary)">
+									<span className="sm:hidden">Add filters from the list below to narrow the table.</span>
+									<span className="max-sm:hidden">Add filters from the left to narrow the table.</span>
+								</div>
+							)}
+						</div>
+					</section>
+				</div>
+
+				<div className="flex items-center justify-between gap-2 border-t border-(--cards-border) bg-(--app-bg) px-4 py-3">
+					{draftFilters.length > 0 ? (
+						<button
+							type="button"
+							onClick={() => setDraftFilters([])}
+							className="text-xs text-(--text-tertiary) underline-offset-2 hover:text-(--text-primary) hover:underline"
+						>
+							Clear all
+						</button>
+					) : (
+						<span className="text-xs text-(--text-tertiary)">No filters selected</span>
+					)}
+					<button
+						type="button"
+						onClick={commitFilters}
+						className="rounded-md bg-(--old-blue) px-3 py-1.5 text-sm font-medium text-white hover:brightness-110 focus-visible:brightness-110"
+					>
+						Done
+					</button>
+				</div>
+			</Ariakit.Dialog>
+		</Ariakit.DialogProvider>
+	)
+}
+
+export function EquityActiveFilterPills({
+	filters,
+	onRemove
+}: {
+	filters: EquityActiveFilter[]
+	onRemove: (id: string) => void
+}) {
+	if (filters.length === 0) return null
+
+	return (
+		<div className="flex flex-wrap gap-1">
+			{filters.map((filter) => (
+				<button
+					key={filter.id}
+					type="button"
+					onClick={() => onRemove(filter.id)}
+					className="group flex items-center gap-1 rounded-full border border-[color-mix(in_oklch,var(--old-blue)_45%,transparent)] bg-[color-mix(in_oklch,var(--old-blue)_14%,transparent)] px-2 py-1 text-xs text-(--text-primary) hover:bg-(--link-hover-bg)"
+				>
+					<span>{formatEquityActiveFilter(filter)}</span>
+					<Icon name="x" className="size-3 opacity-60 group-hover:opacity-100" />
+				</button>
+			))}
+		</div>
+	)
+}

@@ -183,7 +183,11 @@ export function PaginatedTable<T extends RowData>({
 											const align = cell.column.columnDef.meta?.align ?? 'start'
 
 											return (
-												<TokenPageTableBodyCell key={cell.id} textAlign={align}>
+												<TokenPageTableBodyCell
+													key={cell.id}
+													textAlign={align}
+													className={cell.column.columnDef.meta?.cellClassName}
+												>
 													{flexRender(cell.column.columnDef.cell, cell.getContext())}
 												</TokenPageTableBodyCell>
 											)
