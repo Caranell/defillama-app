@@ -8,7 +8,6 @@ import { fetchRaises } from '~/containers/Raises/api'
 import type { ProtocolEmissionSupplyMetricsMap } from '~/containers/Unlocks/api.types'
 import { TVL_SETTINGS_KEYS_SET } from '~/contexts/LocalStorage'
 import { getPercentChange, slug } from '~/utils'
-import { tokenIconUrl } from '~/utils/icons'
 import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { recordRuntimeError } from '~/utils/telemetry'
 import { AIRDROP_EXCLUDE } from './airdrop-exclude'
@@ -286,7 +285,7 @@ export async function getExtraTvlByChain({
 
 		const p: IExtraTvlProtocolRow = {
 			name: protocol.name,
-			logo: tokenIconUrl(slug(protocol.name)),
+			logo: protocol.logo,
 			slug: slug(protocol.name),
 			category: protocol.category,
 			chains: (protocol.defillamaId ? protocolMetadata[protocol.defillamaId]?.chains : null) ?? protocol.chains ?? [],
@@ -322,7 +321,7 @@ export async function getExtraTvlByChain({
 
 		finalProtocols.push({
 			name: parent.name,
-			logo: tokenIconUrl(slug(parent.name)),
+			logo: parent.logo ?? '',
 			slug: slug(parent.name),
 			category: categories.length > 1 ? null : (categories[0] ?? null),
 			chains: Array.from(new Set(children.flatMap((p) => p.chains))),
@@ -395,7 +394,7 @@ function buildTokenMetricProtocols({
 
 		const p: ITokenMetricProtocolRow = {
 			name: protocol.name,
-			logo: tokenIconUrl(slug(protocol.name)),
+			logo: protocol.logo,
 			slug: slug(protocol.name),
 			category: protocol.category,
 			chains: (protocol.defillamaId ? protocolMetadata[protocol.defillamaId]?.chains : null) ?? protocol.chains ?? [],
@@ -422,7 +421,7 @@ function buildTokenMetricProtocols({
 
 		finalProtocols.push({
 			name: parent.name,
-			logo: tokenIconUrl(slug(parent.name)),
+			logo: parent.logo ?? '',
 			slug: slug(parent.name),
 			category: cats.length > 1 ? null : (cats[0] ?? null),
 			chains: Array.from(new Set(children.flatMap((p) => p.chains))),

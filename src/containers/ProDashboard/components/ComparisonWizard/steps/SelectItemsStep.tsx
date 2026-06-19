@@ -3,8 +3,9 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { matchSorter } from 'match-sorter'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '~/components/Icon'
+import { TokenLogo } from '~/components/TokenLogo'
 import { fetchChainsByCategory, fetchChainsCategories } from '~/containers/Chains/api'
-import { chainIconUrl, tokenIconUrl } from '~/utils/icons'
+import { chainIconUrl } from '~/utils/icons'
 import { useProDashboardCatalog } from '../../../ProDashboardAPIContext'
 import { AriakitMultiSelect } from '../../AriakitMultiSelect'
 import { useComparisonWizardContext } from '../ComparisonWizardContext'
@@ -92,7 +93,7 @@ export function SelectItemsStep() {
 			result.push({
 				value: parent.slug,
 				label: parent.name,
-				logo: parent.logo || tokenIconUrl(parent.slug)
+				logo: parent.logo ?? ''
 			})
 			const children = childrenByParentId.get(parent.id) || []
 			if (children.length > 0) {
@@ -101,7 +102,7 @@ export function SelectItemsStep() {
 					result.push({
 						value: child.slug,
 						label: child.name,
-						logo: child.logo || tokenIconUrl(child.slug),
+						logo: child.logo ?? '',
 						isChild: true,
 						parentSlug: parent.slug
 					})
@@ -145,7 +146,7 @@ export function SelectItemsStep() {
 				filtered = matchingProtocols.map((protocol) => ({
 					value: protocol.slug,
 					label: protocol.name,
-					logo: protocol.logo || tokenIconUrl(protocol.slug)
+					logo: protocol.logo ?? ''
 				}))
 			}
 		}
@@ -221,15 +222,7 @@ export function SelectItemsStep() {
 									key={item.value}
 									className="flex shrink-0 items-center gap-2 rounded-full border border-(--cards-border) bg-(--cards-bg-alt)/50 py-1 pr-1 pl-2 text-sm"
 								>
-									{item.logo ? (
-										<img
-											src={item.logo}
-											alt={item.label}
-											width={20}
-											height={20}
-											className="size-5 rounded-full object-cover"
-										/>
-									) : null}
+									<TokenLogo src={item.logo} alt={`Logo of ${item.label}`} size={20} />
 									<span className="whitespace-nowrap text-(--text-primary)">{item.label}</span>
 									<button
 										type="button"
@@ -337,15 +330,9 @@ export function SelectItemsStep() {
 											{isSelected ? <Icon name="check" height={10} width={10} className="text-white" /> : null}
 										</div>
 
-										<img
-											src={option.logo}
-											alt={option.label}
-											width={24}
-											height={24}
-											className={`size-6 shrink-0 rounded-full object-cover ring-1 ring-(--cards-border) ${
-												option.isChild ? 'opacity-70' : ''
-											}`}
-										/>
+										<span className={option.isChild ? 'opacity-70' : undefined}>
+											<TokenLogo src={option.logo} alt={`Logo of ${option.label}`} size={24} />
+										</span>
 
 										<div className="min-w-0 flex-1">
 											<span

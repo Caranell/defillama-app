@@ -7,6 +7,7 @@ interface ForkLink {
 
 export interface ForkTableDataRow {
 	name: string
+	logo?: string | null
 	tvl: number
 	forkedProtocols: number
 	parentTvl: number | null

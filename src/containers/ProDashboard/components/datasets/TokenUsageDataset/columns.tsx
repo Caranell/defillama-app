@@ -28,7 +28,7 @@ export const getColumns = (tokenSymbols: string[]): ColumnDef<TokenUsageRow>[] =
 				return (
 					<div className="flex items-center gap-2">
 						<span className="min-w-[30px] shrink-0 text-sm font-medium text-(--text-tertiary)">{index + 1}</span>
-						<TokenLogo name={value} kind="token" alt={`Logo of ${value}`} data-lgonly />
+						<TokenLogo src={row.original.logo} alt={`Logo of ${value}`} data-lgonly />
 						<BasicLink
 							href={`/protocol/${slug(value)}`}
 							className="text-sm font-medium text-(--link-text) hover:underline"

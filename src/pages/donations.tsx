@@ -1,6 +1,6 @@
+import { TokenLogo } from '~/components/TokenLogo'
 import { fetchProtocols } from '~/containers/ProtocolLists/api'
 import Layout from '~/layout'
-import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 
@@ -15,7 +15,7 @@ export const getStaticProps = withPerformanceLogging('donations', async () => {
 		if (parent.referralUrl == null) continue
 		protocolsWithReferralurl[parent.id] = {
 			name: parent.name,
-			logo: tokenIconUrl(parent.name),
+			logo: parent.logo ?? '',
 			url: parent.referralUrl,
 			tvl: 0
 		}
@@ -36,7 +36,7 @@ export const getStaticProps = withPerformanceLogging('donations', async () => {
 		) {
 			protocolsWithReferralurl[protocol.defillamaId] = {
 				name: protocol.name,
-				logo: tokenIconUrl(protocol.name),
+				logo: protocol.logo,
 				url: protocol.referralUrl,
 				tvl: protocol.tvl ?? 0
 			}
@@ -80,7 +80,7 @@ function DonationsPage({ protocols }) {
 								rel="noopener noreferrer"
 								href={p.url}
 							>
-								<img src={p.logo} alt={`${p.name} logo`} className="size-6 shrink-0 rounded-full" />
+								<TokenLogo src={p.logo} alt={`${p.name} logo`} size={24} />
 								<span className="truncate text-sm text-(--blue)">{p.name}</span>
 							</a>
 						))}

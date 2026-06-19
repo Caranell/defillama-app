@@ -59,13 +59,13 @@ export const OracleOverview = ({
 			columnHelper.accessor('name', {
 				header: 'Name',
 				enableSorting: false,
-				cell: ({ getValue }) => {
+				cell: ({ getValue, row }) => {
 					const name = getValue()
 					return (
 						<span className="flex items-center gap-2">
 							<span className="vf-row-index shrink-0" aria-hidden="true" />
 
-							<TokenLogo name={name} kind="token" data-lgonly alt={`Logo of ${name}`} />
+							<TokenLogo src={row.original.logo} data-lgonly alt={`Logo of ${name}`} />
 
 							<BasicLink
 								href={`/protocol/${slug(name)}`}
