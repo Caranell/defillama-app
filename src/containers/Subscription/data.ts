@@ -18,8 +18,8 @@ export const PLAN_META_BY_CYCLE: Record<BillingCycle, Record<PlanKey, PlanMeta>>
 	},
 	yearly: {
 		free: { title: 'Free', price: '$0/month', action: 'Get Started' },
-		pro: { title: 'Pro', price: '$490/year', action: 'Get Started' },
-		api: { title: 'API', price: '$3,000/year', action: 'Get Started' },
+		pro: { title: 'Pro', price: '$40.83/month', priceSecondary: '$490/year', action: 'Get Started' },
+		api: { title: 'API', price: '$250/month', priceSecondary: '$3,000/year', action: 'Get Started' },
 		enterprise: { title: 'Enterprise', price: 'Custom', action: 'Contact us' }
 	}
 }
@@ -158,8 +158,8 @@ const CYCLE_PRICING: Record<
 	},
 	yearly: {
 		free: { priceMain: '$0', priceUnit: '/month' },
-		pro: { priceMain: '$490', priceUnit: '/year', priceSecondary: '$40.83 /month' },
-		api: { priceMain: '$3,000', priceUnit: '/year', priceSecondary: '$250 /month' },
+		pro: { priceMain: '$40.83', priceUnit: '/month', priceSecondary: '$490 /year' },
+		api: { priceMain: '$250', priceUnit: '/month', priceSecondary: '$3,000 /year' },
 		enterprise: {}
 	}
 }
