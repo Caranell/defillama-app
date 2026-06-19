@@ -2,6 +2,7 @@ import type { GetStaticPropsContext, InferGetStaticPropsType } from 'next'
 import { SKIP_BUILD_STATIC_GENERATION } from '~/constants'
 import { RWAPerpsContractPage } from '~/containers/RWA/Perps/Contract'
 import { getRWAPerpsContractData } from '~/containers/RWA/Perps/queries'
+import { rwaSlug } from '~/containers/RWA/rwaSlug'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
@@ -23,7 +24,15 @@ function resolveCanonicalContract(contractParam: string, contracts: string[]): s
 		}
 	}
 
-	return null
+	const contractParamSlug = rwaSlug(contractParam)
+	let slugMatch = null
+	for (const contract of contracts) {
+		if (rwaSlug(contract) !== contractParamSlug) continue
+		if (slugMatch !== null) return null
+		slugMatch = contract
+	}
+
+	return slugMatch
 }
 
 export async function getStaticPaths() {
@@ -53,6 +62,15 @@ export const getStaticProps = withPerformanceLogging(
 		const canonicalContract = resolveCanonicalContract(contractParam, metadataCache.rwaPerpsList.contracts)
 		if (!canonicalContract) {
 			return { notFound: true }
+		}
+
+		if (contractParam !== canonicalContract) {
+			return {
+				redirect: {
+					destination: `/rwa/perps/contract/${encodeURIComponent(canonicalContract)}`,
+					permanent: false
+				}
+			}
 		}
 
 		const contract = await getRWAPerpsContractData({ contract: canonicalContract })

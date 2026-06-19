@@ -64,12 +64,14 @@ describe('rwa asset page', () => {
 		})
 	})
 
-	it('getStaticProps resolves lowercase asset params to the canonical asset', async () => {
+	it('getStaticProps redirects lowercase asset params to the canonical asset', async () => {
 		const page = await setupPageModule()
 
 		await expect(page.getStaticProps({ params: { asset: 'usde' } } as never)).resolves.toEqual({
-			props: { asset: TEST_ASSET },
-			revalidate: 123
+			redirect: {
+				destination: '/rwa/asset/USDE',
+				permanent: false
+			}
 		})
 	})
 

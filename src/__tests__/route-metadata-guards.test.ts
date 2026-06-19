@@ -242,6 +242,34 @@ describe('route metadata guards', () => {
 		expect(getDATCompanyDataMock).not.toHaveBeenCalled()
 	})
 
+	it('DAT routes redirect noncanonical params before data fetches', async () => {
+		await expect(datAssetPage.getStaticProps({ params: { asset: 'Bitcoin' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/digital-asset-treasuries/bitcoin',
+				permanent: false
+			}
+		})
+		await expect(datCompanyPage.getStaticProps({ params: { company: 'MSTR' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/digital-asset-treasury/mstr',
+				permanent: false
+			}
+		})
+		expect(getDATOverviewDataByAssetMock).not.toHaveBeenCalled()
+		expect(getDATCompanyDataMock).not.toHaveBeenCalled()
+	})
+
+	it('DAT getStaticPaths uses blocking fallback so canonical redirects can run', async () => {
+		await expect(datAssetPage.getStaticPaths()).resolves.toEqual({
+			paths: [{ params: { asset: 'bitcoin' } }],
+			fallback: 'blocking'
+		})
+		await expect(datCompanyPage.getStaticPaths()).resolves.toEqual({
+			paths: [{ params: { company: 'mstr' } }],
+			fallback: 'blocking'
+		})
+	})
+
 	it('stablecoin route returns notFound before data fetch for indexed invalid slugs', async () => {
 		await expect(stablecoinPage.getStaticProps({ params: { peggedasset: 'bad' } } as never)).resolves.toEqual({
 			notFound: true

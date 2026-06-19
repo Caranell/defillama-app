@@ -50,6 +50,15 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
+		if (params.platform !== platformSlug) {
+			return {
+				redirect: {
+					destination: `/rwa/platform/${platformSlug}`,
+					permanent: false
+				}
+			}
+		}
+
 		const props = await getRWAAssetsOverview({ platform: platformSlug, rwaList })
 
 		if (!props) {

@@ -52,6 +52,15 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
+		if (params.category !== categorySlug) {
+			return {
+				redirect: {
+					destination: `/rwa/category/${categorySlug}`,
+					permanent: false
+				}
+			}
+		}
+
 		const props = await getRWAAssetsOverview({ category: categorySlug, rwaList })
 
 		if (!props) {

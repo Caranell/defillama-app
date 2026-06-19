@@ -51,6 +51,15 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
+		if (params.assetGroup !== assetGroupSlug) {
+			return {
+				redirect: {
+					destination: `/rwa/asset-group/${assetGroupSlug}`,
+					permanent: false
+				}
+			}
+		}
+
 		const props = await getRWAAssetsOverview({ assetGroup: assetGroupSlug, rwaList })
 		if (!props || props.assets.length === 0) {
 			return { notFound: true }

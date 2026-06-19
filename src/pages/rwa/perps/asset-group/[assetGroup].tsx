@@ -9,6 +9,17 @@ import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 
+function resolveCanonicalAssetGroupSlug(assetGroupParam: string, assetGroups: string[]): string | null {
+	const assetGroupSlug = rwaSlug(assetGroupParam)
+
+	for (const assetGroup of assetGroups) {
+		const canonicalSlug = rwaSlug(assetGroup)
+		if (canonicalSlug === assetGroupSlug) return canonicalSlug
+	}
+
+	return null
+}
+
 export async function getStaticPaths() {
 	if (SKIP_BUILD_STATIC_GENERATION) {
 		return {
@@ -34,10 +45,18 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const assetGroup = params.assetGroup
-		const validAssetGroups = new Set(metadataCache.rwaPerpsList.assetGroups.map((group) => rwaSlug(group)))
-		if (!validAssetGroups.has(assetGroup)) {
+		const assetGroup = resolveCanonicalAssetGroupSlug(params.assetGroup, metadataCache.rwaPerpsList.assetGroups)
+		if (!assetGroup) {
 			return { notFound: true }
+		}
+
+		if (params.assetGroup !== assetGroup) {
+			return {
+				redirect: {
+					destination: `/rwa/perps/asset-group/${assetGroup}`,
+					permanent: false
+				}
+			}
 		}
 
 		const data = await getRWAPerpsAssetGroupPage({

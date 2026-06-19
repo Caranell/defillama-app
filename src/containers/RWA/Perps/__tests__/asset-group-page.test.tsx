@@ -81,4 +81,15 @@ describe('rwa perps asset-group page', () => {
 			revalidate: 123
 		})
 	})
+
+	it('getStaticProps redirects noncanonical asset group params to the canonical slug', async () => {
+		const page = await setupPageModule({ assetGroups: ['US Equities'] })
+
+		await expect(page.getStaticProps({ params: { assetGroup: 'US Equities' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/rwa/perps/asset-group/us-equities',
+				permanent: false
+			}
+		})
+	})
 })

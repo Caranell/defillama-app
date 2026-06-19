@@ -9,6 +9,17 @@ import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 
+function resolveCanonicalVenueSlug(venueParam: string, venues: string[]): string | null {
+	const venueSlug = rwaSlug(venueParam)
+
+	for (const venue of venues) {
+		const canonicalSlug = rwaSlug(venue)
+		if (canonicalSlug === venueSlug) return canonicalSlug
+	}
+
+	return null
+}
+
 export async function getStaticPaths() {
 	if (SKIP_BUILD_STATIC_GENERATION) {
 		return {
@@ -32,10 +43,18 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const venue = params.venue
-		const validVenues = new Set(metadataCache.rwaPerpsList.venues.map((item) => rwaSlug(item)))
-		if (!validVenues.has(venue)) {
+		const venue = resolveCanonicalVenueSlug(params.venue, metadataCache.rwaPerpsList.venues)
+		if (!venue) {
 			return { notFound: true }
+		}
+
+		if (params.venue !== venue) {
+			return {
+				redirect: {
+					destination: `/rwa/perps/venue/${venue}`,
+					permanent: false
+				}
+			}
 		}
 
 		const data = await getRWAPerpsVenuePage({ venue, activeView: DEFAULT_CHART_VIEW })

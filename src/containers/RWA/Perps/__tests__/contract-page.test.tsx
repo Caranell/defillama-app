@@ -138,21 +138,44 @@ describe('rwa perps contract page', () => {
 		})
 	})
 
-	it('getStaticProps resolves lowercase contract params to the canonical contract', async () => {
+	it('getStaticProps redirects lowercase contract params to the canonical contract', async () => {
 		const page = await setupPageModule({ contracts: ['xyz:META'], contractData: TEST_CONTRACT })
 
 		await expect(page.getStaticProps({ params: { contract: 'xyz:meta' } } as never)).resolves.toEqual({
-			props: { contract: TEST_CONTRACT },
-			revalidate: 123
+			redirect: {
+				destination: '/rwa/perps/contract/xyz%3AMETA',
+				permanent: false
+			}
 		})
 	})
 
-	it('getStaticProps resolves encoded lowercase contract params to the canonical contract', async () => {
+	it('getStaticProps redirects encoded lowercase contract params to the canonical contract', async () => {
 		const page = await setupPageModule({ contracts: ['xyz:META'], contractData: TEST_CONTRACT })
 
 		await expect(page.getStaticProps({ params: { contract: 'xyz%3ameta' } } as never)).resolves.toEqual({
-			props: { contract: TEST_CONTRACT },
-			revalidate: 123
+			redirect: {
+				destination: '/rwa/perps/contract/xyz%3AMETA',
+				permanent: false
+			}
+		})
+	})
+
+	it('getStaticProps redirects slugified contract params to the canonical contract', async () => {
+		const page = await setupPageModule({ contracts: ['xyz:META'], contractData: TEST_CONTRACT })
+
+		await expect(page.getStaticProps({ params: { contract: 'xyz-meta' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/rwa/perps/contract/xyz%3AMETA',
+				permanent: false
+			}
+		})
+	})
+
+	it('getStaticProps returns notFound for ambiguous slugified contract params', async () => {
+		const page = await setupPageModule({ contracts: ['xyz:META', 'xyz META'], contractData: TEST_CONTRACT })
+
+		await expect(page.getStaticProps({ params: { contract: 'xyz-meta' } } as never)).resolves.toEqual({
+			notFound: true
 		})
 	})
 

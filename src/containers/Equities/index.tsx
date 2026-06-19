@@ -13,7 +13,7 @@ import {
 	useReactTable
 } from '@tanstack/react-table'
 import { useRouter } from 'next/router'
-import { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { startTransition, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { CSVDownloadButton } from '~/components/ButtonStyled/CsvButton'
 import { Icon } from '~/components/Icon'
 import { BasicLink } from '~/components/Link'
@@ -656,8 +656,6 @@ type EquitiesTableState = {
 	searchValue: string
 }
 
-const DEFAULT_PRESET: EquitiesPreset = 'Market Cap'
-
 function buildInitialTableState(preset: EquitiesPreset): EquitiesTableState {
 	return {
 		columnFilters: [],
@@ -837,31 +835,22 @@ function EquitiesRankingsTable({
 
 export function EquitiesOverview({ companies, updatedAt }: IEquitiesListPageProps) {
 	const router = useRouter()
-	const [selectedPreset, setSelectedPreset] = useState<EquitiesPreset>(DEFAULT_PRESET)
-	const [showMorePresets, setShowMorePresets] = useState(false)
-
-	useEffect(() => {
-		if (!router.isReady) return
-		const nextPreset = getPresetFromQuery(readSingleQueryValue(router.query.rankBy))
-		setSelectedPreset((current) => (current === nextPreset ? current : nextPreset))
-	}, [router.isReady, router.query.rankBy])
-
-	useEffect(() => {
-		if (EQUITIES_MORE_PRESETS.some((preset) => preset === selectedPreset)) {
-			setShowMorePresets(true)
-		}
-	}, [selectedPreset])
+	const selectedPreset = useMemo(
+		() => getPresetFromQuery(readSingleQueryValue(router.query.rankBy)),
+		[router.query.rankBy]
+	)
+	const [isMorePresetsManuallyOpen, setIsMorePresetsManuallyOpen] = useState(false)
 
 	const selectPreset = useCallback(
 		(preset: EquitiesPreset) => {
 			if (preset === selectedPreset) return
-			setSelectedPreset(preset)
 			void pushShallowQuery(router, { rankBy: PRESET_QUERY_SLUGS[preset] })
 		},
 		[router, selectedPreset]
 	)
 
 	const isMorePresetActive = EQUITIES_MORE_PRESETS.some((preset) => preset === selectedPreset)
+	const showMorePresets = isMorePresetActive || isMorePresetsManuallyOpen
 
 	const presetButtonClassName =
 		'rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg) data-[active=true]:bg-(--old-blue) data-[active=true]:text-white'
@@ -900,22 +889,24 @@ export function EquitiesOverview({ companies, updatedAt }: IEquitiesListPageProp
 								{preset}
 							</button>
 						))}
-						<button
-							type="button"
-							aria-expanded={true}
-							onClick={() => setShowMorePresets(false)}
-							className="flex items-center gap-1 rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg)"
-						>
-							<Icon name="minus" height={12} width={12} />
-							Less
-						</button>
+						{isMorePresetsManuallyOpen && !isMorePresetActive ? (
+							<button
+								type="button"
+								aria-expanded={true}
+								onClick={() => setIsMorePresetsManuallyOpen(false)}
+								className="flex items-center gap-1 rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg)"
+							>
+								<Icon name="minus" height={12} width={12} />
+								Less
+							</button>
+						) : null}
 					</>
 				) : (
 					<button
 						type="button"
 						aria-expanded={false}
 						data-active={isMorePresetActive}
-						onClick={() => setShowMorePresets(true)}
+						onClick={() => setIsMorePresetsManuallyOpen(true)}
 						className={presetButtonClassName}
 					>
 						+ More

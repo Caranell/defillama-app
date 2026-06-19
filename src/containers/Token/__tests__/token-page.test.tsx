@@ -729,29 +729,12 @@ describe('token page', () => {
 		})
 	})
 
-	it('getStaticProps keeps the canonical URL metadata-defined for lowercase token params', async () => {
-		await expect(getStaticProps({ params: { token: 'btc' } } as never)).resolves.toMatchObject({
-			props: {
-				seoTitle: 'BTC Price, Market Cap, Supply & Trading Volume',
-				seoDescription: 'Track BTC price, market cap, circulating supply, max supply, and trading volume.',
-				canonicalUrl: '/token/BTC',
-				sections: [
-					{
-						id: 'token-overview',
-						overview: overviewFixture,
-						geckoId: 'bitcoin'
-					},
-					{
-						id: 'token-markets',
-						tokenSymbol: 'BTC'
-					},
-					{
-						id: 'token-usage',
-						tokenSymbol: 'BTC'
-					}
-				]
-			},
-			revalidate: 123
+	it('getStaticProps redirects lowercase token params when metadata defines a canonical route', async () => {
+		await expect(getStaticProps({ params: { token: 'btc' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/token/BTC',
+				permanent: false
+			}
 		})
 	})
 
@@ -760,7 +743,7 @@ describe('token page', () => {
 		state.liquidationsTokenSymbolsSet = new Set(['BTC'])
 		state.hasTokenLiquidationsData = true
 
-		const result = await getStaticProps({ params: { token: 'btc' } } as never)
+		const result = await getStaticProps({ params: { token: 'BTC' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -772,7 +755,7 @@ describe('token page', () => {
 		state.liquidationsTokenSymbols = ['BTC']
 		state.liquidationsTokenSymbolsSet = new Set(['BTC'])
 
-		const result = await getStaticProps({ params: { token: 'btc' } } as never)
+		const result = await getStaticProps({ params: { token: 'BTC' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -793,7 +776,7 @@ describe('token page', () => {
 		}
 		state.tokenlist = {}
 
-		await expect(getStaticProps({ params: { token: 'btc' } } as never)).resolves.toMatchObject({
+		await expect(getStaticProps({ params: { token: 'BTC' } } as never)).resolves.toMatchObject({
 			props: {
 				seoTitle: 'BTC Price, Market Cap, Supply & Trading Volume',
 				seoDescription: 'Track BTC price, market cap, circulating supply, max supply, and trading volume.',
@@ -985,7 +968,7 @@ describe('token page', () => {
 			}
 		}
 
-		const result = await getStaticProps({ params: { token: 'bp' } } as never)
+		const result = await getStaticProps({ params: { token: 'BP' } } as never)
 
 		expect('props' in result).toBe(true)
 		if (!('props' in result)) throw new Error('expected props')
@@ -1384,7 +1367,7 @@ describe('token page', () => {
 		)
 		vi.mocked(hasTokenLiquidationsData).mockRejectedValueOnce(integrityError)
 
-		await expect(getStaticProps({ params: { token: 'btc' } } as never)).rejects.toThrow('corrupt liquidations index')
+		await expect(getStaticProps({ params: { token: 'BTC' } } as never)).rejects.toThrow('corrupt liquidations index')
 	})
 
 	it('renders the risks section only when getStaticProps returns token risk data', async () => {

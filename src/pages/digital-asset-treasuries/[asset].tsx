@@ -22,10 +22,28 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
+		if (params.asset !== asset) {
+			return {
+				redirect: {
+					destination: `/digital-asset-treasuries/${asset}`,
+					permanent: false
+				}
+			}
+		}
+
 		const props = await getDATOverviewDataByAsset(asset)
 
 		if (!props) {
 			return { notFound: true }
+		}
+
+		if (asset !== props.asset) {
+			return {
+				redirect: {
+					destination: `/digital-asset-treasuries/${props.asset}`,
+					permanent: false
+				}
+			}
 		}
 
 		return {
@@ -46,7 +64,7 @@ export async function getStaticPaths() {
 	const { getDATAssetStaticPaths } = await import('~/containers/DAT/server/routes')
 	const paths = await getDATAssetStaticPaths()
 
-	return { paths, fallback: false }
+	return { paths, fallback: 'blocking' }
 }
 
 export default function TreasuriesByAssetPage(props: InferGetStaticPropsType<typeof getStaticProps>) {

@@ -81,4 +81,15 @@ describe('rwa perps venue page', () => {
 			revalidate: 123
 		})
 	})
+
+	it('getStaticProps redirects noncanonical venue params to the canonical slug', async () => {
+		const page = await setupPageModule({ venues: ['xyz venue'] })
+
+		await expect(page.getStaticProps({ params: { venue: 'XYZ Venue' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/rwa/perps/venue/xyz-venue',
+				permanent: false
+			}
+		})
+	})
 })

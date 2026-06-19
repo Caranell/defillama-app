@@ -68,4 +68,13 @@ describe('rwa category page', () => {
 			notFound: true
 		})
 	})
+
+	it('redirects noncanonical category params to the canonical slug', async () => {
+		await expect(page.getStaticProps({ params: { category: 'Treasuries' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/rwa/category/treasuries',
+				permanent: false
+			}
+		})
+	})
 })

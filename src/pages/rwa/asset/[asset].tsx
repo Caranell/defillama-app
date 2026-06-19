@@ -63,6 +63,15 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
+		if (assetParam !== canonicalMarketId) {
+			return {
+				redirect: {
+					destination: `/rwa/asset/${encodeURIComponent(canonicalMarketId)}`,
+					permanent: false
+				}
+			}
+		}
+
 		const assetId = rwaList.idMap[canonicalMarketId] ?? null
 		if (!assetId) {
 			return { notFound: true }

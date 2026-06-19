@@ -49,6 +49,15 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
+		if (params.chain !== chainSlug) {
+			return {
+				redirect: {
+					destination: `/rwa/chain/${chainSlug}`,
+					permanent: false
+				}
+			}
+		}
+
 		const props = await getRWAAssetsOverview({ chain: chainSlug, rwaList })
 
 		if (!props) {

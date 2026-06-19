@@ -20,10 +20,29 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
+		if (params.company !== company) {
+			return {
+				redirect: {
+					destination: `/digital-asset-treasury/${company}`,
+					permanent: false
+				}
+			}
+		}
+
 		const props = await getDATCompanyData(company)
 
 		if (!props) {
 			return { notFound: true }
+		}
+
+		const canonicalCompany = slug(props.ticker)
+		if (company !== canonicalCompany) {
+			return {
+				redirect: {
+					destination: `/digital-asset-treasury/${canonicalCompany}`,
+					permanent: false
+				}
+			}
 		}
 
 		return {
@@ -43,7 +62,7 @@ export async function getStaticPaths() {
 
 	const { getDATCompanyStaticPaths } = await import('~/containers/DAT/server/routes')
 	const paths = await getDATCompanyStaticPaths()
-	return { paths, fallback: false }
+	return { paths, fallback: 'blocking' }
 }
 
 export default function DigitalAssetTreasuryPage(props: InferGetStaticPropsType<typeof getStaticProps>) {
