@@ -77,7 +77,16 @@ export function ArticleEditorHeader({
 			}`}
 		>
 			<nav className="flex min-w-0 items-center gap-2.5 text-sm">
-				<Link href="/research" className="text-(--text-tertiary) hover:text-(--text-primary)">
+				<Link
+					href="/research/admin"
+					className="inline-flex items-center gap-1 text-(--text-tertiary) transition-colors hover:text-(--text-primary)"
+				>
+					Admin
+				</Link>
+				<span aria-hidden className="text-(--text-tertiary)/50">
+					›
+				</span>
+				<Link href="/research/mine" className="text-(--text-tertiary) hover:text-(--text-primary)">
 					Articles
 				</Link>
 				<span aria-hidden className="text-(--text-tertiary)/50">

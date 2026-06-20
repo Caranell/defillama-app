@@ -5,7 +5,8 @@ import {
 	canEditResearchArticle,
 	canManageResearchArticle,
 	hasResearchAccess,
-	isResearcher
+	isResearcher,
+	resolveArticlesGateState
 } from '../ArticlesAccessGate'
 import type { ArticleDocument } from '../types'
 
@@ -76,5 +77,23 @@ describe('research access helpers', () => {
 		expect(canManageResearchArticle(article({ viewerRole: 'researcher' }))).toBe(true)
 		expect(canManageResearchArticle(article({ viewerRole: 'owner' }))).toBe(true)
 		expect(canManageResearchArticle(article({ viewerRole: 'collaborator' }))).toBe(false)
+	})
+})
+
+describe('resolveArticlesGateState', () => {
+	it('waits during the client hydration gap instead of redirecting', () => {
+		expect(resolveArticlesGateState({ isClient: false, isLoading: false, hasAccess: false })).toBe('loading')
+	})
+
+	it('waits while auth is still loading', () => {
+		expect(resolveArticlesGateState({ isClient: true, isLoading: true, hasAccess: false })).toBe('loading')
+	})
+
+	it('redirects only once hydrated and resolved without access', () => {
+		expect(resolveArticlesGateState({ isClient: true, isLoading: false, hasAccess: false })).toBe('redirect')
+	})
+
+	it('authorizes a resolved researcher', () => {
+		expect(resolveArticlesGateState({ isClient: true, isLoading: false, hasAccess: true })).toBe('authorized')
 	})
 })
