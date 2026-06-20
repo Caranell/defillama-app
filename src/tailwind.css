@@ -1207,7 +1207,7 @@
 	}
 
 	button {
-		@apply pointer-events-auto cursor-pointer touch-none select-none disabled:cursor-not-allowed;
+		@apply pointer-events-auto cursor-pointer touch-manipulation select-none disabled:cursor-not-allowed;
 	}
 
 	a,
