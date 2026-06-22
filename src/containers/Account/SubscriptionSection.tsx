@@ -297,7 +297,11 @@ export function SubscriptionSection() {
 		isCancelSubscriptionLoading,
 		endTrialSubscription,
 		isEndTrialLoading,
-		isSubscriptionLoading
+		isSubscriptionLoading,
+		enableOverage,
+		disableOverage,
+		isEnableOverageLoading,
+		isDisableOverageLoading
 	} = useSubscribe()
 
 	const isTeamMember = Boolean(team && !team.isAdmin)
@@ -384,6 +388,19 @@ export function SubscriptionSection() {
 	const handleUpgradeToYearly = (type: 'llamafeed' | 'api') => {
 		setYearlyUpgradeType(type)
 		setIsYearlyUpgradeModalOpen(true)
+	}
+
+	const isOverageEnabled = Boolean(apiSubscription?.overage)
+	const canManageOverage = hasApiSubscription && apiSubscription?.provider === 'manual'
+	const isOverageToggleLoading = isEnableOverageLoading || isDisableOverageLoading
+
+	const handleToggleOverage = () => {
+		if (isOverageToggleLoading) return
+		if (isOverageEnabled) {
+			void disableOverage()
+		} else {
+			void enableOverage()
+		}
 	}
 
 	if (isPastDue && pastDueSubscription) {
@@ -542,6 +559,10 @@ export function SubscriptionSection() {
 					isUsageStatsError={isUsageStatsError}
 					onRegenerateKey={() => generateNewKeyMutation.mutate()}
 					isRegenerateLoading={generateNewKeyMutation.isPending}
+					canManageOverage={canManageOverage}
+					isOverageEnabled={isOverageEnabled}
+					onToggleOverage={handleToggleOverage}
+					isOverageToggleLoading={isOverageToggleLoading}
 				/>
 				{balanceCard}
 				{topupModal}
