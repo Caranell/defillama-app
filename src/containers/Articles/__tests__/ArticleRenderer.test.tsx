@@ -54,6 +54,34 @@ describe('ArticleRenderer', () => {
 		expect(html).toContain('/research/authors/john-doe')
 	})
 
+	it('links the DefiLlama Research brand byline to the research author page', () => {
+		const normalized = normalizeLocalArticleDocument({
+			title: 'Market structure report',
+			status: 'published',
+			author: 'DefiLlama Research',
+			brandByline: true,
+			section: 'interview',
+			contentJson: {
+				type: 'doc',
+				content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Body text.' }] }]
+			}
+		})
+
+		expect(normalized.ok).toBe(true)
+		if (!normalized.ok) return
+		const client = new QueryClient()
+		const html = renderToStaticMarkup(
+			<QueryClientProvider client={client}>
+				<ArticleRenderer article={normalized.value} />
+			</QueryClientProvider>
+		)
+
+		expect(html).toContain('Interviewer')
+		expect(html).toContain('DefiLlama Research')
+		expect(html).toContain('href="/research/authors/defillama-research"')
+		expect(html).not.toContain('href="/research"')
+	})
+
 	it('renders custom article primitives without the editor', () => {
 		const normalized = normalizeLocalArticleDocument({
 			title: 'Aave fees after the exploit',
