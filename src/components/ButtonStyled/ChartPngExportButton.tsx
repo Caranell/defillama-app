@@ -7,6 +7,14 @@ import { Icon } from '~/components/Icon'
 import { LoadingSpinner } from '~/components/Loaders'
 import { useDarkModeManager } from '~/contexts/LocalStorage'
 import { downloadDataURL } from '~/utils/download'
+import {
+	BASE_TOP_PADDING,
+	computeExportLayout,
+	EXPORT_FONT_SIZE,
+	IMAGE_EXPORT_WIDTH,
+	LEGEND_ITEM_GAP,
+	type ExportLayout
+} from './chartPngExportLayout'
 
 // --- Shared profile type (single source of truth) ---
 
@@ -14,23 +22,13 @@ export type PngExportProfile = 'default' | 'scatterWithImageSymbols' | 'treemap'
 
 // --- Constants ---
 
-const IMAGE_EXPORT_WIDTH = 1280
 const IMAGE_EXPORT_HEIGHT = 720
-const EXPORT_FONT_SIZE = 24
-const LEGEND_ITEM_GAP = 20
-const LEGEND_ITEM_WIDTH = 48
-const BASE_TOP_PADDING = 16
 const TREEMAP_EXPORT_SIDE_PADDING = 16
 const TREEMAP_EXPORT_BOTTOM_PADDING = 16
 const TREEMAP_EXPORT_LABEL_Z = 10000
 const EXPORT_TITLE_Z = 10002
 
 // --- Small utilities ---
-
-const approximateTextWidth = (text: string, fontSize: number) => {
-	if (!text) return 0
-	return text.length * fontSize * 0.6
-}
 
 const parsePixelValue = (value: unknown) => {
 	if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -543,16 +541,14 @@ async function composeLogoOverlay(opts: {
 }): Promise<string> {
 	const { baseDataURL, tempChart, logosData, isDark, gridBottom, chartCssWidth, chartCssHeight } = opts
 
-	const loadedImgs = await Promise.all(
-		logosData.logos.map((url) => (url ? loadProxiedImage(url) : Promise.resolve(null)))
-	)
-
-	const chartImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+	const loadedImgsPromise = Promise.all(logosData.logos.map((url) => (url ? loadProxiedImage(url) : null)))
+	const chartImgPromise = new Promise<HTMLImageElement>((resolve, reject) => {
 		const img = new Image()
 		img.onload = () => resolve(img)
 		img.onerror = reject
 		img.src = baseDataURL
 	})
+	const [loadedImgs, chartImg] = await Promise.all([loadedImgsPromise, chartImgPromise])
 
 	const dpr = chartImg.width / chartCssWidth
 	const canvas = document.createElement('canvas')
@@ -821,9 +817,14 @@ function collectLegendItems(options: Record<string, any>, isPieChart: boolean): 
 		return legendArray[0].data.filter((x: any) => typeof x === 'string')
 	}
 	if (isPieChart && Array.isArray(options.series)) {
-		return options.series
-			.filter((s: any) => s.type === 'pie')
-			.flatMap((s: any) => (Array.isArray(s.data) ? s.data.flatMap((d: any) => (d?.name ? [d.name] : [])) : []))
+		const items: string[] = []
+		for (const s of options.series) {
+			if (s?.type !== 'pie' || !Array.isArray(s.data)) continue
+			for (const d of s.data) {
+				if (d?.name) items.push(d.name)
+			}
+		}
+		return items
 	}
 	if (Array.isArray(options.series)) {
 		return options.series.flatMap((s: any) => (s.name ? [s.name] : []))
@@ -839,64 +840,6 @@ function isLegendVisibleForExport(flags: SeriesFlags, options: Record<string, an
 		return legendArray.length > 0 ? legendArray.some((l: any) => l?.show !== false) : false
 	}
 	return true
-}
-
-// --- Export layout computation ---
-
-interface ExportLayout {
-	gridTop: number
-	legendTop: number
-	canShareRow: boolean
-	hasLegend: boolean
-	legendRows: number
-	totalLegendWidth: number
-}
-
-function computeExportLayout(opts: {
-	title: string | undefined
-	legendItems: string[]
-	shouldShowLegend: boolean
-	hasIcon: boolean
-	expandLegend: boolean | undefined
-}): ExportLayout {
-	const { title, legendItems, shouldShowLegend, hasIcon, expandLegend } = opts
-
-	const totalLegendWidth = legendItems.reduce(
-		(total, name) => total + approximateTextWidth(name, EXPORT_FONT_SIZE) + LEGEND_ITEM_WIDTH + LEGEND_ITEM_GAP,
-		0
-	)
-
-	const hasLegend = shouldShowLegend && legendItems.length > 1
-	const availableWidth = IMAGE_EXPORT_WIDTH - 32
-	let legendRows = 1
-	if (expandLegend) {
-		legendRows = Math.max(1, Math.ceil(totalLegendWidth / availableWidth))
-	}
-
-	const titleHeight = title ? 36 : 0
-	const singleRowHeight = 32
-	const legendHeight = hasLegend ? singleRowHeight * legendRows : 0
-	const verticalGap = 16
-	const titleWidth = title ? approximateTextWidth(title, 28) + (hasIcon ? 40 : 0) : 0
-	const horizontalGap = 24
-	const canShareRow =
-		!!title &&
-		hasLegend &&
-		legendRows === 1 &&
-		totalLegendWidth > 0 &&
-		titleWidth + horizontalGap + totalLegendWidth <= availableWidth
-
-	const legendTop =
-		BASE_TOP_PADDING +
-		(canShareRow ? Math.max(0, (titleHeight - singleRowHeight) / 2) : title ? titleHeight + verticalGap : 0)
-	const gridTop =
-		BASE_TOP_PADDING +
-		(canShareRow
-			? Math.max(titleHeight, legendHeight) + verticalGap
-			: (title ? titleHeight + verticalGap : 0) +
-				(hasLegend ? legendHeight + verticalGap + (expandLegend ? 16 : 0) : 0))
-
-	return { gridTop, legendTop, canShareRow, hasLegend, legendRows, totalLegendWidth }
 }
 
 // --- Series adjustments for export ---
@@ -1011,7 +954,10 @@ function adjustSeriesForExport(opts: {
 		const bottomPadding = expandLegend ? 32 : 16
 		const plotHeight = Math.max(1, (exportHeight ?? IMAGE_EXPORT_HEIGHT) - layout.gridTop - bottomPadding)
 		const bandHeight = categoryCount > 0 ? plotHeight / categoryCount : plotHeight
-		const barStacks = new Set(series.filter((s: any) => s?.type === 'bar').map((s: any) => s.stack ?? s.name ?? ''))
+		const barStacks = new Set<string>()
+		for (const s of series) {
+			if (s?.type === 'bar') barStacks.add(s.stack ?? s.name ?? '')
+		}
 		const barSeriesCount = Math.max(1, barStacks.size)
 		const barWidth = Math.max(8, Math.min(80, Math.floor((bandHeight * 0.65) / barSeriesCount)))
 		series = series.map((s) => (s?.type === 'bar' ? { ...s, barWidth } : s))
@@ -1426,25 +1372,25 @@ export function ChartPngExportButton({
 		}
 	}
 
-	const handleDownload = async () => {
+	const handleDownload = () => {
 		if (isLoading) return
 		popover.hide()
-		try {
-			const dataURL = await generateDataURL()
-			if (!dataURL) return
-			let safeFilename = filename || 'chart'
-			if (safeFilename.toLowerCase().endsWith('.png')) {
-				safeFilename = safeFilename.slice(0, -4)
-			}
-			const imageFilename = `${safeFilename}_${new Date().toISOString().split('T')[0]}.png`
-			downloadDataURL(imageFilename, dataURL)
-			onExport?.({ kind: 'download', filename: imageFilename })
-		} catch (error) {
-			console.log('Error exporting chart image:', error)
-			toast.error('Failed to export chart image')
-		} finally {
-			setIsLoading(false)
-		}
+		generateDataURL()
+			.then((dataURL) => {
+				if (!dataURL) return
+				let safeFilename = filename || 'chart'
+				if (safeFilename.toLowerCase().endsWith('.png')) {
+					safeFilename = safeFilename.slice(0, -4)
+				}
+				const imageFilename = `${safeFilename}_${new Date().toISOString().split('T')[0]}.png`
+				downloadDataURL(imageFilename, dataURL)
+				onExport?.({ kind: 'download', filename: imageFilename })
+			})
+			.catch((error) => {
+				console.log('Error exporting chart image:', error)
+				toast.error('Failed to export chart image')
+			})
+			.finally(() => setIsLoading(false))
 	}
 
 	const handleCopyToClipboard = () => {
@@ -1493,6 +1439,7 @@ export function ChartPngExportButton({
 				<button
 					data-umami-event="export-image"
 					data-umami-event-page={router.pathname}
+					type="button"
 					className="flex items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-(--link-hover-bg)"
 					onClick={() => void handleDownload()}
 				>
@@ -1502,6 +1449,7 @@ export function ChartPngExportButton({
 				<button
 					data-umami-event="copy-image"
 					data-umami-event-page={router.pathname}
+					type="button"
 					className="flex items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-(--link-hover-bg)"
 					onClick={() => void handleCopyToClipboard()}
 				>
