@@ -1,6 +1,11 @@
 import type { IEquitiesCompanyRoute } from '~/containers/Equities/api.types'
 import type { ProtocolEmissionSupplyMetricsMap } from '~/containers/Unlocks/api.types'
-import type { TokenDirectory } from '~/utils/tokenDirectory'
+import { slug } from '~/utils'
+import {
+	createTokenDirectoryRecordByRouteSegment,
+	type TokenDirectory,
+	type TokenDirectoryRecordByRouteSegment
+} from '~/utils/tokenDirectory'
 import { buildChainDisplayNameLookupRecord, createStringLookupMap } from './displayLookups'
 import type {
 	DigitalAssetTreasuryRoutesMetadata,
@@ -51,24 +56,34 @@ export type CoreMetadataPayload = {
 // adds Maps/Sets and historical field names that are consumed throughout pages.
 export type MetadataCache = {
 	chainMetadata: Record<string, IChainMetadata>
+	chainRouteKeyBySlug: Record<string, string>
 	protocolMetadata: Record<string, IProtocolMetadata>
+	protocolRouteIdBySlug: Record<string, string>
 	categoriesAndTags: ICategoriesAndTags
+	protocolCategoryBySlug: Record<string, string>
+	protocolTagBySlug: Record<string, string>
 	cexs: Array<ICexItem>
+	cexRouteIdBySlug: Record<string, string>
+	cexMetadataBySlug: Record<string, ICexItem>
 	rwaList: IRWAList
 	rwaPerpsList: IRWAPerpsList
 	tokenlist: Record<string, ITokenListEntry>
 	tokenDirectory: TokenDirectory
+	tokenDirectoryRecordByRouteSegment: TokenDirectoryRecordByRouteSegment
 	protocolDisplayNames: Map<string, string>
 	chainDisplayNames: Map<string, string>
 	chainCategories: string[]
 	liquidationsTokenSymbols: string[]
 	liquidationsTokenSymbolsSet: Set<string>
 	emissionsProtocolsList: string[]
+	emissionsProtocolBySlug: Record<string, string>
 	emissionsSupplyMetrics: ProtocolEmissionSupplyMetricsMap
 	emissionsHistoricalPrices: IEmissionsHistoricalPrices
 	cgExchangeIdentifiers: string[]
 	bridgeProtocolSlugs: string[]
+	bridgeProtocolSlugsSet: Set<string>
 	bridgeChainSlugs: string[]
+	bridgeChainSlugsSet: Set<string>
 	bridgeChainSlugToName: Record<string, string>
 	protocolLlamaswapDataset: ProtocolLlamaswapMetadata
 	narrativeCategories: NarrativeCategoriesMetadata
@@ -76,7 +91,7 @@ export type MetadataCache = {
 	oracleRoutes: OracleRoutesMetadata
 	digitalAssetTreasuryRoutes: DigitalAssetTreasuryRoutesMetadata
 	digitalAssetTreasuryAssetSlugsSet: Set<string>
-	digitalAssetTreasuryCompanySlugsSet: Set<string>
+	digitalAssetTreasuryCompanyRouteBySlug: Record<string, string>
 	stablecoinPeggedAssetSlugs: string[]
 	stablecoinPeggedAssetSlugsSet: Set<string>
 	equitiesCompanyRoutes: IEquitiesCompanyRoute[]
@@ -266,26 +281,37 @@ export function validateCoreMetadataPayload(payload: CoreMetadataPayload): CoreM
 }
 
 export function hydrateMetadataCache(payload: CoreMetadataPayload): MetadataCache {
+	const cexRouteIndexes = createCexRouteIndexes(payload.protocols, payload.cexs)
 	return {
 		chainMetadata: payload.chains,
+		chainRouteKeyBySlug: createChainRouteKeyBySlug(payload.chains),
 		protocolMetadata: payload.protocols,
+		protocolRouteIdBySlug: createProtocolRouteIdBySlug(payload.protocols),
 		categoriesAndTags: payload.categoriesAndTags,
+		protocolCategoryBySlug: createSlugLookup(payload.categoriesAndTags.categories),
+		protocolTagBySlug: createSlugLookup(payload.categoriesAndTags.tags),
 		cexs: payload.cexs,
+		cexRouteIdBySlug: cexRouteIndexes.routeIdBySlug,
+		cexMetadataBySlug: cexRouteIndexes.metadataBySlug,
 		rwaList: payload.rwaList,
 		rwaPerpsList: payload.rwaPerpsList,
 		tokenlist: payload.tokenlist,
 		tokenDirectory: payload.tokenDirectory,
+		tokenDirectoryRecordByRouteSegment: createTokenDirectoryRecordByRouteSegment(payload.tokenDirectory),
 		protocolDisplayNames: createStringLookupMap(payload.protocolDisplayNames),
 		chainDisplayNames: createChainDisplayNameMap(payload),
 		chainCategories: payload.chainCategories,
 		liquidationsTokenSymbols: payload.liquidationsTokenSymbols,
 		liquidationsTokenSymbolsSet: new Set(payload.liquidationsTokenSymbols),
 		emissionsProtocolsList: payload.emissionsProtocolsList,
+		emissionsProtocolBySlug: createSlugLookup(payload.emissionsProtocolsList),
 		emissionsSupplyMetrics: payload.emissionsSupplyMetrics,
 		emissionsHistoricalPrices: payload.emissionsHistoricalPrices,
 		cgExchangeIdentifiers: payload.cgExchangeIdentifiers,
 		bridgeProtocolSlugs: payload.bridgeProtocolSlugs,
+		bridgeProtocolSlugsSet: new Set(payload.bridgeProtocolSlugs),
 		bridgeChainSlugs: payload.bridgeChainSlugs,
+		bridgeChainSlugsSet: new Set(payload.bridgeChainSlugs),
 		bridgeChainSlugToName: payload.bridgeChainSlugToName,
 		protocolLlamaswapDataset: payload.protocolLlamaswapDataset,
 		narrativeCategories: payload.narrativeCategories,
@@ -293,7 +319,9 @@ export function hydrateMetadataCache(payload: CoreMetadataPayload): MetadataCach
 		oracleRoutes: payload.oracleRoutes,
 		digitalAssetTreasuryRoutes: payload.digitalAssetTreasuryRoutes,
 		digitalAssetTreasuryAssetSlugsSet: new Set(payload.digitalAssetTreasuryRoutes.assetSlugs),
-		digitalAssetTreasuryCompanySlugsSet: new Set(payload.digitalAssetTreasuryRoutes.companySlugs),
+		digitalAssetTreasuryCompanyRouteBySlug: createDigitalAssetTreasuryCompanyRouteBySlug(
+			payload.digitalAssetTreasuryRoutes.companySlugs
+		),
 		stablecoinPeggedAssetSlugs: payload.stablecoinPeggedAssetSlugs,
 		stablecoinPeggedAssetSlugsSet: new Set(payload.stablecoinPeggedAssetSlugs),
 		equitiesCompanyRoutes: payload.equitiesCompanyRoutes,
@@ -312,8 +340,110 @@ function createChainDisplayNameMap(payload: CoreMetadataPayload): Map<string, st
 	})
 }
 
+function setSlugAlias(index: Record<string, string>, value: unknown, target: string): void {
+	const key = slug(value)
+	if (key && !index[key]) index[key] = target
+}
+
+function createSlugLookup(values: string[]): Record<string, string> {
+	const lookup: Record<string, string> = {}
+
+	for (const value of values) {
+		setSlugAlias(lookup, value, value)
+	}
+
+	return lookup
+}
+
+function createChainRouteKeyBySlug(chains: Record<string, IChainMetadata>): Record<string, string> {
+	const routeKeyBySlug: Record<string, string> = {}
+
+	for (const chainKey in chains) {
+		const metadata = chains[chainKey]
+		setSlugAlias(routeKeyBySlug, chainKey, chainKey)
+		setSlugAlias(routeKeyBySlug, metadata.name, chainKey)
+		setSlugAlias(routeKeyBySlug, metadata.id, chainKey)
+	}
+
+	return routeKeyBySlug
+}
+
+function createProtocolRouteIdBySlug(protocols: Record<string, IProtocolMetadata>): Record<string, string> {
+	const routeIdBySlug: Record<string, string> = {}
+
+	for (const protocolId in protocols) {
+		const metadata = protocols[protocolId]
+		if (metadata.cex) continue
+		setSlugAlias(routeIdBySlug, metadata.displayName, protocolId)
+		setSlugAlias(routeIdBySlug, metadata.name, protocolId)
+		setSlugAlias(routeIdBySlug, protocolId, protocolId)
+	}
+
+	return routeIdBySlug
+}
+
+function createCexRouteIndexes(
+	protocols: Record<string, IProtocolMetadata>,
+	cexs: ICexItem[]
+): {
+	routeIdBySlug: Record<string, string>
+	metadataBySlug: Record<string, ICexItem>
+} {
+	// CEX API names and protocol metadata names can differ, so index both and
+	// cross-reference by slug while preserving first-wins route aliases.
+	const routeIdBySlug: Record<string, string> = {}
+	const metadataBySlug: Record<string, ICexItem> = {}
+	const cexSlugByNameSlug: Record<string, string> = {}
+	const protocolIdByCanonicalSlug: Record<string, string> = {}
+
+	for (const cexMetadata of cexs) {
+		const cexSlug = slug(cexMetadata.slug)
+		if (!cexSlug) continue
+		metadataBySlug[cexSlug] = cexMetadata
+
+		const nameSlug = slug(cexMetadata.name)
+		if (nameSlug) cexSlugByNameSlug[nameSlug] = cexSlug
+	}
+
+	for (const protocolId in protocols) {
+		const metadata = protocols[protocolId]
+		if (!metadata.cex || !metadata.name) continue
+
+		const canonicalSlug = slug(metadata.name)
+		if (!canonicalSlug) continue
+
+		if (!protocolIdByCanonicalSlug[canonicalSlug]) {
+			protocolIdByCanonicalSlug[canonicalSlug] = protocolId
+		}
+		setSlugAlias(routeIdBySlug, canonicalSlug, protocolId)
+		setSlugAlias(routeIdBySlug, metadata.displayName, protocolId)
+		setSlugAlias(routeIdBySlug, protocolId, protocolId)
+	}
+
+	for (const nameSlug in cexSlugByNameSlug) {
+		const protocolId = protocolIdByCanonicalSlug[cexSlugByNameSlug[nameSlug]]
+		if (protocolId && !routeIdBySlug[nameSlug]) {
+			routeIdBySlug[nameSlug] = protocolId
+		}
+	}
+
+	return { routeIdBySlug, metadataBySlug }
+}
+
+function createDigitalAssetTreasuryCompanyRouteBySlug(companyRoutes: string[]): Record<string, string> {
+	const routeBySlug: Record<string, string> = {}
+
+	for (const companyRoute of companyRoutes) {
+		const companySlug = slug(companyRoute)
+		if (!companySlug || routeBySlug[companySlug]) continue
+		routeBySlug[companySlug] = companyRoute
+	}
+
+	return routeBySlug
+}
+
 function getEquityCompanySlug(company: IEquitiesCompanyRoute): string {
-	return `${company.ticker.trim().toLowerCase()}:${company.country.trim().toLowerCase()}`
+	return `${company.ticker}:${company.country}`
 }
 
 export function replaceMetadataCacheContents(metadataCache: MetadataCache, payload: CoreMetadataPayload): void {

@@ -547,7 +547,6 @@ function UnifiedTableInner({
 				rowHeaders={resolvedRowHeaders}
 				isExportDisabled={!unifiedTable.leafRows.length}
 				isLoading={unifiedTable.isLoading}
-				searchTerm={searchTerm}
 				onSearchChange={setSearchTerm}
 				filterChips={filterChips}
 				onFilterRemove={canEditFilters ? handleFilterChipRemove : undefined}

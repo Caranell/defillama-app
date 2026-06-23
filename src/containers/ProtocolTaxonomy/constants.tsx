@@ -31,6 +31,8 @@ export interface ProtocolCategoryConfig {
 	seoLabel?: string
 	seoBaseTitle?: string
 	seoTitleSuffix?: string
+	directorySubject?: string
+	directoryListingLabel?: string
 	tableHeader?: string
 	searchPlaceholder?: string
 	metrics?: ProtocolCategoryMetrics
@@ -254,6 +256,8 @@ export const protocolCategoryConfig: Record<string, ProtocolCategoryConfig> = {
 		description: 'Protocols where users can buy/sell/rent NFTs',
 		defaultChart: 'revenue',
 		seoBaseTitle: 'Top Crypto NFT Marketplaces - Volume & Revenue',
+		directorySubject: 'Foundation',
+		directoryListingLabel: 'NFT marketplaces',
 		defaultSort: 'revenue_7d'
 	},
 	'NFT Lending': {
@@ -730,12 +734,16 @@ export function getProtocolCategoryPresentation({
 	label,
 	effectiveCategory,
 	isTagPage = false,
-	chain
+	chain,
+	protocolCount,
+	year = new Date().getUTCFullYear()
 }: {
 	label: string
 	effectiveCategory: string | null
 	isTagPage?: boolean
 	chain?: string
+	protocolCount?: number
+	year?: number
 }) {
 	const config = effectiveCategory ? protocolCategoryConfig[effectiveCategory] : null
 
@@ -758,19 +766,32 @@ export function getProtocolCategoryPresentation({
 	const resolvedSeoLabel = config?.seoLabel ?? defaultSeoLabel
 	const seoBaseTitle = config?.seoBaseTitle
 	const hasChain = normalizedChain && normalizedChain !== 'All'
+	const hasProtocolCount = protocolCount != null && protocolCount > 0
+	const directoryCount = hasProtocolCount ? `${protocolCount} ` : ''
+	const directoryChainSuffix = hasChain ? ` on ${normalizedChain}` : ''
+	const directorySourceSuffix = hasChain ? ` on ${normalizedChain}` : ''
+	const directoryScope = hasChain ? ` on ${normalizedChain}` : ' across all chains'
 
-	const seoTitle = seoBaseTitle
-		? hasChain
-			? `${normalizedChain} ${seoBaseTitle}`
-			: `${seoBaseTitle}`
-		: hasChain
-			? `${normalizedChain} ${capitalizeFirstLetter(resolvedSeoLabel)} Rankings`
-			: `${capitalizeFirstLetter(resolvedSeoLabel)} Rankings`
+	const seoTitle =
+		config?.directorySubject && config.directoryListingLabel
+			? `Find ${directoryCount}${config.directorySubject} alternatives${directoryChainSuffix} (${year})`
+			: seoBaseTitle
+				? hasChain
+					? `${normalizedChain} ${seoBaseTitle}`
+					: `${seoBaseTitle}`
+				: hasChain
+					? `${normalizedChain} ${capitalizeFirstLetter(resolvedSeoLabel)} Rankings`
+					: `${capitalizeFirstLetter(resolvedSeoLabel)} Rankings`
 
 	const MAX_DESC_LENGTH = 155
-	const baseDesc = hasChain
-		? `Track top ${resolvedSeoLabel} on ${normalizedChain} by TVL, volume, and more on DefiLlama.`
-		: `Track top ${resolvedSeoLabel} across all chains by TVL, volume, and more on DefiLlama.`
+	const baseDesc =
+		config?.directorySubject && config.directoryListingLabel
+			? `Find ${directoryCount}alternatives, competitors, and apps like ${config.directorySubject} from a list of ${config.directoryListingLabel}${directorySourceSuffix} in the DefiLlama directory.`
+			: hasProtocolCount
+				? `Compare ${protocolCount} ${resolvedSeoLabel} protocols${directoryScope}. Rank DefiLlama's directory by TVL, fees, revenue, volume, chains, and more.`
+				: hasChain
+					? `Track top ${resolvedSeoLabel} on ${normalizedChain} by TVL, volume, and more on DefiLlama.`
+					: `Track top ${resolvedSeoLabel} across all chains by TVL, volume, and more on DefiLlama.`
 	const categoryDesc = config?.description
 	const seoDescription =
 		categoryDesc && `${baseDesc} ${categoryDesc}`.length <= MAX_DESC_LENGTH ? `${baseDesc} ${categoryDesc}` : baseDesc

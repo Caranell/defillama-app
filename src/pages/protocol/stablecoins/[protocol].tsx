@@ -6,10 +6,9 @@ import { getProtocolMetricFlags } from '~/containers/ProtocolOverview/queries'
 import { getProtocolWarningBanners } from '~/containers/ProtocolOverview/utils'
 import { getStablecoinAssetPageData } from '~/containers/Stablecoins/queries.server'
 import { PeggedAssetInfo } from '~/containers/Stablecoins/StablecoinOverview'
-import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
-import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const EMPTY_TOGGLE_OPTIONS = []
 
@@ -20,24 +19,29 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 		const { protocol } = params
-		const normalizedName = slug(protocol)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const { protocolMetadata } = metadataCache
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata || !metadata[1].stablecoins) {
+		const [{ default: metadataCache }, { resolveProtocolFeatureRouteFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
+		const protocolRoute = resolveProtocolFeatureRouteFromMetadata({
+			cexRoutePrefix: 'cex/stablecoins',
+			hasMetric: (metadata) => Boolean(metadata.stablecoins),
+			metadataCache,
+			protocol,
+			routePrefix: 'protocol/stablecoins'
+		})
+		if (!protocolRoute) {
 			return { notFound: true }
 		}
+		if (protocolRoute.type === 'redirect') {
+			return canonicalRouteRedirect(protocolRoute.destination)
+		}
+		const metadata = protocolRoute.route.metadata
+		const canonicalProtocol = protocolRoute.route.canonicalSlug
 
-		const protocolData = await fetchProtocolOverviewMetrics(protocol)
+		const protocolData = await fetchProtocolOverviewMetrics(canonicalProtocol)
 
-		const metrics = getProtocolMetricFlags({ protocolData, metadata: metadata[1] })
+		const metrics = getProtocolMetricFlags({ protocolData, metadata })
 		const seoTitle = `${protocolData.name} Stablecoin Data & Reserves - DefiLlama`
 		const seoDescription = `Track ${protocolData.name} stablecoin market cap, peg stability, chain distribution, and reserves on DefiLlama.`
 

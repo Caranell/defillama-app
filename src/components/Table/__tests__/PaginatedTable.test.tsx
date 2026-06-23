@@ -60,11 +60,12 @@ describe('PaginatedTable', () => {
 		expect(html).not.toContain('Rows per page')
 	})
 
-	it('hides rows-per-page when only one valid option remains', () => {
+	it('keeps configured rows-per-page options available for paginated tables', () => {
 		const html = renderToStaticMarkup(<TestTable rowCount={11} />)
 
 		expect(html).toContain('Page 1 of 2')
-		expect(html).not.toContain('Rows per page')
+		expect(html).toContain('Rows per page')
+		expect(html).toContain('<option value="50">50</option>')
 	})
 
 	it('shows rows-per-page when at least two valid options remain', () => {
@@ -74,10 +75,11 @@ describe('PaginatedTable', () => {
 		expect(html).toContain('Rows per page')
 	})
 
-	it('keeps rows-per-page visible when the current page size exceeds the filtered row count', () => {
-		const html = renderToStaticMarkup(<TestTable rowCount={11} initialPageSize={20} />)
+	it('keeps the current page size available when it is not in configured options', () => {
+		const html = renderToStaticMarkup(<TestTable rowCount={20} initialPageSize={15} />)
 
 		expect(html).toContain('Rows per page')
+		expect(html).toContain('<option value="15" selected="">15</option>')
 	})
 
 	it('marks sortable headers as disabled when interactions are disabled', () => {

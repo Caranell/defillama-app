@@ -8,7 +8,6 @@ import { fetchProtocols } from '~/containers/ProtocolLists/api'
 import { basicProtocolPropertiesToKeepV1List } from '~/containers/ProtocolLists/utils.old'
 import { setStorageItem, useStorageItem } from '~/contexts/localStorageStore'
 import Layout from '~/layout'
-import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 
@@ -19,7 +18,7 @@ export const getStaticProps = withPerformanceLogging('directory', async () => {
 			protocols: protocols
 				.map((protocol) => ({
 					name: protocol.name,
-					logo: tokenIconUrl(protocol.name),
+					logo: protocol.logo,
 					route: protocol.url
 				}))
 				.filter((p) => !!(p.name && p.route))

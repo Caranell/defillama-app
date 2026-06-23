@@ -27,8 +27,8 @@ export function SubscribeAPICard({
 }) {
 	const monthlyPrice = 300
 	const yearlyPrice = monthlyPrice * 10
-	const displayPrice = billingInterval === 'year' ? yearlyPrice : monthlyPrice
-	const displayPeriod = billingInterval === 'year' ? '/year' : '/month'
+	const displayPrice = billingInterval === 'year' ? yearlyPrice / 12 : monthlyPrice
+	const displayPeriod = '/month'
 	const { loading } = useSubscribe()
 	const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
 
@@ -47,7 +47,7 @@ export function SubscribeAPICard({
 					<span className="ml-1 text-[#8a8c90]">{displayPeriod}</span>
 				</div>
 				{billingInterval === 'year' ? (
-					<span className="text-sm text-[#8a8c90]">${(yearlyPrice / 12).toFixed(2)}/month</span>
+					<span className="text-sm text-[#8a8c90]">${yearlyPrice.toLocaleString('en-US')}/year</span>
 				) : null}
 			</div>
 			{billingInterval === 'month' ? (

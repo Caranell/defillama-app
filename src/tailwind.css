@@ -293,9 +293,17 @@
 }
 
 @utility drawer {
+	--drawer-enter-duration: 0.28s;
+	--drawer-leave-duration: 0.2s;
+	--drawer-ease: cubic-bezier(0.32, 0.72, 0, 1);
+	--drawer-opacity-ease: ease-out;
+
 	opacity: 0;
 	transform: translateY(100%);
-	transition: 0.2s ease-out;
+	will-change: transform;
+	transition:
+		transform var(--drawer-enter-duration) var(--drawer-ease),
+		opacity var(--drawer-enter-duration) var(--drawer-opacity-ease);
 
 	&[data-enter] {
 		opacity: 1;
@@ -303,17 +311,30 @@
 	}
 
 	&[data-leave] {
-		transition: 0.1s ease-out;
+		transition:
+			transform var(--drawer-leave-duration) var(--drawer-ease),
+			opacity var(--drawer-leave-duration) var(--drawer-opacity-ease);
+	}
+
+	@starting-style {
+		&[data-enter] {
+			opacity: 0;
+			transform: translateY(100%);
+		}
 	}
 }
 
 @utility drawer-to-left {
+	--drawer-to-left-enter-duration: 150ms;
+	--drawer-to-left-leave-duration: 100ms;
+	--drawer-to-left-ease: ease-out;
+
 	opacity: 0;
 	transform: translateX(100%);
 	transition:
-		opacity 150ms ease-out,
-		transform 150ms ease-out,
-		display 150ms ease-out allow-discrete;
+		opacity var(--drawer-to-left-enter-duration) var(--drawer-to-left-ease),
+		transform var(--drawer-to-left-enter-duration) var(--drawer-to-left-ease),
+		display var(--drawer-to-left-enter-duration) var(--drawer-to-left-ease) allow-discrete;
 
 	&[data-enter] {
 		opacity: 1;
@@ -322,9 +343,9 @@
 
 	&[data-leave] {
 		transition:
-			opacity 100ms ease-out,
-			transform 100ms ease-out,
-			display 100ms ease-out allow-discrete;
+			opacity var(--drawer-to-left-leave-duration) var(--drawer-to-left-ease),
+			transform var(--drawer-to-left-leave-duration) var(--drawer-to-left-ease),
+			display var(--drawer-to-left-leave-duration) var(--drawer-to-left-ease) allow-discrete;
 	}
 
 	@starting-style {
@@ -1186,7 +1207,7 @@
 	}
 
 	button {
-		@apply pointer-events-auto cursor-pointer touch-none select-none disabled:cursor-not-allowed;
+		@apply pointer-events-auto cursor-pointer touch-manipulation select-none disabled:cursor-not-allowed;
 	}
 
 	a,

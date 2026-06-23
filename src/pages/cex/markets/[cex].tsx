@@ -5,9 +5,9 @@ import { CexMarketsSection } from '~/containers/Cexs/CexMarketsSection'
 import { fetchProtocolOverviewMetrics } from '~/containers/ProtocolOverview/api'
 import { ProtocolOverviewLayout } from '~/containers/ProtocolOverview/Layout'
 import type { IProtocolPageMetrics } from '~/containers/ProtocolOverview/types'
-import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 interface CexMarketsPageProps {
 	name: string
@@ -61,26 +61,30 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const exchangeName = params.cex
-		const metadataModule = await import('~/utils/metadata')
-		const metadataCache = metadataModule.default
-		const cexs = metadataCache.cexs
+		const [{ default: metadataCache }, { resolveCexParamFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/Cexs/server/routes')
+		])
 
-		const exchangeData = cexs.find(
-			(cex) => cex.slug && (slug(cex.slug) === slug(exchangeName) || slug(cex.name) === slug(exchangeName))
-		)
-
-		if (!exchangeData) {
+		const cexRoute = resolveCexParamFromMetadata(exchangeName, metadataCache)
+		if (!cexRoute) {
 			return { notFound: true }
+		}
+		if (exchangeName !== cexRoute.canonicalSlug) {
+			return canonicalRouteRedirect(`/cex/markets/${cexRoute.canonicalSlug}`, true)
 		}
 
 		const { resolveCexMarketsByDefillamaSlug } = await import('~/containers/Markets/server/dataset')
-		const cexMarkets = await resolveCexMarketsByDefillamaSlug(exchangeData.slug ?? '')
+		const cexMarkets = await resolveCexMarketsByDefillamaSlug(cexRoute.canonicalSlug).catch((error) => {
+			console.warn(`[cex/markets/[cex]] Failed to resolve markets exchange for ${exchangeName}`, error)
+			return null
+		})
 
 		if (!cexMarkets) {
 			return { notFound: true }
 		}
 
-		const protocolData = await fetchProtocolOverviewMetrics(exchangeName)
+		const protocolData = await fetchProtocolOverviewMetrics(cexRoute.canonicalSlug)
 
 		if (!protocolData) {
 			return { notFound: true }
@@ -91,7 +95,11 @@ export const getStaticProps = withPerformanceLogging(
 				name: protocolData.name,
 				otherProtocols: protocolData.otherProtocols ?? [],
 				category: protocolData.category ?? null,
-				metrics: CEX_MARKETS_METRICS,
+				metrics: {
+					...CEX_MARKETS_METRICS,
+					tvl: Boolean(cexRoute.metadata.tvl),
+					stablecoins: Boolean(cexRoute.metadata.stablecoins)
+				},
 				cexMarketsExchange: cexMarkets.exchange,
 				cexMarketsSlug: cexMarkets.defillama_slug
 			},

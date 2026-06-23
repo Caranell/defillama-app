@@ -10,6 +10,7 @@ import { Switch } from '~/components/Switch'
 import { TokenLogo } from '~/components/TokenLogo'
 import { SKIP_BUILD_STATIC_GENERATION } from '~/constants'
 import { fetchProtocolOverviewMetrics } from '~/containers/ProtocolOverview/api'
+import { reconcileChartSelection } from '~/containers/ProtocolOverview/chartSeries.utils'
 import { ProtocolOverviewLayout } from '~/containers/ProtocolOverview/Layout'
 import { getProtocolMetricFlags } from '~/containers/ProtocolOverview/queries'
 import type { IProtocolPageMetrics } from '~/containers/ProtocolOverview/types'
@@ -19,8 +20,8 @@ import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { slug } from '~/utils'
 import { fetchJson } from '~/utils/async'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
-import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 import { pushShallowQuery } from '~/utils/routerQuery'
 
 const EMPTY_TOGGLE_OPTIONS = []
@@ -41,13 +42,6 @@ interface TreasuryPageProps {
 	seoDescription: string
 }
 
-function updateSelectionOnListChange(selected: string[], all: string[]) {
-	if (all.length === 0) return []
-	if (selected.length === 0) return all
-	const next = selected.filter((x) => all.includes(x))
-	return next.length > 0 ? next : all
-}
-
 function TokensBreakdownPieChartCard({
 	protocolName,
 	chartData
@@ -58,7 +52,7 @@ function TokensBreakdownPieChartCard({
 	const allTokens = React.useMemo(() => chartData.map((d) => d.name), [chartData])
 	const [selectedTokensRaw, setSelectedTokensRaw] = React.useState<string[]>(() => allTokens)
 	const selectedTokens = React.useMemo(
-		() => updateSelectionOnListChange(selectedTokensRaw, allTokens),
+		() => reconcileChartSelection(selectedTokensRaw, allTokens),
 		[selectedTokensRaw, allTokens]
 	)
 
@@ -151,7 +145,7 @@ function TokensMultiSeriesChartCard({
 }) {
 	const [selectedTokensRaw, setSelectedTokensRaw] = React.useState<string[]>(() => allTokens)
 	const selectedTokens = React.useMemo(
-		() => updateSelectionOnListChange(selectedTokensRaw, allTokens),
+		() => reconcileChartSelection(selectedTokensRaw, allTokens),
 		[selectedTokensRaw, allTokens]
 	)
 
@@ -197,28 +191,32 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 		const { protocol } = params
-		const normalizedName = slug(protocol)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const { protocolMetadata } = metadataCache
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata || !metadata[1].treasury) {
+		const [{ default: metadataCache }, { resolveProtocolFeatureRouteFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
+		const protocolRoute = resolveProtocolFeatureRouteFromMetadata({
+			hasMetric: (metadata) => Boolean(metadata.treasury),
+			metadataCache,
+			protocol,
+			routePrefix: 'protocol/treasury'
+		})
+		if (!protocolRoute) {
 			return { notFound: true }
 		}
+		if (protocolRoute.type === 'redirect') {
+			return canonicalRouteRedirect(protocolRoute.destination)
+		}
+		const metadata = protocolRoute.route.metadata
+		const canonicalProtocol = protocolRoute.route.canonicalSlug
 
-		const protocolData = await fetchProtocolOverviewMetrics(protocol)
+		const protocolData = await fetchProtocolOverviewMetrics(canonicalProtocol)
 
 		if (!protocolData) {
 			return { notFound: true }
 		}
 
-		const metrics = getProtocolMetricFlags({ protocolData, metadata: metadata[1] })
+		const metrics = getProtocolMetricFlags({ protocolData, metadata })
 		const seoTitle = `${protocolData.name} Treasury Holdings & Assets - DefiLlama`
 		const seoDescription = `Track ${protocolData.name} treasury holdings, asset composition, and own-token vs stablecoin breakdown on DefiLlama.`
 

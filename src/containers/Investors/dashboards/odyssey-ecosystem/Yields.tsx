@@ -39,7 +39,7 @@ export default function Yields() {
 				/>
 			</ChartCard>
 
-			<SectionHeader>Metronome Looper · Per-Strategy APY (Max Leverage)</SectionHeader>
+			<SectionHeader>Odyssey Loopr · Per-Strategy Max APY</SectionHeader>
 			<ChartCard title="Live strategies" subtitle="Collateral / borrow APY per pool (snapshot)">
 				<SimpleTable
 					rows={data?.looperApy?.rows}

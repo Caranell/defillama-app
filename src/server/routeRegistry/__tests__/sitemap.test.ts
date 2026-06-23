@@ -6,12 +6,31 @@ const metadataCache = vi.hoisted(
 		chainMetadata: {
 			ethereum: { name: 'Ethereum', id: 'ethereum', stablecoins: true, fees: true }
 		},
+		chainRouteKeyBySlug: {
+			ethereum: 'ethereum'
+		},
 		protocolMetadata: {
 			aave: { name: 'aave', displayName: 'Aave', tvl: true, fees: true, emissions: true },
-			uniswap: { name: 'uniswap', displayName: 'Uniswap', dexs: true }
+			uniswap: { name: 'uniswap', displayName: 'Uniswap', dexs: true },
+			binance: { name: 'binance-cex', displayName: 'Binance CEX', tvl: true, stablecoins: true, cex: true }
+		},
+		protocolRouteIdBySlug: {
+			aave: 'aave',
+			uniswap: 'uniswap'
 		},
 		categoriesAndTags: { categories: ['Lending'], tags: [], tagCategoryMap: {}, configs: {} },
-		cexs: [{ name: 'Binance', slug: 'binance' }],
+		protocolCategoryBySlug: {
+			lending: 'Lending'
+		},
+		protocolTagBySlug: {},
+		cexs: [{ name: 'Binance', slug: 'binance-cex' }],
+		cexRouteIdBySlug: {
+			binance: 'binance',
+			'binance-cex': 'binance'
+		},
+		cexMetadataBySlug: {
+			'binance-cex': { name: 'Binance', slug: 'binance-cex' }
+		},
 		rwaList: {
 			canonicalMarketIds: ['ondo/usdy'],
 			platforms: ['Ondo'],
@@ -21,7 +40,7 @@ const metadataCache = vi.hoisted(
 			idMap: {}
 		},
 		rwaPerpsList: {
-			contracts: ['Gold Dec 2026'],
+			contracts: ['xyz:sp500'],
 			venues: ['CME'],
 			categories: ['RWA Perps'],
 			assetGroups: [],
@@ -31,17 +50,21 @@ const metadataCache = vi.hoisted(
 		tokenDirectory: {
 			btc: { name: 'Bitcoin', symbol: 'BTC', route: 'token/btc' }
 		},
+		tokenDirectoryRecordByRouteSegment: {},
 		protocolDisplayNames: new Map(),
 		chainDisplayNames: new Map(),
 		chainCategories: [],
 		liquidationsTokenSymbols: ['WETH'],
 		liquidationsTokenSymbolsSet: new Set(['WETH']),
 		emissionsProtocolsList: ['aave'],
+		emissionsProtocolBySlug: { aave: 'aave' },
 		emissionsSupplyMetrics: {},
 		emissionsHistoricalPrices: {},
 		cgExchangeIdentifiers: [],
 		bridgeProtocolSlugs: ['stargate'],
+		bridgeProtocolSlugsSet: new Set(['stargate']),
 		bridgeChainSlugs: ['ethereum'],
+		bridgeChainSlugsSet: new Set(['ethereum']),
 		bridgeChainSlugToName: { ethereum: 'Ethereum' },
 		protocolLlamaswapDataset: {},
 		narrativeCategories: { ids: ['ai'], nameById: { ai: 'AI' } },
@@ -51,9 +74,9 @@ const metadataCache = vi.hoisted(
 			chainNameBySlug: { ethereum: 'Ethereum' },
 			chainSlugsByOracleSlug: { chainlink: ['ethereum'] }
 		},
-		digitalAssetTreasuryRoutes: { assetSlugs: ['bitcoin'], companySlugs: ['mstr'] },
+		digitalAssetTreasuryRoutes: { assetSlugs: ['bitcoin'], companySlugs: ['MSTR'] },
 		digitalAssetTreasuryAssetSlugsSet: new Set(['bitcoin']),
-		digitalAssetTreasuryCompanySlugsSet: new Set(['mstr']),
+		digitalAssetTreasuryCompanyRouteBySlug: { mstr: 'MSTR' },
 		stablecoinPeggedAssetSlugs: ['tether'],
 		stablecoinPeggedAssetSlugsSet: new Set(['tether']),
 		equitiesCompanyRoutes: [],
@@ -138,19 +161,27 @@ describe('cache-backed sitemap sections', () => {
 
 		expect(getSitemapSectionPath('protocols')).toBe('sitemap/protocols.xml')
 		expect(entriesBySection.get('protocols')).toEqual(expect.arrayContaining(['protocol/aave', 'protocol/fees/aave']))
+		expect(entriesBySection.get('protocols')).not.toContain('protocol/binance-cex')
 		expect(entriesBySection.get('chains')).toEqual(expect.arrayContaining(['chain/ethereum', 'fees/chain/ethereum']))
 		expect(entriesBySection.get('stablecoins')).toEqual(
 			expect.arrayContaining(['stablecoin/tether', 'stablecoins/ethereum'])
 		)
 		expect(entriesBySection.get('cexs')).toEqual(
-			expect.arrayContaining(['cex/binance', 'cex/assets/binance', 'cex/stablecoins/binance', 'cex/markets/binance'])
+			expect.arrayContaining([
+				'cex/binance-cex',
+				'cex/assets/binance-cex',
+				'cex/stablecoins/binance-cex',
+				'cex/markets/binance-cex'
+			])
 		)
 		expect(entriesBySection.get('bridges')).toEqual(expect.arrayContaining(['bridge/stargate', 'bridges/ethereum']))
 		expect(getSitemapSectionPath('protocols-by-category')).toBe('sitemap/protocols-by-category.xml')
 		expect(entriesBySection.get('dat')).toEqual(
-			expect.arrayContaining(['digital-asset-treasury/mstr', 'digital-asset-treasuries/bitcoin'])
+			expect.arrayContaining(['digital-asset-treasury/MSTR', 'digital-asset-treasuries/bitcoin'])
 		)
-		expect(entriesBySection.get('rwa')).toEqual(expect.arrayContaining(['rwa/perps/forex']))
+		expect(entriesBySection.get('rwa')).toEqual(
+			expect.arrayContaining(['rwa/asset/ondo%2Fusdy', 'rwa/perps/contract/xyz%3Asp500', 'rwa/perps/forex'])
+		)
 		expect(entriesBySection.get('rwa')).not.toContain('rwa/perps/category/rwa-perps')
 		expect(entriesBySection.get('liquidations')).toEqual(
 			expect.arrayContaining(['liquidations/aave', 'liquidations/aave/ethereum'])
@@ -199,7 +230,7 @@ describe('cache-backed sitemap sections', () => {
 		const section = await getSitemapSection('cexs.xml')
 
 		expect(section?.entries.map((entry) => entry.path)).toEqual(
-			expect.arrayContaining(['cex/binance', 'cex/markets/binance'])
+			expect.arrayContaining(['cex/binance-cex', 'cex/markets/binance-cex'])
 		)
 		await Promise.resolve()
 		await Promise.resolve()

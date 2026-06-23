@@ -22,10 +22,6 @@ vi.mock('~/containers/AdapterMetrics/api', () => ({
 	fetchAdapterProtocolMetrics: vi.fn().mockResolvedValue({})
 }))
 
-vi.mock('~/containers/Hacks/api', () => ({
-	fetchHacks: vi.fn().mockResolvedValue([])
-}))
-
 vi.mock('~/containers/Incentives/queries', () => ({
 	getProtocolIncentivesFromAggregatedEmissions: vi.fn().mockResolvedValue(null)
 }))

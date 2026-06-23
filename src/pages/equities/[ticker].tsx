@@ -10,6 +10,24 @@ import { buildEquityTickerCountrySlug, parseEquityTickerCountrySlug } from '~/co
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
+
+function getCanonicalEquityTickerSlug(
+	ticker: string,
+	country: string,
+	routes: Array<{ ticker: string; country: string }>
+): string | null {
+	const lookupTicker = ticker.toLowerCase()
+	const lookupCountry = country.toLowerCase()
+
+	for (const route of routes) {
+		if (route.ticker.toLowerCase() === lookupTicker && route.country.toLowerCase() === lookupCountry) {
+			return buildEquityTickerCountrySlug(route.ticker, route.country)
+		}
+	}
+
+	return null
+}
 
 export const getStaticProps = withPerformanceLogging(
 	'equities/[ticker]',
@@ -25,18 +43,20 @@ export const getStaticProps = withPerformanceLogging(
 			const redirectSlug = await getEquitiesTickerRedirectSlug(params.ticker, metadata.equitiesCompanyRoutes)
 			if (!redirectSlug) return { notFound: true }
 
-			return {
-				redirect: {
-					destination: `/equities/${redirectSlug}`,
-					permanent: false
-				}
-			}
+			return canonicalRouteRedirect(`/equities/${redirectSlug}`)
 		}
 
-		if (
-			!metadata.equitiesCompanySlugsSet.has(buildEquityTickerCountrySlug(tickerCountry.ticker, tickerCountry.country))
-		) {
+		const inputSlug = buildEquityTickerCountrySlug(tickerCountry.ticker, tickerCountry.country)
+		const canonicalSlug = metadata.equitiesCompanySlugsSet.has(inputSlug)
+			? inputSlug
+			: getCanonicalEquityTickerSlug(tickerCountry.ticker, tickerCountry.country, metadata.equitiesCompanyRoutes)
+
+		if (!canonicalSlug) {
 			return { notFound: true }
+		}
+
+		if (params.ticker !== canonicalSlug) {
+			return canonicalRouteRedirect(`/equities/${canonicalSlug}`)
 		}
 
 		const props = await getEquitiesTickerPageData(tickerCountry.ticker, tickerCountry.country, {

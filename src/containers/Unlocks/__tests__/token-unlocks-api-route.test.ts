@@ -35,6 +35,7 @@ vi.mock('~/utils/metadata', () => ({
 	__esModule: true,
 	default: {
 		emissionsProtocolsList: ['aave'],
+		emissionsProtocolBySlug: { aave: 'aave' },
 		tokenlist: { aave: { symbol: 'AAVE' } }
 	},
 	refreshMetadataInBackgroundIfStale: refreshMetadataInBackgroundIfStaleMock

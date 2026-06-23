@@ -77,6 +77,7 @@ export interface IProtocolMetadata {
 	txCount?: boolean
 	gasUsed?: boolean
 	gecko_id?: string
+	cex?: boolean
 }
 
 export interface ICexItem {

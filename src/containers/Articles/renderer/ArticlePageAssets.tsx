@@ -30,8 +30,71 @@ function usePageAssetMarkets(ids: Array<string>) {
 		staleTime: 60 * 1000,
 		gcTime: 5 * 60 * 1000,
 		refetchOnWindowFocus: false,
+		refetchInterval: 60 * 1000,
+		refetchIntervalInBackground: false,
 		retry: 0
 	})
+}
+
+function AssetRow({
+	asset,
+	market,
+	isLoading
+}: {
+	asset: ArticlePageAsset
+	market: PageAssetMarket | undefined
+	isLoading: boolean
+}) {
+	const route = market?.route ?? null
+	const logoSrc = market?.image ?? geckoTokenIconUrl(`coingecko:${asset.geckoId}`)
+	const showSkeleton = !market && isLoading
+	const symbol = asset.symbol.toUpperCase()
+	const change = market?.change24h ?? null
+
+	const content = (
+		<>
+			<span className="inline-flex shrink-0 group-hover/asset:animate-wiggle">
+				<TokenLogo src={logoSrc} size={22} alt={asset.symbol} title={asset.name} />
+			</span>
+			<span
+				className="min-w-0 truncate text-[13px] leading-none font-bold text-(--text-primary) transition-colors group-hover/asset:text-(--link-text)"
+				title={asset.name}
+			>
+				{symbol}
+			</span>
+			<span className="ml-auto text-[13px] leading-none font-semibold text-(--text-primary) tabular-nums">
+				{showSkeleton ? (
+					<span className="inline-block h-3.5 w-14 animate-pulse rounded bg-(--bg-tertiary) align-middle" />
+				) : (
+					formatAssetPrice(market?.price ?? null)
+				)}
+			</span>
+			<span className="w-[52px] shrink-0 text-right text-[12px] leading-none tabular-nums">
+				{showSkeleton ? (
+					<span className="inline-block h-3 w-9 animate-pulse rounded bg-(--bg-tertiary) align-middle" />
+				) : change != null ? (
+					<PercentChange percent={change} fontWeight={600} />
+				) : null}
+			</span>
+		</>
+	)
+
+	if (!route) {
+		return <li className="flex items-center gap-2.5 px-3 py-2.5">{content}</li>
+	}
+
+	return (
+		<li>
+			<a
+				href={route}
+				target="_blank"
+				rel="noreferrer noopener"
+				className="group/asset flex items-center gap-2.5 px-3 py-2.5 no-underline transition-colors hover:bg-black/5 focus-visible:bg-black/5 focus-visible:outline-none dark:hover:bg-white/10 dark:focus-visible:bg-white/10"
+			>
+				{content}
+			</a>
+		</li>
+	)
 }
 
 export function ArticlePageAssets({ pageAssets }: { pageAssets?: Array<ArticlePageAsset> | null }) {
@@ -47,14 +110,16 @@ export function ArticlePageAssets({ pageAssets }: { pageAssets?: Array<ArticlePa
 	if (assets.length === 0) return null
 
 	return (
-		<section aria-label="Assets on this page" className="grid gap-3">
+		<section aria-label="Assets on this page" className="grid">
 			<button
 				type="button"
 				onClick={() => setOpen((value) => !value)}
 				aria-expanded={open}
-				className="group flex items-center justify-between gap-2"
+				className={`group flex items-center justify-between gap-2 transition-[min-height] duration-300 ease-out ${
+					open ? 'min-h-0' : 'min-h-[66px]'
+				}`}
 			>
-				<span className="flex items-center gap-2 text-[11px] leading-none font-semibold tracking-[0.16em] text-(--text-secondary) uppercase">
+				<span className="flex items-center gap-2 text-[10px] leading-none font-semibold tracking-[0.18em] text-(--text-tertiary) uppercase">
 					Assets on this page
 					<span className="rounded-full bg-(--bg-tertiary) px-1.5 py-0.5 text-[10px] leading-none font-semibold tracking-normal text-(--text-tertiary)">
 						{assets.length}
@@ -73,37 +138,10 @@ export function ArticlePageAssets({ pageAssets }: { pageAssets?: Array<ArticlePa
 				}`}
 			>
 				<div className="overflow-hidden">
-					<ul className="m-0 list-none divide-y divide-(--cards-border) overflow-hidden rounded-xl border border-(--cards-border) p-0">
-						{assets.map((asset) => {
-							const market = byId.get(asset.geckoId)
-							const logoSrc = market?.image ?? geckoTokenIconUrl(`coingecko:${asset.geckoId}`)
-							const showSkeleton = !market && isLoading
-							return (
-								<li key={asset.geckoId} className="flex items-center gap-2.5 px-3 py-2.5">
-									<TokenLogo src={logoSrc} size={22} alt={asset.symbol} title={asset.name} />
-									<span
-										className="min-w-0 truncate text-[13px] leading-none font-bold text-(--text-primary)"
-										title={asset.name}
-									>
-										{asset.symbol.toUpperCase()}
-									</span>
-									<span className="ml-auto text-[13px] leading-none font-semibold text-(--text-primary) tabular-nums">
-										{showSkeleton ? (
-											<span className="inline-block h-3.5 w-14 animate-pulse rounded bg-(--bg-tertiary) align-middle" />
-										) : (
-											formatAssetPrice(market?.price ?? null)
-										)}
-									</span>
-									<span className="w-[52px] shrink-0 text-right text-[12px] leading-none tabular-nums">
-										{showSkeleton ? (
-											<span className="inline-block h-3 w-9 animate-pulse rounded bg-(--bg-tertiary) align-middle" />
-										) : market && market.change24h != null ? (
-											<PercentChange percent={market.change24h} fontWeight={600} />
-										) : null}
-									</span>
-								</li>
-							)
-						})}
+					<ul className="mt-3 mb-0 list-none divide-y divide-(--cards-border) overflow-hidden rounded-xl border border-(--cards-border) p-0">
+						{assets.map((asset) => (
+							<AssetRow key={asset.geckoId} asset={asset} market={byId.get(asset.geckoId)} isLoading={isLoading} />
+						))}
 					</ul>
 				</div>
 			</div>

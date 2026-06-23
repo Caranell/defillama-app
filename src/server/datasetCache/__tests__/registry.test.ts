@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import nextConfig from '../../../../next.config'
+import { legacyRedirects } from '../../routeRegistry/legacyRedirects'
 import {
 	DATASET_CACHE_MANIFEST_TRACE_INCLUDE,
 	DATASET_DOMAIN_ARTIFACTS,
@@ -82,5 +83,21 @@ describe('dataset cache registry', () => {
 		for (const [route, domains] of Object.entries(expectedRouteDomains)) {
 			expect(includes[route]).toEqual(getDatasetCacheTraceIncludes(...domains))
 		}
+	})
+
+	it('uses the shared legacy redirect table in next config', async () => {
+		const redirects = await nextConfig.redirects?.()
+
+		expect(redirects).toBe(legacyRedirects)
+		expect(redirects).toContainEqual({
+			source: '/chain/Binance',
+			destination: '/chain/bsc',
+			permanent: true
+		})
+		expect(redirects).toContainEqual({
+			source: '/protocol/eigenlayer',
+			destination: '/protocol/eigencloud',
+			permanent: true
+		})
 	})
 })

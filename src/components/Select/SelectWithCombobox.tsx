@@ -1,4 +1,5 @@
 import * as Ariakit from '@ariakit/react'
+import clsx from 'clsx'
 import { matchSorter } from 'match-sorter'
 import { useRouter } from 'next/router'
 import * as React from 'react'
@@ -27,6 +28,12 @@ interface ISelectWithComboboxBase {
 	resetPageOnQueryChange?: boolean
 	pushQueryUpdates?: (updates: Record<string, string | string[] | undefined>) => void
 	unmountOnHide?: boolean
+	popoverClassName?: string
+	popoverWrapperClassName?: string
+	searchPlaceholder?: string
+	visibleOptionLimit?: number | null
+	selectAllScope?: 'all' | 'matches'
+	emptyLabel?: React.ReactNode
 }
 
 interface ISelectWithComboboxUrlParams extends ISelectWithComboboxBase {
@@ -39,7 +46,7 @@ interface ISelectWithComboboxUrlParams extends ISelectWithComboboxBase {
 interface ISelectWithComboboxState extends ISelectWithComboboxBase {
 	includeQueryKey?: never
 	excludeQueryKey?: never
-	setSelectedValues: React.Dispatch<React.SetStateAction<Array<string>>>
+	setSelectedValues: (values: Array<string>) => void
 }
 
 type ISelectWithCombobox = ISelectWithComboboxUrlParams | ISelectWithComboboxState
@@ -64,7 +71,13 @@ export function SelectWithCombobox({
 	pushQueryUpdates,
 	onValuesChange,
 	defaultSelectedValues,
-	unmountOnHide = true
+	unmountOnHide = true,
+	popoverClassName,
+	popoverWrapperClassName,
+	searchPlaceholder = 'Search...',
+	visibleOptionLimit = 20,
+	selectAllScope = 'all',
+	emptyLabel = 'No results found'
 }: ISelectWithCombobox) {
 	const router = useRouter()
 	const valuesAreAnArrayOfStrings = typeof allValues[0] === 'string'
@@ -107,13 +120,6 @@ export function SelectWithCombobox({
 					pushQueryUpdates
 				})
 		: () => setSelectedValuesFromState([])
-	const toggleAll = includeQueryKey
-		? () =>
-				updateQueryFromSelected(router, includeQueryKey, excludeQueryKey, getAllKeys(), null, defaultSelectedValues, {
-					resetPage: resetPageOnQueryChange,
-					pushQueryUpdates
-				})
-		: () => setSelectedValuesFromState(getAllKeys())
 	const selectOnlyOne = includeQueryKey
 		? (value: string) =>
 				updateQueryFromSelected(
@@ -167,7 +173,42 @@ export function SelectWithCombobox({
 		)
 	}, [valuesAreAnArrayOfStrings, allValues, searchValue])
 
-	const [viewableMatches, setViewableMatches] = React.useState(20)
+	const [viewableMatches, setViewableMatches] = React.useState(visibleOptionLimit ?? 20)
+
+	React.useEffect(() => {
+		if (visibleOptionLimit !== null) {
+			setViewableMatches(visibleOptionLimit)
+		}
+	}, [visibleOptionLimit])
+
+	const getMatchKeys = React.useCallback(() => matches.map(getOptionKey), [matches, getOptionKey])
+
+	const getSelectAllValues = React.useCallback(() => {
+		if (selectAllScope === 'all') return getAllKeys()
+		return Array.from(new Set(selectedValues.concat(getMatchKeys())))
+	}, [getAllKeys, getMatchKeys, selectedValues, selectAllScope])
+
+	const toggleAll = includeQueryKey
+		? () => {
+				const allKeys = getAllKeys()
+				const nextValues = selectAllScope === 'all' ? null : getSelectAllValues()
+				updateQueryFromSelected(
+					router,
+					includeQueryKey,
+					excludeQueryKey,
+					allKeys,
+					nextValues && nextValues.length === allKeys.length ? null : nextValues,
+					defaultSelectedValues,
+					{
+						resetPage: resetPageOnQueryChange,
+						pushQueryUpdates
+					}
+				)
+			}
+		: () => setSelectedValuesFromState(getSelectAllValues())
+	const hasOptionLimit = visibleOptionLimit !== null
+	const visibleMatches = hasOptionLimit ? matches.slice(0, viewableMatches) : matches
+	const selectAllLabel = selectAllScope === 'matches' && searchValue.trim() ? 'Select shown' : 'Select All'
 
 	const comboboxRef = React.useRef<HTMLDivElement>(null)
 
@@ -209,7 +250,7 @@ export function SelectWithCombobox({
 				>
 					<NestedMenu label={label} render={<button type="button" />}>
 						<Ariakit.Combobox
-							placeholder="Search..."
+							placeholder={searchPlaceholder}
 							className="m-3 mb-0 rounded-md bg-white px-3 py-2 text-base dark:bg-black"
 						/>
 						{showCheckboxes ? (
@@ -218,12 +259,12 @@ export function SelectWithCombobox({
 									Deselect All
 								</button>
 								<button onClick={toggleAll} className="p-3">
-									Select All
+									{selectAllLabel}
 								</button>
 							</span>
 						) : null}
 						<Ariakit.ComboboxList>
-							{matches.slice(0, viewableMatches).map((option) => (
+							{visibleMatches.map((option) => (
 								<NestedMenuItem
 									key={getOptionKey(option)}
 									render={<Ariakit.SelectItem value={getOptionKey(option)} />}
@@ -250,7 +291,7 @@ export function SelectWithCombobox({
 									)}
 								</NestedMenuItem>
 							))}
-							{matches.length > viewableMatches ? (
+							{hasOptionLimit && matches.length > viewableMatches ? (
 								<Ariakit.SelectItem
 									value="__see_more__"
 									setValueOnClick={false}
@@ -322,9 +363,15 @@ export function SelectWithCombobox({
 					hideOnInteractOutside
 					gutter={6}
 					wrapperProps={{
-						className: 'max-sm:fixed! max-sm:bottom-0! max-sm:top-[unset]! max-sm:transform-none! max-sm:w-full!'
+						className: clsx(
+							'max-sm:fixed! max-sm:top-[unset]! max-sm:bottom-0! max-sm:w-full! max-sm:transform-none!',
+							popoverWrapperClassName
+						)
 					}}
-					className="z-10 flex min-w-[180px] flex-col overflow-auto overscroll-contain rounded-md border border-[hsl(204,20%,88%)] bg-(--bg-main) max-sm:h-[calc(100dvh-80px)] max-sm:drawer max-sm:rounded-b-none sm:max-h-[min(400px,60dvh)] lg:max-h-(--popover-available-height) dark:border-[hsl(204,3%,32%)]"
+					className={clsx(
+						'z-10 flex min-w-[180px] flex-col overflow-auto overscroll-contain rounded-md border border-[hsl(204,20%,88%)] bg-(--bg-main) max-sm:h-[calc(100dvh-80px)] max-sm:drawer max-sm:rounded-b-none sm:max-h-[min(400px,60dvh)] lg:max-h-(--popover-available-height) dark:border-[hsl(204,3%,32%)]',
+						popoverClassName
+					)}
 					portal={portal || false}
 				>
 					<Ariakit.PopoverDismiss className="ml-auto p-2 opacity-50 sm:hidden">
@@ -333,7 +380,7 @@ export function SelectWithCombobox({
 
 					<span className="relative mb-2 p-3">
 						<Ariakit.Combobox
-							placeholder="Search..."
+							placeholder={searchPlaceholder}
 							className="w-full rounded-md bg-white px-3 py-1 text-base dark:bg-black"
 						/>
 					</span>
@@ -345,12 +392,12 @@ export function SelectWithCombobox({
 										Deselect All
 									</button>
 									<button onClick={toggleAll} className="p-3">
-										Select All
+										{selectAllLabel}
 									</button>
 								</span>
 							) : null}
 							<Ariakit.ComboboxList ref={comboboxRef}>
-								{matches.slice(0, viewableMatches).map((option) => {
+								{visibleMatches.map((option) => {
 									const isCustom = typeof option === 'object' && option.isCustom
 									const customIndex = typeof option === 'object' ? option.customIndex : undefined
 									return (
@@ -421,7 +468,7 @@ export function SelectWithCombobox({
 									)
 								})}
 
-								{matches.length > viewableMatches ? (
+								{hasOptionLimit && matches.length > viewableMatches ? (
 									<Ariakit.SelectItem
 										value="__see_more__"
 										setValueOnClick={false}
@@ -437,7 +484,7 @@ export function SelectWithCombobox({
 							{customFooter ? <>{customFooter}</> : null}
 						</>
 					) : (
-						<p className="px-3 py-6 text-center text-(--text-primary)">No results found</p>
+						<p className="px-3 py-6 text-center text-(--text-primary)">{emptyLabel}</p>
 					)}
 				</Ariakit.SelectPopover>
 			</Ariakit.SelectProvider>

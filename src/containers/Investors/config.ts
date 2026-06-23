@@ -8,7 +8,7 @@ export const ALL_INVESTORS_PROJECTS = [
 	{ id: 'near', name: 'NEAR', dashboardId: 'n34rr3v3nu3d4sh', customOnly: true },
 	{ id: 'flare', name: 'Flare', dashboardId: 'fl4r3d4shb0ard1', customOnly: true },
 	{ id: 'odyssey-ecosystem', name: 'Odyssey Ecosystem', dashboardId: '0dyss3y3c0sys7m1', customOnly: true },
-	{ id: 'thorchain', name: 'THORChain', dashboardId: 'bfqwxro9m0xnc9z', customOnly: false }
+	{ id: 'thorchain', name: 'THORChain', dashboardId: 'bfqwxro9m0xnc9z', customOnly: true }
 ] as const
 
 export type InvestorsProject = (typeof ALL_INVESTORS_PROJECTS)[number]

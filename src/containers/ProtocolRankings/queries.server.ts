@@ -212,6 +212,7 @@ export const getProtocolsByChain = async ({
 		const childStore: IChildProtocol & { defillamaId: string } = {
 			name: protocolMetadata[protocol.defillamaId].displayName,
 			slug: slug(protocolMetadata[protocol.defillamaId].displayName),
+			logo: protocol.logo,
 			chains: protocolMetadata[protocol.defillamaId].chains,
 			category: protocol.category ?? null,
 			tvl: protocol.tvl != null && protocol.category !== 'Bridge' ? tvls : null,
@@ -478,6 +479,7 @@ export const getProtocolsByChain = async ({
 			protocolsStore[parentProtocol.id] = {
 				name: protocolMetadata[parentProtocol.id].displayName,
 				slug: slug(protocolMetadata[parentProtocol.id].displayName),
+				logo: parentProtocol.logo ?? null,
 				category: chilsProtocolCategories.length > 1 ? null : chilsProtocolCategories[0],
 				childProtocols,
 				chains: Array.from(chainsSet),

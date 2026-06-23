@@ -33,6 +33,47 @@ export function getProtocolListingSlugsFromMetadata(metadataCache: MetadataCache
 	return [...slugs]
 }
 
+export type ProtocolListingRoute =
+	| {
+			kind: 'category'
+			value: string
+			canonicalSlug: string
+	  }
+	| {
+			kind: 'tag'
+			value: string
+			tagCategory: string
+			canonicalSlug: string
+	  }
+
+export function resolveProtocolListingParamFromMetadata(
+	category: string,
+	metadataCache: MetadataCache
+): ProtocolListingRoute | null {
+	const categorySlug = slug(category)
+	const categoryName = metadataCache.protocolCategoryBySlug[categorySlug]
+	if (categoryName) {
+		return {
+			kind: 'category',
+			value: categoryName,
+			canonicalSlug: slug(categoryName)
+		}
+	}
+
+	const tagName = metadataCache.protocolTagBySlug[categorySlug]
+	if (!tagName) return null
+
+	const tagCategory = metadataCache.categoriesAndTags.tagCategoryMap[tagName]
+	if (!tagCategory) return null
+
+	return {
+		kind: 'tag',
+		value: tagName,
+		tagCategory,
+		canonicalSlug: slug(tagName)
+	}
+}
+
 export async function getProtocolListingStaticPaths(): Promise<Array<StaticParamPath<'category'>>> {
 	return getProtocolListingSlugsFromMetadata(await getMetadataCache()).map((category) => ({ params: { category } }))
 }

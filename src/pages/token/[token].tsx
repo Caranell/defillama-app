@@ -33,12 +33,39 @@ import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { normalizeLiquidationsTokenSymbol } from '~/utils/metadata/liquidations'
 import type { ITokenListEntry } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect, safeDecodeURIComponent } from '~/utils/route'
+import {
+	getCanonicalTokenRoute,
+	type TokenDirectory,
+	type TokenDirectoryRecord,
+	type TokenDirectoryRecordByRouteSegment
+} from '~/utils/tokenDirectory'
 
 type TokenRouteParams = {
 	token: string
 }
 
 const INITIAL_TOKEN_PRERENDER_LIMIT = 30
+
+function getTokenDirectoryRecordForRouteParam(
+	tokenDirectory: TokenDirectory,
+	tokenDirectoryRecordByRouteSegment: TokenDirectoryRecordByRouteSegment,
+	tokenParam: string
+): TokenDirectoryRecord | null {
+	const normalizedToken = slug(tokenParam)
+	const directRecord = tokenDirectory[normalizedToken]
+	if (directRecord) return directRecord
+
+	return tokenDirectoryRecordByRouteSegment[safeDecodeURIComponent(tokenParam)] ?? null
+}
+
+function tokenRouteMatchesParam(canonicalUrl: string, tokenParam: string): boolean {
+	const routePrefix = '/token/'
+	if (!canonicalUrl.startsWith(routePrefix)) return false
+
+	const canonicalToken = canonicalUrl.slice(routePrefix.length)
+	return safeDecodeURIComponent(canonicalToken) === safeDecodeURIComponent(tokenParam)
+}
 
 type TokenPageSectionRendererMap = {
 	[Section in TokenPageSection as Section['id']]: (props: { section: Section }) => ReactNode
@@ -55,7 +82,11 @@ export const getStaticProps = withPerformanceLogging<TokenPageProps, TokenRouteP
 		const metadataModule = await import('~/utils/metadata')
 		const metadataCache = metadataModule.default
 		const normalizedToken = slug(token)
-		const record = metadataCache.tokenDirectory[normalizedToken]
+		const record = getTokenDirectoryRecordForRouteParam(
+			metadataCache.tokenDirectory,
+			metadataCache.tokenDirectoryRecordByRouteSegment,
+			token
+		)
 
 		if (!record) {
 			return {
@@ -65,6 +96,11 @@ export const getStaticProps = withPerformanceLogging<TokenPageProps, TokenRouteP
 		}
 
 		const geckoId = getCoinGeckoId(record.token_nk)
+		const canonicalUrl = getCanonicalTokenRoute(record)
+		if (!tokenRouteMatchesParam(canonicalUrl, token)) {
+			return canonicalRouteRedirect(canonicalUrl)
+		}
+
 		const tokenEntry: ITokenListEntry | null = geckoId ? (metadataCache.tokenlist[geckoId] ?? null) : null
 		const protocolMetadata = record.protocolId ? (metadataCache.protocolMetadata[record.protocolId] ?? null) : null
 		const resolvedUnlocksSlug =
@@ -266,7 +302,7 @@ export const getStaticProps = withPerformanceLogging<TokenPageProps, TokenRouteP
 			props: {
 				seoTitle,
 				seoDescription,
-				canonicalUrl: record.route ?? `/token/${encodeURIComponent(record.symbol)}`,
+				canonicalUrl,
 				sections
 			},
 			revalidate: maxAgeForNext([22])
@@ -297,8 +333,14 @@ export const getStaticPaths = async () => {
 
 	rankedRecords.sort((a, b) => (a.mcap_rank ?? Number.POSITIVE_INFINITY) - (b.mcap_rank ?? Number.POSITIVE_INFINITY))
 
+	const paths: string[] = []
+	for (const record of rankedRecords) {
+		const route = getCanonicalTokenRoute(record)
+		if (route.startsWith('/token/')) paths.push(route)
+	}
+
 	return {
-		paths: rankedRecords.map((record) => record.route),
+		paths,
 		fallback: 'blocking'
 	}
 }

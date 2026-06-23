@@ -13,7 +13,7 @@ import {
 import type { IEquitiesCompanyRoute, IEquitiesOnchainResponse } from './api.types'
 import { buildPriceHistoryChart } from './chartData'
 import type { IEquitiesListPageProps, IEquitiesOnchainPageData, IEquityTickerPageProps } from './types'
-import { buildEquityTickerCountrySlug, normalizeEquityCountry, normalizeEquityTicker } from './utils'
+import { buildEquityTickerCountrySlug } from './utils'
 
 export async function getEquitiesListPageData(): Promise<IEquitiesListPageProps> {
 	const companies = await fetchEquitiesCompanies()
@@ -88,13 +88,10 @@ interface EquitiesTickerPageMetadata {
 }
 
 export async function getEquitiesTickerPageData(
-	rawTicker: string,
-	rawCountry: string,
+	ticker: string,
+	country: string,
 	pageMetadata: EquitiesTickerPageMetadata
 ): Promise<IEquityTickerPageProps | null> {
-	const ticker = normalizeEquityTicker(rawTicker)
-	const country = normalizeEquityCountry(rawCountry)
-
 	const [summary, metadata, priceHistory, statements, filings, dimensions, rawOnchain] = await Promise.all([
 		fetchEquitiesSummary(ticker, country),
 		fetchEquitiesMetadata(ticker, country),
@@ -148,11 +145,11 @@ export async function getEquitiesTickerRedirectSlug(
 	rawTicker: string,
 	companiesList?: IEquitiesCompanyRoute[]
 ): Promise<string | null> {
-	const ticker = normalizeEquityTicker(rawTicker)
+	const lookupTicker = rawTicker.toLowerCase()
 	const companies = companiesList ?? (await fetchEquitiesCompaniesList().catch(() => []))
 	let match: IEquitiesCompanyRoute | null = null
 	for (const company of companies) {
-		if (normalizeEquityTicker(company.ticker) !== ticker) continue
+		if (company.ticker.toLowerCase() !== lookupTicker) continue
 		if (match) return null
 		match = company
 	}

@@ -12,8 +12,8 @@ import { TVL_SETTINGS } from '~/contexts/LocalStorage'
 import { FEE_EXTRA_CONFIGS } from '~/metrics/feeExtras'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
-import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 import { isTruthyQueryParam } from '~/utils/routerQuery'
 
 const ProtocolCoreChart = lazy(() => import('~/containers/ProtocolOverview/Chart')) as ComponentType<any>
@@ -33,25 +33,21 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const protocol = params.protocol
-		const normalizedName = slug(protocol)
-		const metadataModule = await import('~/utils/metadata')
-		const metadataCache = metadataModule.default
-		const { protocolMetadata } = metadataCache
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata) {
+		const [{ default: metadataCache }, { resolveProtocolParamFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
+		const protocolRoute = resolveProtocolParamFromMetadata(protocol, metadataCache)
+		if (!protocolRoute) {
 			return { notFound: true }
+		}
+		if (protocol !== protocolRoute.canonicalSlug) {
+			return canonicalRouteRedirect(`/chart/protocol/${protocolRoute.canonicalSlug}`)
 		}
 
 		const data = await getProtocolOverviewPageData({
-			protocolId: metadata[0],
-			currentProtocolMetadata: metadata[1],
+			protocolId: protocolRoute.id,
+			currentProtocolMetadata: protocolRoute.metadata,
 			chainMetadata: metadataCache.chainMetadata,
 			tokenlist: metadataCache.tokenlist,
 			cgExchangeIdentifiers: metadataCache.cgExchangeIdentifiers,

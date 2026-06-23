@@ -1,13 +1,12 @@
 import type { GetServerSideProps } from 'next'
+import { canonicalRouteRedirect, encodeRouteSegment, getSingleRouteParam } from '~/utils/route'
 import { withServerSidePropsTelemetry } from '~/utils/telemetry'
 
 const getServerSidePropsHandler: GetServerSideProps = async (context) => {
-	return Promise.resolve({
-		redirect: {
-			destination: `/protocol/perps-aggregators/${context.params?.item}`,
-			permanent: true
-		}
-	})
+	const item = getSingleRouteParam(context.params?.item)
+	if (!item) return { notFound: true }
+
+	return canonicalRouteRedirect(`/protocol/perps-aggregators/${encodeRouteSegment(item)}`, true)
 }
 
 export default function PerpsAggregator() {

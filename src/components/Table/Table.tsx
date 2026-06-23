@@ -115,7 +115,7 @@ function TableRow<T extends RowData>({
 							data-chainpage={isChainPage}
 							className={`overflow-hidden border-t border-r border-(--divider) p-3 text-ellipsis whitespace-nowrap ${
 								compact ? 'border-r-0 border-t-black/10 px-5 dark:border-t-white/10' : ''
-							}`}
+							} ${cell.column.columnDef.meta?.cellClassName ?? ''}`}
 							style={{
 								textAlign,
 								verticalAlign: compact ? 'middle' : undefined,

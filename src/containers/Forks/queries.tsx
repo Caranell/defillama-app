@@ -55,7 +55,14 @@ export async function getForksListPageData(): Promise<ForkOverviewPageData | nul
 			const parentTvl = parentProtocol?.tvl
 			const ftot = getForkToOriginalTvlPercent(tvl, parentTvl)
 
-			return { name: forkName, tvl, forkedProtocols, parentTvl: parentTvl ?? null, ftot }
+			return {
+				name: forkName,
+				logo: parentProtocol?.logo ?? null,
+				tvl,
+				forkedProtocols,
+				parentTvl: parentTvl ?? null,
+				ftot
+			}
 		})
 
 		// Build fork links

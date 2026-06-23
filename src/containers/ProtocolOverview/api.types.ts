@@ -1,3 +1,5 @@
+import type { IHackApiItem } from '../Hacks/api.types'
+
 export interface IProtocolRaise {
 	round: string
 	amount: number
@@ -54,6 +56,7 @@ export interface IProtocolMetricsV2 {
 	mcap: number | null
 	methodology?: string
 	raises?: Array<IProtocolRaise>
+	hacks?: Array<IHackApiItem>
 	otherProtocols?: Array<string>
 	hallmarks?: Array<[number, string]> | Array<[[number, number], string]>
 	dimensions?: Record<string, { genuineSpikes?: Array<[string, string]>; adapter?: string }> | null

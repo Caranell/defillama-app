@@ -7,6 +7,7 @@ import { RWATabNav } from '~/containers/RWA/TabNav'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export async function getStaticPaths() {
 	// When this is true (in preview environments) don't
@@ -48,6 +49,10 @@ export const getStaticProps = withPerformanceLogging(
 
 		if (!platformName) {
 			return { notFound: true }
+		}
+
+		if (params.platform !== platformSlug) {
+			return canonicalRouteRedirect(`/rwa/platform/${platformSlug}`)
 		}
 
 		const props = await getRWAAssetsOverview({ platform: platformSlug, rwaList })

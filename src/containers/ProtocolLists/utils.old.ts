@@ -83,7 +83,14 @@ export const formatProtocolsData = ({
 			if (protocol.deprecated) {
 				final = [
 					...final,
-					{ name: protocol.name, chains: protocol.chains, extraTvl: {}, category: protocol.category, deprecated: true }
+					{
+						name: protocol.name,
+						logo: protocol.logo,
+						chains: protocol.chains,
+						extraTvl: {},
+						category: protocol.category,
+						deprecated: true
+					}
 				]
 				return final
 			}

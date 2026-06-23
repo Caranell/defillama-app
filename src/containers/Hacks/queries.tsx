@@ -111,7 +111,7 @@ export async function getTotalValueLostInHacksByProtocol({
 }): Promise<IProtocolTotalValueLostInHacksByProtocol> {
 	try {
 		const rawHacks = await fetchHacks()
-		const protocols = rawHacks.filter((h): h is IHackApiItem & { defillamaId: number } => h.defillamaId != null)
+		const protocols = rawHacks.filter((h): h is IHackApiItem & { defillamaId: string } => h.defillamaId != null)
 
 		const totalLostByProtocol = new Map<string, ProtocolHackRow>()
 

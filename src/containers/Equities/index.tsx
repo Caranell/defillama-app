@@ -2,6 +2,7 @@ import {
 	type ColumnDef,
 	type ColumnFiltersState,
 	createColumnHelper,
+	functionalUpdate,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getPaginationRowModel,
@@ -12,22 +13,31 @@ import {
 	useReactTable
 } from '@tanstack/react-table'
 import { useRouter } from 'next/router'
-import { startTransition, useEffect, useMemo, useState } from 'react'
+import { startTransition, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { CSVDownloadButton } from '~/components/ButtonStyled/CsvButton'
 import { Icon } from '~/components/Icon'
 import { BasicLink } from '~/components/Link'
 import { SelectWithCombobox } from '~/components/Select/SelectWithCombobox'
 import { PaginatedTable, usePaginatedTableDisplayRowNumber } from '~/components/Table/PaginatedTable'
-import { prepareTableCsv, useTableSearch } from '~/components/Table/utils'
+import { prepareTableCsv } from '~/components/Table/utils'
 import { TokenLogo } from '~/components/TokenLogo'
 import defs from '~/public/equities-definitions.json'
 import { abbreviateNumber } from '~/utils'
 import { equityCountryFlagUrl } from '~/utils/icons'
-import { pushShallowQuery, readSingleQueryValue } from '~/utils/routerQuery'
+import { readSingleQueryValue, pushShallowQuery } from '~/utils/routerQuery'
+import { EquitiesFiltersDialog, EquityActiveFilterPills } from './EquityFiltersDialog'
+import { filterEquityCompanies, type EquityActiveFilter } from './filters'
+import {
+	applyEquityFilterColumnVisibility,
+	getEquityFilterDefaultSorting,
+	shouldUpdateEquityFilterDefaultSorting
+} from './tableVisibility'
 import type { IEquitiesListCompanyRow, IEquitiesListPageProps } from './types'
 import { formatEquitiesDateTime } from './utils'
 
-const columnHelper = createColumnHelper<IEquitiesListCompanyRow>()
+type EquitiesTableCompanyRow = IEquitiesListCompanyRow & { searchPriority?: number }
+
+const columnHelper = createColumnHelper<EquitiesTableCompanyRow>()
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
 const DEFAULT_PAGE_SIZE = 50
 
@@ -51,12 +61,12 @@ function ChangeValue({ value, symbol }: { value: number | null; symbol?: string 
 	)
 }
 
-function EquityTickerCell({ row }: { row: { id: string; original: IEquitiesListCompanyRow } }) {
+function EquityTickerCell({ row }: { row: { id: string; original: EquitiesTableCompanyRow } }) {
 	const rowIndex = usePaginatedTableDisplayRowNumber(row.id)
 
 	return (
-		<span className="relative flex items-center gap-2">
-			<span className="w-6 shrink-0 text-right text-(--text-secondary)" aria-hidden="true">
+		<span className="flex min-w-0 items-center gap-2">
+			<span className="inline-block min-w-4 shrink-0 text-left text-(--text-secondary) tabular-nums" aria-hidden="true">
 				{rowIndex}
 			</span>
 			<TokenLogo
@@ -73,13 +83,21 @@ function EquityTickerCell({ row }: { row: { id: string; original: IEquitiesListC
 	)
 }
 
-const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
+const columns: ColumnDef<EquitiesTableCompanyRow>[] = [
+	columnHelper.accessor((row) => row.searchPriority ?? 0, {
+		id: 'searchPriority',
+		header: 'Search Priority',
+		meta: {
+			hidden: true,
+			headerClassName: 'w-[0px] min-w-[0px]'
+		}
+	}),
 	columnHelper.accessor('ticker', {
 		header: 'Ticker',
 		enableSorting: false,
 		cell: ({ row }) => <EquityTickerCell row={row} />,
 		meta: {
-			headerClassName: 'w-[124px] min-w-[124px]',
+			headerClassName: 'w-[128px] min-w-[128px]',
 			align: 'start'
 		}
 	}),
@@ -91,7 +109,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 				<img
 					src={equityCountryFlagUrl(getValue())}
 					alt={`${getValue()} flag`}
-					className="h-6 w-6 rounded-full object-contain"
+					className="hidden h-6 w-6 rounded-full object-contain lg:block"
 					height={24}
 					width={24}
 				/>
@@ -99,25 +117,30 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 			</span>
 		),
 		meta: {
-			headerClassName: 'w-[108px] min-w-[108px]',
+			headerClassName: 'w-[76px] min-w-[76px] lg:w-[88px] lg:min-w-[88px] ',
 			align: 'start'
+		}
+	}),
+	columnHelper.accessor('marketCap', {
+		header: defs.marketCap.label,
+		cell: ({ getValue }) => formatNumber(getValue(), '$'),
+		meta: {
+			headerClassName: 'w-[121px] min-w-[121px]',
+			align: 'end',
+			headerHelperText: defs.marketCap.description
 		}
 	}),
 	columnHelper.accessor('name', {
 		header: 'Company',
 		enableSorting: false,
-		filterFn: (row, _columnId, filterValue) => {
-			const query = String(filterValue).trim().toLowerCase()
-			if (!query) return true
-			return row.original.name.toLowerCase().includes(query) || row.original.ticker.toLowerCase().includes(query)
-		},
 		cell: ({ getValue, row }) => (
 			<BasicLink href={row.original.href} className="text-(--link-text)">
 				{getValue()}
 			</BasicLink>
 		),
 		meta: {
-			headerClassName: 'w-[168px] min-w-[168px]',
+			headerClassName: 'w-[180px] min-w-[180px]',
+			cellClassName: 'truncate',
 			align: 'start'
 		}
 	}),
@@ -125,7 +148,8 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: 'Sector',
 		enableSorting: false,
 		meta: {
-			headerClassName: 'w-[124px] min-w-[124px]',
+			headerClassName: 'w-[170px] min-w-[170px]',
+			cellClassName: 'truncate',
 			align: 'start'
 		}
 	}),
@@ -133,7 +157,8 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: 'Industry',
 		enableSorting: false,
 		meta: {
-			headerClassName: 'w-[144px] min-w-[144px]',
+			headerClassName: 'w-[170px] min-w-[170px]',
+			cellClassName: 'truncate',
 			align: 'start'
 		}
 	}),
@@ -141,16 +166,34 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.currentPrice.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[92px] min-w-[92px]',
+			headerClassName: 'w-[96px] min-w-[96px]',
 			align: 'end',
 			headerHelperText: defs.currentPrice.description
+		}
+	}),
+	columnHelper.accessor('fiftyTwoWeekHigh', {
+		header: defs.fiftyTwoWeekHigh.label,
+		cell: ({ getValue }) => formatNumber(getValue(), '$'),
+		meta: {
+			headerClassName: 'w-[128px] min-w-[128px]',
+			align: 'end',
+			headerHelperText: defs.fiftyTwoWeekHigh.description
+		}
+	}),
+	columnHelper.accessor('fiftyTwoWeekLow', {
+		header: defs.fiftyTwoWeekLow.label,
+		cell: ({ getValue }) => formatNumber(getValue(), '$'),
+		meta: {
+			headerClassName: 'w-[128px] min-w-[128px]',
+			align: 'end',
+			headerHelperText: defs.fiftyTwoWeekLow.description
 		}
 	}),
 	columnHelper.accessor('priceChangePercentage1d', {
 		header: defs.priceChangePercentage1d.label,
 		cell: ({ getValue }) => <ChangePercent value={getValue()} />,
 		meta: {
-			headerClassName: 'w-[156px] min-w-[156px]',
+			headerClassName: 'w-[153px] min-w-[153px]',
 			align: 'end',
 			headerHelperText: defs.priceChangePercentage1d.description
 		}
@@ -159,7 +202,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.priceChangePercentage7d.label,
 		cell: ({ getValue }) => <ChangePercent value={getValue()} />,
 		meta: {
-			headerClassName: 'w-[158px] min-w-[158px]',
+			headerClassName: 'w-[156px] min-w-[156px]',
 			align: 'end',
 			headerHelperText: defs.priceChangePercentage7d.description
 		}
@@ -168,7 +211,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.priceChangePercentage1m.label,
 		cell: ({ getValue }) => <ChangePercent value={getValue()} />,
 		meta: {
-			headerClassName: 'w-[160px] min-w-[160px]',
+			headerClassName: 'w-[156px] min-w-[156px]',
 			align: 'end',
 			headerHelperText: defs.priceChangePercentage1m.description
 		}
@@ -177,25 +220,16 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.volume.label,
 		cell: ({ getValue }) => formatNumber(getValue()),
 		meta: {
-			headerClassName: 'w-[112px] min-w-[112px]',
+			headerClassName: 'w-[95px] min-w-[95px]',
 			align: 'end',
 			headerHelperText: defs.volume.description
-		}
-	}),
-	columnHelper.accessor('marketCap', {
-		header: defs.marketCap.label,
-		cell: ({ getValue }) => formatNumber(getValue(), '$'),
-		meta: {
-			headerClassName: 'w-[138px] min-w-[138px]',
-			align: 'end',
-			headerHelperText: defs.marketCap.description
 		}
 	}),
 	columnHelper.accessor('marketCapChange1d', {
 		header: defs.marketCapChange1d.label,
 		cell: ({ getValue }) => <ChangeValue value={getValue()} symbol="$" />,
 		meta: {
-			headerClassName: 'w-[176px] min-w-[176px]',
+			headerClassName: 'w-[196px] min-w-[196px]',
 			align: 'end',
 			headerHelperText: defs.marketCapChange1d.description
 		}
@@ -204,7 +238,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.circulatingMarketCap.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[166px] min-w-[166px]',
+			headerClassName: 'w-[156px] min-w-[156px]',
 			align: 'end',
 			headerHelperText: defs.circulatingMarketCap.description
 		}
@@ -213,7 +247,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.enterpriseValue.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[174px] min-w-[174px]',
+			headerClassName: 'w-[153px] min-w-[153px]',
 			align: 'end',
 			headerHelperText: defs.enterpriseValue.description
 		}
@@ -222,7 +256,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.trailingPE.label,
 		cell: ({ getValue }) => formatNumber(getValue()),
 		meta: {
-			headerClassName: 'w-[72px] min-w-[72px]',
+			headerClassName: 'w-[87px] min-w-[87px]',
 			align: 'end',
 			headerHelperText: defs.trailingPE.description
 		}
@@ -231,7 +265,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.priceToRevenue.label,
 		cell: ({ getValue }) => formatNumber(getValue()),
 		meta: {
-			headerClassName: 'w-[74px] min-w-[74px]',
+			headerClassName: 'w-[87px] min-w-[87px]',
 			align: 'end',
 			headerHelperText: defs.priceToRevenue.description
 		}
@@ -240,7 +274,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.dividendYield.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '%'),
 		meta: {
-			headerClassName: 'w-[150px] min-w-[150px]',
+			headerClassName: 'w-[140px] min-w-[140px]',
 			align: 'end',
 			headerHelperText: defs.dividendYield.description
 		}
@@ -249,7 +283,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.holdersYield.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '%'),
 		meta: {
-			headerClassName: 'w-[146px] min-w-[146px]',
+			headerClassName: 'w-[133px] min-w-[133px]',
 			align: 'end',
 			headerHelperText: defs.holdersYield.description
 		}
@@ -258,7 +292,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.priceToBook.label,
 		cell: ({ getValue }) => formatNumber(getValue()),
 		meta: {
-			headerClassName: 'w-[76px] min-w-[76px]',
+			headerClassName: 'w-[87px] min-w-[87px]',
 			align: 'end',
 			headerHelperText: defs.priceToBook.description
 		}
@@ -267,7 +301,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.enterpriseValueToEbitda.label,
 		cell: ({ getValue }) => formatNumber(getValue()),
 		meta: {
-			headerClassName: 'w-[124px] min-w-[124px]',
+			headerClassName: 'w-[118px] min-w-[118px]',
 			align: 'end',
 			headerHelperText: defs.enterpriseValueToEbitda.description
 		}
@@ -276,7 +310,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.operatingProfitMarginTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '%'),
 		meta: {
-			headerClassName: 'w-[170px] min-w-[170px]',
+			headerClassName: 'w-[163px] min-w-[163px]',
 			align: 'end',
 			headerHelperText: defs.operatingProfitMarginTTM.description
 		}
@@ -285,7 +319,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.revenueTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[162px] min-w-[162px]',
+			headerClassName: 'w-[147px] min-w-[147px]',
 			align: 'end',
 			headerHelperText: defs.revenueTTM.description
 		}
@@ -294,7 +328,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.grossProfitTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[190px] min-w-[190px]',
+			headerClassName: 'w-[168px] min-w-[168px]',
 			align: 'end',
 			headerHelperText: defs.grossProfitTTM.description
 		}
@@ -303,7 +337,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.earningsTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[168px] min-w-[168px]',
+			headerClassName: 'w-[147px] min-w-[147px]',
 			align: 'end',
 			headerHelperText: defs.earningsTTM.description
 		}
@@ -312,7 +346,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.ebitdaTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[148px] min-w-[148px]',
+			headerClassName: 'w-[140px] min-w-[140px]',
 			align: 'end',
 			headerHelperText: defs.ebitdaTTM.description
 		}
@@ -321,7 +355,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.holdersRevenueTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[218px] min-w-[218px]',
+			headerClassName: 'w-[203px] min-w-[203px]',
 			align: 'end',
 			headerHelperText: defs.holdersRevenueTTM.description
 		}
@@ -330,7 +364,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.holderEarningsTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[216px] min-w-[216px]',
+			headerClassName: 'w-[195px] min-w-[195px]',
 			align: 'end',
 			headerHelperText: defs.holderEarningsTTM.description
 		}
@@ -339,7 +373,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.dividendsTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[158px] min-w-[158px]',
+			headerClassName: 'w-[155px] min-w-[155px]',
 			align: 'end',
 			headerHelperText: defs.dividendsTTM.description
 		}
@@ -348,7 +382,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.stockRepurchaseTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[150px] min-w-[150px]',
+			headerClassName: 'w-[154px] min-w-[154px]',
 			align: 'end',
 			headerHelperText: defs.stockRepurchaseTTM.description
 		}
@@ -357,7 +391,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.stockIssuanceTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[188px] min-w-[188px]',
+			headerClassName: 'w-[190px] min-w-[190px]',
 			align: 'end',
 			headerHelperText: defs.stockIssuanceTTM.description
 		}
@@ -366,7 +400,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.stockBasedCompensationTTM.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[184px] min-w-[184px]',
+			headerClassName: 'w-[174px] min-w-[174px]',
 			align: 'end',
 			headerHelperText: defs.stockBasedCompensationTTM.description
 		}
@@ -375,7 +409,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.cashAndCashEquivalents.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[132px] min-w-[132px]',
+			headerClassName: 'w-[136px] min-w-[136px]',
 			align: 'end',
 			headerHelperText: defs.cashAndCashEquivalents.description
 		}
@@ -384,7 +418,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.totalAssets.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[132px] min-w-[132px]',
+			headerClassName: 'w-[126px] min-w-[126px]',
 			align: 'end',
 			headerHelperText: defs.totalAssets.description
 		}
@@ -393,7 +427,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.totalLiabilities.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[162px] min-w-[162px]',
+			headerClassName: 'w-[143px] min-w-[143px]',
 			align: 'end',
 			headerHelperText: defs.totalLiabilities.description
 		}
@@ -402,7 +436,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.totalShareholdersEquity.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[190px] min-w-[190px]',
+			headerClassName: 'w-[116px] min-w-[116px]',
 			align: 'end',
 			headerHelperText: defs.totalShareholdersEquity.description
 		}
@@ -411,7 +445,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.totalDebt.label,
 		cell: ({ getValue }) => formatNumber(getValue(), '$'),
 		meta: {
-			headerClassName: 'w-[124px] min-w-[124px]',
+			headerClassName: 'w-[113px] min-w-[113px]',
 			align: 'end',
 			headerHelperText: defs.totalDebt.description
 		}
@@ -420,7 +454,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.circulatingSupply.label,
 		cell: ({ getValue }) => formatNumber(getValue()),
 		meta: {
-			headerClassName: 'w-[136px] min-w-[136px]',
+			headerClassName: 'w-[125px] min-w-[125px]',
 			align: 'end',
 			headerHelperText: defs.circulatingSupply.description
 		}
@@ -429,7 +463,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.totalSupply.label,
 		cell: ({ getValue }) => formatNumber(getValue()),
 		meta: {
-			headerClassName: 'w-[138px] min-w-[138px]',
+			headerClassName: 'w-[128px] min-w-[128px]',
 			align: 'end',
 			headerHelperText: defs.totalSupply.description
 		}
@@ -438,7 +472,7 @@ const columns: ColumnDef<IEquitiesListCompanyRow>[] = [
 		header: defs.employeeCount.label,
 		cell: ({ getValue }) => formatNumber(getValue()),
 		meta: {
-			headerClassName: 'w-[118px] min-w-[118px]',
+			headerClassName: 'w-[117px] min-w-[117px]',
 			align: 'end',
 			headerHelperText: defs.employeeCount.description
 		}
@@ -497,6 +531,8 @@ const DATA_COLUMN_IDS = [
 	'sector',
 	'industry',
 	'currentPrice',
+	'fiftyTwoWeekHigh',
+	'fiftyTwoWeekLow',
 	'priceChangePercentage1d',
 	'priceChangePercentage7d',
 	'priceChangePercentage1m',
@@ -535,19 +571,16 @@ const DATA_COLUMN_IDS = [
 const PRESET_VISIBLE_COLUMNS: Record<EquitiesPreset, readonly string[]> = {
 	'Market Cap': [
 		'country',
-		'sector',
-		'industry',
+		'marketCap',
 		'currentPrice',
 		'priceChangePercentage1d',
 		'priceChangePercentage7d',
 		'priceChangePercentage1m',
-		'volume',
-		'marketCap'
+		'volume'
 	],
-	Employees: ['country', 'sector', 'industry', 'employeeCount', 'marketCap', 'revenueTTM', 'currentPrice'],
+	Employees: ['country', 'employeeCount', 'marketCap', 'revenueTTM', 'currentPrice'],
 	Earnings: [
 		'country',
-		'sector',
 		'earningsTTM',
 		'ebitdaTTM',
 		'holderEarningsTTM',
@@ -557,7 +590,6 @@ const PRESET_VISIBLE_COLUMNS: Record<EquitiesPreset, readonly string[]> = {
 	],
 	Revenue: [
 		'country',
-		'sector',
 		'revenueTTM',
 		'grossProfitTTM',
 		'holdersRevenueTTM',
@@ -565,38 +597,13 @@ const PRESET_VISIBLE_COLUMNS: Record<EquitiesPreset, readonly string[]> = {
 		'operatingProfitMarginTTM',
 		'marketCap'
 	],
-	'P/E ratio': ['country', 'sector', 'trailingPE', 'currentPrice', 'earningsTTM', 'marketCap', 'priceToBook'],
-	'Dividend %': ['country', 'sector', 'dividendYield', 'currentPrice', 'marketCap', 'trailingPE'],
-	'Market Cap gain': [
-		'country',
-		'sector',
-		'marketCapChange1d',
-		'marketCap',
-		'priceChangePercentage1d',
-		'currentPrice',
-		'volume'
-	],
-	'Market Cap loss': [
-		'country',
-		'sector',
-		'marketCapChange1d',
-		'marketCap',
-		'priceChangePercentage1d',
-		'currentPrice',
-		'volume'
-	],
-	'Holder Yield': [
-		'country',
-		'sector',
-		'holdersYield',
-		'dividendsTTM',
-		'stockRepurchaseTTM',
-		'stockIssuanceTTM',
-		'marketCap'
-	],
+	'P/E ratio': ['country', 'trailingPE', 'currentPrice', 'earningsTTM', 'marketCap', 'priceToBook'],
+	'Dividend %': ['country', 'dividendYield', 'currentPrice', 'marketCap', 'trailingPE'],
+	'Market Cap gain': ['country', 'marketCapChange1d', 'marketCap', 'priceChangePercentage1d', 'currentPrice', 'volume'],
+	'Market Cap loss': ['country', 'marketCapChange1d', 'marketCap', 'priceChangePercentage1d', 'currentPrice', 'volume'],
+	'Holder Yield': ['country', 'holdersYield', 'dividendsTTM', 'stockRepurchaseTTM', 'stockIssuanceTTM', 'marketCap'],
 	'Operating Margin': [
 		'country',
-		'sector',
 		'operatingProfitMarginTTM',
 		'revenueTTM',
 		'grossProfitTTM',
@@ -605,7 +612,6 @@ const PRESET_VISIBLE_COLUMNS: Record<EquitiesPreset, readonly string[]> = {
 	],
 	'Enterprise Value': [
 		'country',
-		'sector',
 		'enterpriseValue',
 		'enterpriseValueToEbitda',
 		'ebitdaTTM',
@@ -613,10 +619,9 @@ const PRESET_VISIBLE_COLUMNS: Record<EquitiesPreset, readonly string[]> = {
 		'cashAndCashEquivalents',
 		'marketCap'
 	],
-	'Total assets': ['country', 'sector', 'totalAssets', 'totalLiabilities', 'totalDebt', 'marketCap', 'currentPrice'],
+	'Total assets': ['country', 'totalAssets', 'totalLiabilities', 'totalDebt', 'marketCap', 'currentPrice'],
 	'Total liabilities': [
 		'country',
-		'sector',
 		'totalLiabilities',
 		'totalAssets',
 		'totalShareholdersEquity',
@@ -624,34 +629,10 @@ const PRESET_VISIBLE_COLUMNS: Record<EquitiesPreset, readonly string[]> = {
 		'marketCap',
 		'currentPrice'
 	],
-	'Net Assets': [
-		'country',
-		'sector',
-		'totalShareholdersEquity',
-		'totalAssets',
-		'totalLiabilities',
-		'totalDebt',
-		'marketCap'
-	],
-	'Total debt': [
-		'country',
-		'sector',
-		'totalDebt',
-		'totalLiabilities',
-		'totalAssets',
-		'cashAndCashEquivalents',
-		'marketCap'
-	],
-	'Cash on hand': [
-		'country',
-		'sector',
-		'cashAndCashEquivalents',
-		'totalDebt',
-		'totalLiabilities',
-		'totalAssets',
-		'marketCap'
-	],
-	'Price to Book': ['country', 'sector', 'priceToBook', 'currentPrice', 'marketCap', 'totalAssets']
+	'Net Assets': ['country', 'totalShareholdersEquity', 'totalAssets', 'totalLiabilities', 'totalDebt', 'marketCap'],
+	'Total debt': ['country', 'totalDebt', 'totalLiabilities', 'totalAssets', 'cashAndCashEquivalents', 'marketCap'],
+	'Cash on hand': ['country', 'cashAndCashEquivalents', 'totalDebt', 'totalLiabilities', 'totalAssets', 'marketCap'],
+	'Price to Book': ['country', 'priceToBook', 'currentPrice', 'marketCap', 'totalAssets']
 }
 
 const PRESET_SORTING: Record<EquitiesPreset, SortingState> = {
@@ -682,233 +663,323 @@ function getPresetFromQuery(value?: string): EquitiesPreset {
 
 function buildPresetVisibility(preset: EquitiesPreset): VisibilityState {
 	const visible = new Set(PRESET_VISIBLE_COLUMNS[preset])
-	const visibility: VisibilityState = {}
+	const visibility: VisibilityState = { name: false, searchPriority: false }
 	for (const id of DATA_COLUMN_IDS) {
 		visibility[id] = visible.has(id)
 	}
 	return visibility
 }
 
-function getUniqueValues(companies: IEquitiesListCompanyRow[], key: 'country' | 'sector' | 'industry'): string[] {
-	const values = new Set<string>()
-	for (const company of companies) {
-		if (company[key]) values.add(company[key])
-	}
-	return Array.from(values).sort((a, b) => a.localeCompare(b))
+type EquitiesTableState = {
+	columnFilters: ColumnFiltersState
+	sorting: SortingState
+	columnVisibility: VisibilityState
+	pagination: PaginationState
+	searchValue: string
 }
 
-export function EquitiesOverview({ companies, updatedAt }: IEquitiesListPageProps) {
-	const router = useRouter()
-	const presetQueryValue = readSingleQueryValue(router.query.rankBy)
-	const activePreset = useMemo(() => getPresetFromQuery(presetQueryValue), [presetQueryValue])
-	const [showMorePresets, setShowMorePresets] = useState(() =>
-		EQUITIES_MORE_PRESETS.some((preset) => preset === activePreset)
-	)
-	const countryOptions = useMemo(() => getUniqueValues(companies, 'country'), [companies])
-	const sectorOptions = useMemo(() => getUniqueValues(companies, 'sector'), [companies])
-	const industryOptions = useMemo(() => getUniqueValues(companies, 'industry'), [companies])
-	const [selectedCountries, setSelectedCountries] = useState(countryOptions)
-	const [selectedSectors, setSelectedSectors] = useState(sectorOptions)
-	const [selectedIndustries, setSelectedIndustries] = useState(industryOptions)
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-	const [sorting, setSorting] = useState<SortingState>(PRESET_SORTING[activePreset])
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => buildPresetVisibility(activePreset))
-	const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE })
+function buildInitialTableState(preset: EquitiesPreset): EquitiesTableState {
+	return {
+		columnFilters: [],
+		sorting: PRESET_SORTING[preset],
+		columnVisibility: buildPresetVisibility(preset),
+		pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
+		searchValue: ''
+	}
+}
+
+function EquitiesRankingsTable({
+	preset,
+	companies,
+	filters,
+	onFiltersChange
+}: {
+	preset: EquitiesPreset
+	companies: IEquitiesListCompanyRow[]
+	filters: EquityActiveFilter[]
+	onFiltersChange: (filters: EquityActiveFilter[]) => void
+}) {
+	const [tableState, setTableState] = useState(() => buildInitialTableState(preset))
+	const { columnFilters, sorting, columnVisibility, pagination, searchValue } = tableState
+	const deferredSearchValue = useDeferredValue(searchValue)
+	const searchQuery = deferredSearchValue.trim()
+
 	const filteredCompanies = useMemo(() => {
-		if (selectedCountries.length === 0 || selectedSectors.length === 0 || selectedIndustries.length === 0) return []
+		const companiesForFilters = filterEquityCompanies(companies, filters)
+		const normalizedSearchQuery = searchQuery.toLowerCase()
+		if (normalizedSearchQuery) {
+			const tickerMatches: EquitiesTableCompanyRow[] = []
+			const companyMatches: EquitiesTableCompanyRow[] = []
 
-		const countries = new Set(selectedCountries)
-		const sectors = new Set(selectedSectors)
-		const industries = new Set(selectedIndustries)
-		const filtered: IEquitiesListCompanyRow[] = []
+			for (const company of companiesForFilters) {
+				if (company.ticker.toLowerCase().includes(normalizedSearchQuery)) {
+					tickerMatches.push({ ...company, searchPriority: 0 })
+				} else if (company.name.toLowerCase().includes(normalizedSearchQuery)) {
+					companyMatches.push({ ...company, searchPriority: 1 })
+				}
+			}
 
-		for (const company of companies) {
-			if (!countries.has(company.country)) continue
-			if (!sectors.has(company.sector)) continue
-			if (!industries.has(company.industry)) continue
-			filtered.push(company)
+			return tickerMatches.concat(companyMatches)
 		}
 
-		return filtered
-	}, [companies, selectedCountries, selectedSectors, selectedIndustries])
+		return companiesForFilters
+	}, [companies, filters, searchQuery])
+	const tableSorting = searchQuery
+		? [{ id: 'searchPriority', desc: false }, ...sorting.filter((sort) => sort.id !== 'searchPriority')]
+		: sorting
+	const tableColumnVisibility = useMemo(
+		() => applyEquityFilterColumnVisibility({ columnVisibility, filters }),
+		[columnVisibility, filters]
+	)
 
 	const table = useReactTable({
 		data: filteredCompanies,
 		columns,
 		state: {
-			sorting,
+			sorting: tableSorting,
 			columnFilters,
-			columnVisibility,
+			columnVisibility: tableColumnVisibility,
 			pagination
 		},
 		defaultColumn: {
 			sortUndefined: 'last'
 		},
 		enableSortingRemoval: false,
-		onSortingChange: (updater) => startTransition(() => setSorting(updater)),
-		onColumnFiltersChange: (updater) => startTransition(() => setColumnFilters(updater)),
-		onColumnVisibilityChange: (updater) => startTransition(() => setColumnVisibility(updater)),
-		onPaginationChange: (updater) => startTransition(() => setPagination(updater)),
+		onSortingChange: (updater) =>
+			startTransition(() =>
+				setTableState((state) => ({ ...state, sorting: functionalUpdate(updater, state.sorting) }))
+			),
+		onColumnFiltersChange: (updater) =>
+			startTransition(() =>
+				setTableState((state) => ({
+					...state,
+					columnFilters: functionalUpdate(updater, state.columnFilters)
+				}))
+			),
+		onColumnVisibilityChange: (updater) =>
+			startTransition(() =>
+				setTableState((state) => ({
+					...state,
+					columnVisibility: functionalUpdate(updater, state.columnVisibility)
+				}))
+			),
+		onPaginationChange: (updater) =>
+			startTransition(() =>
+				setTableState((state) => ({ ...state, pagination: functionalUpdate(updater, state.pagination) }))
+			),
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getPaginationRowModel: getPaginationRowModel()
 	})
-	const [searchValue, setSearchValue] = useTableSearch({ instance: table, columnToSearch: 'name' })
-
-	useEffect(() => {
-		startTransition(() => {
-			setSorting(PRESET_SORTING[activePreset])
-			setColumnVisibility(buildPresetVisibility(activePreset))
-			setColumnFilters([])
-			setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-			setSearchValue('')
-		})
-	}, [activePreset, setSearchValue])
 
 	const columnOptions = useMemo(() => {
+		const filterColumnIds = new Set<string>()
+		for (const filter of filters) {
+			filterColumnIds.add(filter.id)
+		}
+
 		const options: Array<{ key: string; name: string; help?: string }> = []
 		for (const column of columns) {
+			if (column.meta?.hidden) continue
 			const key = column.id ?? ('accessorKey' in column ? String(column.accessorKey) : '')
 			if (!key) continue
 			const name = typeof column.header === 'function' ? key : column.header != null ? String(column.header) : key
-			const help = column.meta?.headerHelperText ?? undefined
+			const help =
+				[
+					column.meta?.headerHelperText,
+					filterColumnIds.has(key) ? 'Visible while this column has an active filter.' : undefined
+				]
+					.filter(Boolean)
+					.join(' ') || undefined
 			options.push({ key, name, help })
 		}
 		return options
-	}, [])
+	}, [filters])
+
+	// The Columns picker reflects and edits the user's persisted intent, not the effective
+	// (filter-forced) visibility — so toggles here always persist and a filtered column shows
+	// unchecked even while it is force-shown in the table.
 	const selectedColumns: string[] = []
 	for (const column of table.getAllLeafColumns()) {
-		if (column.getIsVisible()) selectedColumns.push(column.id)
-	}
-	const setColumnOptions = (newOptions: string[] | ((prev: string[]) => string[])) => {
-		const resolvedOptions = typeof newOptions === 'function' ? newOptions(selectedColumns) : newOptions
-		const nextVisibility: VisibilityState = {}
-		for (const column of table.getAllLeafColumns()) {
-			nextVisibility[column.id] = resolvedOptions.includes(column.id)
-		}
-		table.setColumnVisibility(nextVisibility)
+		if (column.id === 'searchPriority') continue
+		if (columnVisibility[column.id] !== false) selectedColumns.push(column.id)
 	}
 
-	const setPreset = (preset: EquitiesPreset) => {
-		void pushShallowQuery(router, { rankBy: PRESET_QUERY_SLUGS[preset] })
+	const setColumnOptions = (newOptions: string[] | ((prev: string[]) => string[])) => {
+		const resolvedOptions = typeof newOptions === 'function' ? newOptions(selectedColumns) : newOptions
+		startTransition(() =>
+			setTableState((state) => {
+				const nextVisibility: VisibilityState = {}
+				for (const column of table.getAllLeafColumns()) {
+					nextVisibility[column.id] = resolvedOptions.includes(column.id)
+				}
+				return { ...state, columnVisibility: nextVisibility }
+			})
+		)
 	}
-	const isMorePresetActive = EQUITIES_MORE_PRESETS.some((preset) => preset === activePreset)
+
+	const setSearchValue = (value: string) => {
+		setTableState((state) => ({ ...state, searchValue: value }))
+	}
+
+	const setFiltersAndResetPage = (nextFilters: EquityActiveFilter[]) => {
+		setTableState((state) => {
+			const fallbackSorting = PRESET_SORTING[preset]
+			const shouldUpdateSorting = shouldUpdateEquityFilterDefaultSorting({
+				currentSorting: state.sorting,
+				previousFilters: filters,
+				fallbackSorting
+			})
+			return {
+				...state,
+				sorting: shouldUpdateSorting
+					? getEquityFilterDefaultSorting({ filters: nextFilters, fallbackSorting })
+					: state.sorting,
+				pagination: { ...state.pagination, pageIndex: 0 }
+			}
+		})
+		onFiltersChange(nextFilters)
+	}
+
+	return (
+		<div className="flex flex-col gap-3 rounded-md border border-(--cards-border) bg-(--cards-bg) p-3">
+			<div className="flex w-full flex-wrap items-center justify-end gap-3">
+				<h2 className="mr-auto text-lg font-semibold">Company Rankings</h2>
+				<label className="relative w-full max-w-full min-w-[280px] sm:max-w-[280px]">
+					<span className="sr-only">Search companies or tickers</span>
+					<Icon
+						name="search"
+						height={16}
+						width={16}
+						className="absolute top-0 bottom-0 left-2 my-auto text-(--text-tertiary)"
+					/>
+					<input
+						onInput={(event) => setSearchValue(event.currentTarget.value)}
+						placeholder="Search companies or tickers"
+						className="w-full rounded-md border border-(--form-control-border) bg-white p-1 pl-7 text-black dark:bg-black dark:text-white"
+					/>
+				</label>
+				<EquitiesFiltersDialog companies={companies} filters={filters} onFiltersChange={setFiltersAndResetPage} />
+				<SelectWithCombobox
+					allValues={columnOptions}
+					selectedValues={selectedColumns}
+					setSelectedValues={setColumnOptions}
+					nestedMenu={false}
+					label="Columns"
+					labelType="smol"
+					variant="filter-responsive"
+				/>
+				<CSVDownloadButton
+					prepareCsv={() => prepareTableCsv({ instance: table, filename: 'equities-rankings' })}
+					smol
+				/>
+			</div>
+			<EquityActiveFilterPills
+				filters={filters}
+				onRemove={(id) => setFiltersAndResetPage(filters.filter((f) => f.id !== id))}
+			/>
+			<PaginatedTable table={table} pageSizeOptions={PAGE_SIZE_OPTIONS} tableClassName="min-w-max!" />
+		</div>
+	)
+}
+
+export function EquitiesOverview({ companies, updatedAt }: IEquitiesListPageProps) {
+	const router = useRouter()
+	const selectedPreset = useMemo(
+		() => getPresetFromQuery(readSingleQueryValue(router.query.rankBy)),
+		[router.query.rankBy]
+	)
+	const [isMorePresetsManuallyOpen, setIsMorePresetsManuallyOpen] = useState(false)
+	const [filters, setFilters] = useState<EquityActiveFilter[]>([])
+
+	const selectPreset = useCallback(
+		(preset: EquitiesPreset) => {
+			if (preset === selectedPreset) return
+			void pushShallowQuery(router, { rankBy: PRESET_QUERY_SLUGS[preset] })
+		},
+		[router, selectedPreset]
+	)
+
+	const isMorePresetActive = EQUITIES_MORE_PRESETS.some((preset) => preset === selectedPreset)
+	const showMorePresets = isMorePresetActive || isMorePresetsManuallyOpen
+
+	const presetButtonClassName =
+		'rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg) data-[active=true]:bg-(--old-blue) data-[active=true]:text-white'
+
+	const renderPreset = (preset: EquitiesPreset) => (
+		<button
+			key={preset}
+			type="button"
+			aria-current={preset === selectedPreset ? 'page' : undefined}
+			data-active={preset === selectedPreset}
+			data-umami-event="equities-preset-click"
+			data-umami-event-preset={PRESET_QUERY_SLUGS[preset] ?? 'market-cap'}
+			className={presetButtonClassName}
+			onClick={() => selectPreset(preset)}
+		>
+			{preset}
+		</button>
+	)
 
 	return (
 		<div className="flex flex-col gap-2">
-			<div className="flex flex-wrap items-center justify-center gap-2">
+			{/* Mobile: collapsible drawer toggled purely by the native <details> element */}
+			<details className="group rounded-xl border border-(--cards-border) bg-(--cards-bg) sm:hidden">
+				<summary className="flex items-center gap-2 px-3 py-2.5">
+					<span className="text-sm font-medium text-(--text-secondary)">Rank by</span>
+					<span className="ml-auto text-sm font-medium text-(--text-primary)">{selectedPreset}</span>
+					<Icon
+						name="chevron-down"
+						height={16}
+						width={16}
+						className="shrink-0 text-(--text-tertiary) transition-transform duration-200 group-open:rotate-180"
+					/>
+				</summary>
+				<div className="flex flex-wrap gap-2 border-t border-(--cards-border) p-3">
+					{EQUITIES_PRESETS.map(renderPreset)}
+				</div>
+			</details>
+
+			{/* Desktop: inline chips with a +More toggle */}
+			<div className="hidden flex-wrap items-center justify-center gap-2 sm:flex">
 				<span className="text-sm font-medium text-(--text-secondary)">Rank by</span>
-				{EQUITIES_PRIMARY_PRESETS.map((preset) => (
-					<button
-						key={preset}
-						data-active={preset === activePreset}
-						data-umami-event="equities-preset-click"
-						data-umami-event-preset={PRESET_QUERY_SLUGS[preset] ?? 'market-cap'}
-						onClick={() => startTransition(() => setPreset(preset))}
-						className="rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg) data-[active=true]:bg-(--old-blue) data-[active=true]:text-white"
-					>
-						{preset}
-					</button>
-				))}
+				{EQUITIES_PRIMARY_PRESETS.map(renderPreset)}
 				{showMorePresets ? (
 					<>
-						{EQUITIES_MORE_PRESETS.map((preset) => (
+						{EQUITIES_MORE_PRESETS.map(renderPreset)}
+						{isMorePresetsManuallyOpen && !isMorePresetActive ? (
 							<button
-								key={preset}
-								data-active={preset === activePreset}
-								data-umami-event="equities-preset-click"
-								data-umami-event-preset={PRESET_QUERY_SLUGS[preset]}
-								onClick={() => startTransition(() => setPreset(preset))}
-								className="rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg) data-[active=true]:bg-(--old-blue) data-[active=true]:text-white"
+								type="button"
+								aria-expanded={true}
+								onClick={() => setIsMorePresetsManuallyOpen(false)}
+								className="flex items-center gap-1 rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg)"
 							>
-								{preset}
+								<Icon name="minus" height={12} width={12} />
+								Less
 							</button>
-						))}
-						<button
-							type="button"
-							aria-expanded={true}
-							onClick={() => setShowMorePresets(false)}
-							className="flex items-center gap-1 rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg)"
-						>
-							<Icon name="minus" height={12} width={12} />
-							Less
-						</button>
+						) : null}
 					</>
 				) : (
 					<button
 						type="button"
 						aria-expanded={false}
 						data-active={isMorePresetActive}
-						onClick={() => setShowMorePresets(true)}
-						className="rounded-full border border-(--old-blue) px-3 py-1 text-xs hover:bg-(--link-hover-bg) data-[active=true]:bg-(--old-blue) data-[active=true]:text-white"
+						onClick={() => setIsMorePresetsManuallyOpen(true)}
+						className={presetButtonClassName}
 					>
 						+ More
 					</button>
 				)}
 			</div>
 
-			<div className="flex flex-col gap-3 rounded-md border border-(--cards-border) bg-(--cards-bg) p-3">
-				<div className="flex w-full flex-wrap items-center justify-end gap-3">
-					<h2 className="mr-auto text-lg font-semibold">Company Rankings</h2>
-					<label className="relative w-full max-w-full sm:max-w-[280px]">
-						<span className="sr-only">Search companies or tickers</span>
-						<Icon
-							name="search"
-							height={16}
-							width={16}
-							className="absolute top-0 bottom-0 left-2 my-auto text-(--text-tertiary)"
-						/>
-						<input
-							value={searchValue}
-							onInput={(event) => setSearchValue(event.currentTarget.value)}
-							placeholder="Search companies or tickers"
-							className="w-full rounded-md border border-(--form-control-border) bg-white p-1 pl-7 text-black dark:bg-black dark:text-white"
-						/>
-					</label>
-					<SelectWithCombobox
-						allValues={columnOptions}
-						selectedValues={selectedColumns}
-						setSelectedValues={setColumnOptions}
-						nestedMenu={false}
-						label="Columns"
-						labelType="smol"
-						variant="filter-responsive"
-					/>
-					<SelectWithCombobox
-						allValues={countryOptions}
-						selectedValues={selectedCountries}
-						setSelectedValues={setSelectedCountries}
-						nestedMenu={false}
-						label="Country"
-						labelType="smol"
-						variant="filter-responsive"
-					/>
-					<SelectWithCombobox
-						allValues={sectorOptions}
-						selectedValues={selectedSectors}
-						setSelectedValues={setSelectedSectors}
-						nestedMenu={false}
-						label="Sector"
-						labelType="smol"
-						variant="filter-responsive"
-					/>
-					<SelectWithCombobox
-						allValues={industryOptions}
-						selectedValues={selectedIndustries}
-						setSelectedValues={setSelectedIndustries}
-						nestedMenu={false}
-						label="Industry"
-						labelType="smol"
-						variant="filter-responsive"
-					/>
-					<CSVDownloadButton
-						prepareCsv={() => prepareTableCsv({ instance: table, filename: 'equities-rankings' })}
-						smol
-					/>
-				</div>
-				<PaginatedTable table={table} pageSizeOptions={PAGE_SIZE_OPTIONS} />
-			</div>
+			<EquitiesRankingsTable
+				key={selectedPreset}
+				preset={selectedPreset}
+				companies={companies}
+				filters={filters}
+				onFiltersChange={setFilters}
+			/>
 
 			<p className="px-1 text-xs text-(--text-disabled)">
 				Market and statements data provided by{' '}

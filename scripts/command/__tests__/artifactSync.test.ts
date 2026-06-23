@@ -49,7 +49,7 @@ describe('artifact sync adapter', () => {
 		expect(runCommand).not.toHaveBeenCalled()
 	})
 
-	it('runs upload and download commands for successful builds', async () => {
+	it('uploads static artifacts for successful builds', async () => {
 		const runCommand = vi.fn().mockResolvedValue({ exitCode: 0, signal: null, stdoutTail: '' })
 
 		const result = await syncBuildArtifacts({
@@ -60,7 +60,12 @@ describe('artifact sync adapter', () => {
 		})
 
 		expect(result).toEqual({ status: 'success' })
-		expect(runCommand).toHaveBeenCalledTimes(2)
+		expect(runCommand).toHaveBeenCalledOnce()
+		expect(runCommand).toHaveBeenCalledWith(
+			'rclone',
+			['--config', 'scripts/rclone.conf', 'copy', '.next/static', 'artifacts:defillama-app-artifacts'],
+			expect.objectContaining({ env: artifactSyncEnv })
+		)
 	})
 
 	it('returns a failed result when rclone fails', async () => {

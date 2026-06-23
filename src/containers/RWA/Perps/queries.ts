@@ -1,5 +1,5 @@
 import { ensureChronologicalRows } from '~/components/ECharts/utils'
-import { rwaSlug } from '~/containers/RWA/rwaSlug'
+import { findByRwaSlug, rwaSlug } from '~/containers/RWA/rwaSlug'
 import { getPercentChange } from '~/utils'
 import { buildRwaChartDatasetTotal, type RWAChartDataset } from '../chartDataset'
 import {
@@ -530,7 +530,7 @@ export async function getRWAPerpsVenuePage({
 	const [list, stats] = await Promise.all([fetchRWAPerpsList(), fetchRWAPerpsStats()])
 	if (!list || !stats) return null
 
-	const resolvedVenue = list.venues.find((item) => rwaSlug(item) === rwaSlug(venue))
+	const resolvedVenue = findByRwaSlug(venue, list.venues)
 	if (!resolvedVenue) return null
 
 	const venueResponse = await fetchRWAPerpsMarketsByVenue(resolvedVenue).catch(() => null)
@@ -603,7 +603,7 @@ export async function getRWAPerpsAssetGroupPage({
 	const [list, stats] = await Promise.all([fetchRWAPerpsList(), fetchRWAPerpsStats()])
 	if (!list || !stats) return null
 
-	const resolvedAssetGroup = list.assetGroups.find((item) => rwaSlug(item) === rwaSlug(assetGroup))
+	const resolvedAssetGroup = findByRwaSlug(assetGroup, list.assetGroups)
 	if (!resolvedAssetGroup) return null
 
 	const markets = await fetchRWAPerpsMarketsByAssetGroup(resolvedAssetGroup).catch(() => null)

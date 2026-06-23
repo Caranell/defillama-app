@@ -124,7 +124,7 @@ const bridgesColumn = [
 	columnHelper.accessor('txsPrevDay', {
 		header: '24h # of Txs',
 		meta: {
-			headerClassName: 'w-[120px]',
+			headerClassName: 'w-[124px]',
 			align: 'end'
 		}
 	})

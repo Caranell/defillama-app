@@ -7,6 +7,7 @@ import type { IProtocolOverviewPageData } from '~/containers/ProtocolOverview/ty
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { createRoutePhaseTimer, withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 import { addRouteTelemetryAttributes } from '~/utils/telemetry'
 
 export const getStaticProps = withPerformanceLogging(
@@ -25,15 +26,28 @@ export const getStaticProps = withPerformanceLogging(
 				addRouteTelemetryAttributes({ not_found_reason: 'invalid_protocol_param', protocol_slug: normalizedName })
 				return { notFound: true }
 			}
-			const [{ default: metadataCache }, { resolveProtocolParamFromMetadata }] = await phaseTimer.time(
-				'metadata_and_routes_import',
-				() => Promise.all([import('~/utils/metadata'), import('~/containers/ProtocolOverview/server/routes')])
-			)
+			const [{ default: metadataCache }, { resolveProtocolParamFromMetadata }, { resolveCexParamFromMetadata }] =
+				await phaseTimer.time('metadata_and_routes_import', () =>
+					Promise.all([
+						import('~/utils/metadata'),
+						import('~/containers/ProtocolOverview/server/routes'),
+						import('~/containers/Cexs/server/routes')
+					])
+				)
+			const cexRoute = resolveCexParamFromMetadata(protocol, metadataCache)
+			if (cexRoute) {
+				return canonicalRouteRedirect(`/cex/${cexRoute.canonicalSlug}`, true)
+			}
+
 			const protocolRoute = resolveProtocolParamFromMetadata(protocol, metadataCache)
 
 			if (!protocolRoute) {
 				addRouteTelemetryAttributes({ not_found_reason: 'unknown_protocol_slug', protocol_slug: normalizedName })
 				return { notFound: true }
+			}
+
+			if (protocol !== protocolRoute.canonicalSlug) {
+				return canonicalRouteRedirect(`/protocol/${protocolRoute.canonicalSlug}`)
 			}
 
 			const data = await phaseTimer.time('protocol_overview_data', () =>

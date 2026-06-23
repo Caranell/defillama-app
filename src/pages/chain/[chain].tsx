@@ -9,6 +9,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { createRoutePhaseTimer, withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const pageName = ['Overview']
 
@@ -35,6 +36,9 @@ export const getStaticProps = withPerformanceLogging('chain/[chain]', async ({ p
 		])
 		const isAllChain = chain.toLowerCase() === 'all'
 		const chainRoute = isAllChain ? null : resolveChainParamFromMetadata(chain, metadataCache)
+		if (chainRoute && chain !== chainRoute.canonicalSlug) {
+			return canonicalRouteRedirect(`/chain/${chainRoute.canonicalSlug}`)
+		}
 		const normalizedChain = isAllChain ? 'All' : chainRoute?.canonicalName
 
 		if (!normalizedChain) {

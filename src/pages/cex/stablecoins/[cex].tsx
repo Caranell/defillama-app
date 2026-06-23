@@ -22,6 +22,7 @@ import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { formattedNum, slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const MultiSeriesChart2 = React.lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
 
@@ -37,17 +38,21 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const exchangeName = params.cex
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const cexs = metadataCache.cexs
-
-		const exchangeData = cexs.find((cex) => cex.slug && cex.slug.toLowerCase() === exchangeName.toLowerCase())
-		if (!exchangeData) {
+		const [{ default: metadataCache }, { resolveCexParamFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/Cexs/server/routes')
+		])
+		const cexRoute = resolveCexParamFromMetadata(exchangeName, metadataCache)
+		if (!cexRoute) {
 			return {
 				notFound: true
 			}
 		}
+		if (exchangeName !== cexRoute.canonicalSlug) {
+			return canonicalRouteRedirect(`/cex/stablecoins/${cexRoute.canonicalSlug}`, true)
+		}
 
-		const protocolData = await fetchProtocolOverviewMetrics(exchangeName)
+		const protocolData = await fetchProtocolOverviewMetrics(cexRoute.canonicalSlug)
 
 		if (!protocolData) {
 			return { notFound: true }
@@ -59,8 +64,8 @@ export const getStaticProps = withPerformanceLogging(
 				otherProtocols: protocolData.otherProtocols ?? EMPTY_OTHER_PROTOCOLS,
 				category: protocolData.category ?? null,
 				metrics: {
-					stablecoins: true,
-					tvl: true,
+					stablecoins: Boolean(cexRoute.metadata.stablecoins),
+					tvl: Boolean(cexRoute.metadata.tvl),
 					dexs: false,
 					perps: false,
 					openInterest: false,

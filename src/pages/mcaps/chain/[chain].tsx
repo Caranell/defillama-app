@@ -6,6 +6,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export const getStaticPaths = () => {
 	// When this is true (in preview environments) don't
@@ -25,13 +26,19 @@ export const getStaticProps = withPerformanceLogging(
 	`protocols-market-caps/chain/[chain]`,
 	async ({ params }: GetStaticPropsContext<{ chain: string }>) => {
 		const chain = slug(params.chain)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		if (!metadataCache.chainMetadata[chain]) {
+		const [{ default: metadataCache }, { getChainRouteRedirectDestination, resolveChainParamFromMetadata }] =
+			await Promise.all([import('~/utils/metadata'), import('~/containers/ChainOverview/server/routes')])
+		const chainRoute = resolveChainParamFromMetadata(params.chain, metadataCache)
+		if (!chainRoute) {
 			return { notFound: true }
+		}
+		const redirectDestination = getChainRouteRedirectDestination(params.chain, chainRoute, 'mcaps/chain')
+		if (redirectDestination) {
+			return canonicalRouteRedirect(redirectDestination)
 		}
 
 		const data = await getProtocolsMarketCapsByChain({
-			chain: metadataCache.chainMetadata[chain].name,
+			chain: chainRoute.canonicalName,
 			protocolMetadata: metadataCache.protocolMetadata
 		})
 

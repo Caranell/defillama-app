@@ -12,7 +12,6 @@ import type { ParentProtocolLite, ProtocolLite, ProtocolsResponse } from '~/cont
 import { TVL_SETTINGS_KEYS, TVL_SETTINGS_KEYS_SET } from '~/contexts/LocalStorage'
 import { getNDistinctColors, getPercentChange, slug } from '~/utils'
 import { fetchJson } from '~/utils/async'
-import { tokenIconUrl } from '~/utils/icons'
 import type { ICategoriesAndTags, ICategoriesAndTagsConfig, IChainMetadata } from '~/utils/metadata/types'
 import { fetchCategoriesSummary, fetchCategoryChart, fetchTagChart } from './api'
 import {
@@ -772,7 +771,7 @@ export async function getProtocolTaxonomyPageData(
 		const finalData: ProtocolTableRow = {
 			name: protocol.name,
 			slug: slug(protocol.name),
-			logo: protocol.logo || tokenIconUrl(protocol.name),
+			logo: protocol.logo,
 			chains: Array.from(new Set([...(adapterProtocolData?.chains ?? []), ...protocol.chains])),
 			tvl,
 			extraTvls,
@@ -864,7 +863,7 @@ export async function getProtocolTaxonomyPageData(
 		finalProtocols.push({
 			name: parentProtocol.name,
 			slug: slug(parentProtocol.name),
-			logo: parentProtocol.logo || tokenIconUrl(parentProtocol.name),
+			logo: parentProtocol.logo ?? '',
 			chains: parentProtocol.chains,
 			mcap: parentProtocol.mcap ?? null,
 			tvl,

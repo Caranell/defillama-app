@@ -233,7 +233,7 @@ const protocolsColumns = [
 
 					<span className="vf-row-index shrink-0" aria-hidden="true" />
 
-					<TokenLogo name={value} kind="token" data-lgonly alt={`Logo of ${value}`} />
+					<TokenLogo src={row.original.logo} data-lgonly alt={`Logo of ${value}`} />
 
 					<span className="-my-2 flex flex-col">
 						{row.original?.deprecated ? (

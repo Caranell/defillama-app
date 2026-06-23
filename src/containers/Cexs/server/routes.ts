@@ -1,11 +1,13 @@
 import { getMetadataCache, type StaticParamPath } from '~/server/routeRegistry/common'
 import { slug } from '~/utils'
 import type { MetadataCache } from '~/utils/metadata/artifactContract'
-import type { ICexItem } from '~/utils/metadata/types'
+import type { ICexItem, IProtocolMetadata } from '~/utils/metadata/types'
 import { getCexMarketSlugsFromCache } from './routeData'
 
 export type CexRoute = {
-	metadata: ICexItem
+	id: string
+	metadata: IProtocolMetadata
+	cexMetadata?: ICexItem
 	canonicalSlug: string
 }
 
@@ -13,51 +15,48 @@ export function resolveCexParamFromMetadata(cex: string, metadataCache: Metadata
 	const normalizedCex = slug(cex)
 	if (!normalizedCex) return null
 
-	for (const metadata of metadataCache.cexs) {
-		const cexSlug = metadata.slug ? slug(metadata.slug) : ''
-		if (cexSlug && (cexSlug === normalizedCex || slug(metadata.name) === normalizedCex)) {
-			return {
-				metadata,
-				canonicalSlug: cexSlug
-			}
-		}
+	const protocolId = metadataCache.cexRouteIdBySlug[normalizedCex]
+	if (!protocolId) return null
+
+	const metadata = metadataCache.protocolMetadata[protocolId]
+	const canonicalSlug = slug(metadata.name)
+	return {
+		id: protocolId,
+		metadata,
+		cexMetadata: metadataCache.cexMetadataBySlug[canonicalSlug],
+		canonicalSlug
 	}
-
-	return null
 }
 
-export async function resolveCexParam(cex: string): Promise<CexRoute | null> {
-	return resolveCexParamFromMetadata(cex, await getMetadataCache())
-}
-
-export function getCexSlugsFromMetadata(metadataCache: MetadataCache): string[] {
+export function getCanonicalCexSlugsFromMetadata(metadataCache: MetadataCache): string[] {
 	const slugs = new Set<string>()
-	for (const cex of metadataCache.cexs) {
-		if (!cex.slug) continue
-		slugs.add(slug(cex.slug))
+	for (const protocolId in metadataCache.protocolMetadata) {
+		const metadata = metadataCache.protocolMetadata[protocolId]
+		if (!metadata.cex || !metadata.name) continue
+		slugs.add(slug(metadata.name))
 	}
 	return [...slugs]
 }
 
 export async function getCexStaticPaths(limit = 10): Promise<Array<StaticParamPath<'cex'>>> {
-	return getCexSlugsFromMetadata(await getMetadataCache())
+	return getCanonicalCexSlugsFromMetadata(await getMetadataCache())
 		.slice(0, limit)
 		.map((cex) => ({ params: { cex } }))
 }
 
 export async function getCexSitemapRoutes(metadataCache: MetadataCache): Promise<string[]> {
-	const routes: string[] = []
-	const cexSlugs = getCexSlugsFromMetadata(metadataCache)
+	const routes = new Set<string>()
+	const cexSlugs = getCanonicalCexSlugsFromMetadata(metadataCache)
 
 	for (const cexSlug of cexSlugs) {
-		routes.push(`cex/${cexSlug}`)
-		routes.push(`cex/assets/${cexSlug}`)
-		routes.push(`cex/stablecoins/${cexSlug}`)
+		routes.add(`cex/${cexSlug}`)
+		routes.add(`cex/assets/${cexSlug}`)
+		routes.add(`cex/stablecoins/${cexSlug}`)
 	}
 
 	for (const cexSlug of await getCexMarketSlugsFromCache()) {
-		routes.push(`cex/markets/${cexSlug}`)
+		routes.add(`cex/markets/${resolveCexParamFromMetadata(cexSlug, metadataCache)?.canonicalSlug ?? cexSlug}`)
 	}
 
-	return routes
+	return [...routes]
 }

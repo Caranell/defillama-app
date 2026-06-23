@@ -72,7 +72,7 @@ function PinnedPageRow({ page }: { page: TNavLink }) {
 				<div className="flex min-w-0 flex-1 items-center gap-2">
 					<button
 						type="button"
-						className="flex size-7 items-center justify-center rounded-md text-(--text-tertiary) hover:bg-black/5 focus-visible:bg-black/5 dark:hover:bg-white/10 dark:focus-visible:bg-white/10"
+						className="flex size-7 touch-none items-center justify-center rounded-md text-(--text-tertiary) hover:bg-black/5 focus-visible:bg-black/5 dark:hover:bg-white/10 dark:focus-visible:bg-white/10"
 						aria-label={`Drag ${page.name}`}
 						{...attributes}
 						{...listeners}

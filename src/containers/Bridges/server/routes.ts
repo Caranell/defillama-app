@@ -4,7 +4,7 @@ import type { MetadataCache } from '~/utils/metadata/artifactContract'
 export function resolveBridgeProtocolParamFromMetadata(bridge: string, metadataCache: MetadataCache): string | null {
 	const bridgeSlug = slug(bridge)
 	if (!bridgeSlug) return null
-	return metadataCache.bridgeProtocolSlugs.includes(bridgeSlug) ? bridgeSlug : null
+	return metadataCache.bridgeProtocolSlugsSet.has(bridgeSlug) ? bridgeSlug : null
 }
 export function getBridgeRoutesFromMetadata(metadataCache: MetadataCache): string[] {
 	const routes: string[] = []

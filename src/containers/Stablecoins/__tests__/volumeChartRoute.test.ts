@@ -11,6 +11,10 @@ const { fetchGlobalMock, fetchChainMock, fetchTokenMock } = vi.hoisted(() => ({
 vi.mock('~/utils/metadata', () => ({
 	__esModule: true,
 	default: {
+		chainRouteKeyBySlug: {
+			ethereum: 'ethereum',
+			'zksync-era': 'zksync-era'
+		},
 		chainMetadata: {
 			'zksync-era': { name: 'zkSync Era', id: 'era' },
 			ethereum: { name: 'Ethereum', id: 'ethereum' }

@@ -1,92 +1,161 @@
 import * as Ariakit from '@ariakit/react'
+import { useCallback, useState } from 'react'
 import { Icon } from '~/components/Icon'
+import { useSubscribe } from '~/containers/Subscription/useSubscribe'
 
-const BENEFITS = [
-	'Full CSV download access',
-	'5 deep research questions per day (instead of 3)',
+const DEFAULT_BENEFITS = [
+	'Unlimited CSV downloads',
+	'Unlimited AI questions',
+	'5 deep research questions per day',
 	'All Pro features without limitations'
 ]
 
 interface EndTrialModalProps {
 	isOpen: boolean
 	onClose: () => void
-	onConfirm: () => void
-	isLoading: boolean
+	title?: string
+	description?: string
+	benefitsTitle?: string
+	benefits?: string[]
+	confirmLabel?: string
+	secondaryHref?: string
+	secondaryLabel?: string
+	/** When provided, the parent owns the upgrade action + loading state. When omitted, the modal self-calls endTrialSubscription() and shows its own success state. */
+	onConfirm?: () => void
+	isLoading?: boolean
 }
 
-export function EndTrialModal({ isOpen, onClose, onConfirm, isLoading }: EndTrialModalProps) {
-	return (
-		<Ariakit.DialogProvider open={isOpen} setOpen={(open) => !open && !isLoading && onClose()}>
-			<Ariakit.Dialog
-				backdrop={<div className="bg-black/80" />}
-				className="dialog max-h-[90vh] min-h-0 gap-0 overflow-y-auto rounded-2xl border-0 p-0 md:max-w-[380px]"
-				portal
-				unmountOnHide
-			>
-				<div className="flex flex-col gap-5 px-5 py-6">
-					{/* Header */}
-					<div className="flex items-center justify-between">
-						<h3 className="text-xl leading-7 font-semibold text-(--sub-ink-primary) dark:text-white">
-							Upgrade to Full Access
-						</h3>
-						<Ariakit.DialogDismiss
-							disabled={isLoading}
-							className="rounded-full p-1 text-(--sub-ink-primary) transition-colors disabled:opacity-50 dark:text-white"
-						>
-							<Icon name="x" height={24} width={24} />
-						</Ariakit.DialogDismiss>
-					</div>
+export function EndTrialModal({
+	isOpen,
+	onClose,
+	title = 'Upgrade to Full Access',
+	description,
+	benefitsTitle = 'Benefits of converting now:',
+	benefits = DEFAULT_BENEFITS,
+	confirmLabel = 'Confirm & Upgrade Now',
+	secondaryHref,
+	secondaryLabel,
+	onConfirm,
+	isLoading: externalLoading
+}: EndTrialModalProps) {
+	const selfHandled = !onConfirm
+	const { endTrialSubscription, isEndTrialLoading } = useSubscribe()
+	const [upgraded, setUpgraded] = useState(false)
 
-					{/* Warning */}
-					<div className="flex items-start gap-2 rounded-xl border border-sub-warning-border-light bg-sub-warning-bg/10 p-3 dark:border-sub-warning-border-dark">
-						<Icon
-							name="alert-warning"
-							height={20}
-							width={20}
-							className="mt-0.5 shrink-0 text-sub-warning-text-light dark:text-sub-warning-text-dark"
-						/>
-						<div className="flex flex-col gap-1">
-							<p className="text-xs font-semibold text-sub-warning-text-light dark:text-sub-warning-text-dark">
-								This is NOT a subscription cancellation
-							</p>
-							<p className="text-xs leading-4 text-(--sub-text-muted)">
-								By proceeding, you will end your free trial early and convert to a paid subscription immediately. You'll
-								be charged the full amount ($49/month).
+	const isLoading = selfHandled ? isEndTrialLoading : !!externalLoading
+
+	const handleConfirm = useCallback(async () => {
+		if (onConfirm) {
+			onConfirm()
+			return
+		}
+		try {
+			await endTrialSubscription()
+			setUpgraded(true)
+		} catch (error) {
+			console.error('Failed to upgrade:', error)
+		}
+	}, [onConfirm, endTrialSubscription])
+
+	const handleClose = useCallback(() => {
+		setUpgraded(false)
+		onClose()
+	}, [onClose])
+
+	return (
+		<Ariakit.Dialog
+			open={isOpen}
+			onClose={() => {
+				if (!isLoading) handleClose()
+			}}
+			className="dialog flex max-h-[90dvh] max-w-md flex-col gap-4 overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 text-gray-900 shadow-2xl max-sm:drawer max-sm:rounded-b-none dark:border-[#39393E] dark:bg-[#1a1b1f] dark:text-white"
+			portal
+			unmountOnHide
+		>
+			<div className="flex items-center justify-between">
+				<h3 className="text-xl font-bold">{upgraded ? 'Upgrade Successful' : title}</h3>
+				<button
+					onClick={handleClose}
+					className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-[#8a8c90] dark:hover:bg-[#39393E] dark:hover:text-white"
+				>
+					<Icon name="x" height={18} width={18} />
+				</button>
+			</div>
+
+			{upgraded ? (
+				<>
+					<div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4">
+						<div className="flex items-start gap-3">
+							<Icon name="check" height={20} width={20} className="mt-0.5 shrink-0 text-green-500" />
+							<p className="text-sm text-gray-600 dark:text-[#c5c5c5]">
+								Please wait a few minutes and refresh the page after upgrading, the upgrade might take a few minutes to
+								apply.
 							</p>
 						</div>
 					</div>
+					<button
+						onClick={handleClose}
+						className="w-full rounded-lg bg-(--sub-brand-primary) px-4 py-3 font-medium text-white transition-colors hover:bg-(--sub-brand-primary)/90"
+					>
+						Close
+					</button>
+				</>
+			) : (
+				<>
+					{description ? <p className="text-sm text-gray-500 dark:text-[#8a8c90]">{description}</p> : null}
 
 					{/* Benefits */}
-					<div className="flex flex-col gap-2">
-						<p className="text-xs text-(--sub-text-muted)">Benefits of converting now:</p>
-						<ul className="flex flex-col gap-1.5">
-							{BENEFITS.map((b) => (
+					<div className="mt-2 flex flex-col gap-2">
+						<p className="text-sm text-gray-500 dark:text-[#8a8c90]">{benefitsTitle}</p>
+						<ul className="flex flex-col gap-1 text-sm">
+							{benefits.map((b) => (
 								<li key={b} className="flex items-center gap-2">
-									<Icon name="check" height={14} width={14} className="shrink-0 text-(--sub-brand-primary)" />
-									<span className="text-xs text-(--sub-ink-primary) dark:text-white">{b}</span>
+									<Icon name="check" height={14} width={14} className="shrink-0 text-green-500 dark:text-green-400" />
+									<span>{b}</span>
 								</li>
 							))}
 						</ul>
 					</div>
 
-					{/* Actions */}
-					<div className="flex flex-col gap-2">
-						<button
-							onClick={onConfirm}
-							disabled={isLoading}
-							className="flex h-10 w-full items-center justify-center rounded-lg bg-(--sub-brand-primary) text-sm font-medium text-white disabled:opacity-50"
-						>
-							{isLoading ? 'Processing...' : 'Confirm & Upgrade Now'}
-						</button>
-						<Ariakit.DialogDismiss
-							disabled={isLoading}
-							className="flex h-10 w-full items-center justify-center rounded-lg border border-(--sub-border-muted) text-sm text-(--sub-text-muted) disabled:opacity-50 dark:border-(--sub-border-strong)"
-						>
-							Close
-						</Ariakit.DialogDismiss>
+					{/* Warning — single source of truth for the instant-charge disclosure */}
+					<div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+						<div className="flex items-start gap-3">
+							<Icon name="alert-triangle" height={20} width={20} className="mt-0.5 shrink-0 text-yellow-500" />
+							<p className="text-sm text-gray-600 dark:text-[#c5c5c5]">
+								By upgrading, you will end your free trial early and be charged the full subscription amount ($49/month)
+								immediately.
+							</p>
+						</div>
 					</div>
-				</div>
-			</Ariakit.Dialog>
-		</Ariakit.DialogProvider>
+
+					{/* Actions */}
+					<div className="mt-2 flex flex-col gap-3">
+						<button
+							onClick={() => void handleConfirm()}
+							disabled={isLoading}
+							className="w-full rounded-lg bg-(--sub-brand-primary) px-4 py-3 font-medium text-white transition-colors hover:bg-(--sub-brand-primary)/90 disabled:cursor-not-allowed disabled:opacity-70"
+						>
+							{isLoading ? 'Processing...' : confirmLabel}
+						</button>
+						{secondaryHref ? (
+							<a
+								href={secondaryHref}
+								className="w-full rounded-lg border border-gray-200 px-4 py-2 text-center text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:border-[#39393E] dark:text-[#8a8c90] dark:hover:bg-[#2a2b30] dark:hover:text-white"
+							>
+								{secondaryLabel ?? 'View all plans'}
+							</a>
+						) : (
+							<button
+								onClick={handleClose}
+								disabled={isLoading}
+								className="w-full rounded-lg border border-gray-200 px-4 py-2 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#39393E] dark:text-[#8a8c90] dark:hover:bg-[#2a2b30] dark:hover:text-white"
+							>
+								{secondaryLabel ?? 'Close'}
+							</button>
+						)}
+					</div>
+				</>
+			)}
+		</Ariakit.Dialog>
 	)
 }

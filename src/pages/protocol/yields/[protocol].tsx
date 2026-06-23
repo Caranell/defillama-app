@@ -24,11 +24,10 @@ import { useHolderStats, useVolatility } from '~/containers/Yields/queries.clien
 import { clearYieldsQueries, hasActiveYieldsQueries } from '~/containers/Yields/queryState'
 import { YieldsPoolsTable } from '~/containers/Yields/Tables/Pools'
 import type { IYieldTableRow } from '~/containers/Yields/Tables/types'
-import { slug } from '~/utils'
 import { sluggifyProtocol } from '~/utils/cache-client'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
-import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 import { pushShallowQuery } from '~/utils/routerQuery'
 
 const EMPTY_TOGGLE_OPTIONS = []
@@ -40,28 +39,32 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 		const { protocol } = params
-		const normalizedName = slug(protocol)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const { protocolMetadata } = metadataCache
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata || !metadata[1].yields) {
+		const [{ default: metadataCache }, { resolveProtocolFeatureRouteFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
+		const protocolRoute = resolveProtocolFeatureRouteFromMetadata({
+			hasMetric: (metadata) => Boolean(metadata.yields),
+			metadataCache,
+			protocol,
+			routePrefix: 'protocol/yields'
+		})
+		if (!protocolRoute) {
 			return { notFound: true }
 		}
+		if (protocolRoute.type === 'redirect') {
+			return canonicalRouteRedirect(protocolRoute.destination)
+		}
+		const metadata = protocolRoute.route.metadata
+		const canonicalProtocol = protocolRoute.route.canonicalSlug
 
-		const protocolData = await fetchProtocolOverviewMetrics(protocol)
+		const protocolData = await fetchProtocolOverviewMetrics(canonicalProtocol)
 
 		if (!protocolData) {
 			return { notFound: true }
 		}
 
-		const metrics = getProtocolMetricFlags({ protocolData, metadata: metadata[1] })
+		const metrics = getProtocolMetricFlags({ protocolData, metadata })
 		const seoTitle = `${protocolData.name} Yield Pools & APY Rankings - DefiLlama`
 		const seoDescription = `Explore ${protocolData.name} yield pools, APY rankings, and liquidity farming opportunities across chains on DefiLlama.`
 		const protocolSlug = sluggifyProtocol(protocolData.name)

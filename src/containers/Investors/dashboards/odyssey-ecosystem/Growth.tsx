@@ -65,7 +65,6 @@ export default function Growth() {
 	const k = data?.kpis ?? ({} as Partial<NonNullable<typeof data>['kpis']>)
 	const loopr = data?.loopr
 	const cs = data?.caseStudies ?? ({} as Partial<NonNullable<typeof data>['caseStudies']>)
-	const csk = cs.kpis ?? ({} as Partial<NonNullable<typeof cs.kpis>>)
 
 	const [spendVenue, setSpendVenue] = useState('aerodrome')
 
@@ -113,24 +112,6 @@ export default function Growth() {
 			}))
 		: undefined
 
-	const siusdVsIusd = cs.siusdVsIusd
-		? chartToTs(cs.siusdVsIusd).map((s, i) => ({
-				name: s.name,
-				type: 'line' as const,
-				color: i === 0 ? '#6366f1' : '#fb923c',
-				data: s.data
-			}))
-		: undefined
-
-	const siusdShare = cs.siusdMarketShare
-		? chartToTs(cs.siusdMarketShare).map((s) => ({
-				name: s.name,
-				type: 'line' as const,
-				color: '#34d399',
-				data: s.data
-			}))
-		: undefined
-
 	const morphoMarket = cs.morphoMarket
 		? chartToTs(cs.morphoMarket).map((s, i) => ({
 				name: s.name,
@@ -155,13 +136,11 @@ export default function Growth() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
 				<KpiCard label="Active Accounts" value={k.activeAccounts?.formatted} sub="Loopr — current" />
 				<KpiCard label="Active Positions" value={k.activePositions?.formatted} sub="Loopr — current" />
 				<KpiCard label="Total Users" value={k.totalUsers?.formatted} sub="Loopr — cumulative" />
-				<KpiCard label="siUSD TVL" value={k.siusdTvl?.formatted} sub="vs iUSD" />
-				<KpiCard label="siUSD Share" value={k.siusdSharePct?.formatted} sub="Of siUSD+iUSD" />
-				<KpiCard label="Morpho Utilization" value={k.morphoUtilization?.formatted} sub="Featured market" />
+				<KpiCard label="Morpho Utilization" value={k.morphoUtilization?.formatted} sub="All Metronome markets" />
 			</div>
 
 			<SectionHeader>Loopr · Daily Activity (Combined)</SectionHeader>
@@ -272,34 +251,10 @@ export default function Growth() {
 				</>
 			)}
 
-			<SectionHeader>{cs.title || 'siUSD Market Growth'}</SectionHeader>
-			<div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-				<KpiCard label="siUSD TVL" value={csk.siusdTvl != null ? fmtUsd(csk.siusdTvl) : undefined} />
-				<KpiCard label="iUSD TVL" value={csk.iusdTvl != null ? fmtUsd(csk.iusdTvl) : undefined} />
-			</div>
-			<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-				{siusdVsIusd && (
-					<ChartCard
-						title="siUSD vs iUSD TVL"
-						subtitle={cs.kelpExploitDate ? `Reference: Kelp exploit ${cs.kelpExploitDate}` : undefined}
-					>
-						<MultiSeriesChart series={siusdVsIusd as any} valueSymbol="$" height="320px" />
-					</ChartCard>
-				)}
-				{siusdShare && (
-					<ChartCard title="siUSD Market Share" subtitle="Share of siUSD+iUSD combined supply">
-						<MultiSeriesChart series={siusdShare as any} valueSymbol="%" height="320px" />
-					</ChartCard>
-				)}
-			</div>
-
 			{morphoMarket && (
 				<>
 					<SectionHeader>Morpho Market · Supply / Borrow / Utilization</SectionHeader>
-					<ChartCard
-						title="Featured Morpho market"
-						subtitle={`Latest borrow ${fmtUsd(csk.morphoBorrowLatest)} · utilization ${csk.morphoUtilization?.toFixed?.(1) ?? '—'}%`}
-					>
+					<ChartCard title="Featured Morpho market" subtitle="Daily supply / borrow / utilization">
 						<MultiSeriesChart series={morphoMarket as any} valueSymbol="$" yAxisSymbols={['$', '%']} height="340px" />
 					</ChartCard>
 				</>

@@ -870,8 +870,8 @@ export function ArticleRenderer({
 		: []
 	const hasCoverMeta = !!cover && (coverHeadline || coverCaption || coverMetaParts.length > 0)
 	const articlePageClassName = hideSidePanel
-		? 'article-page mx-auto grid w-full max-w-[760px] animate-fadein gap-10 px-4 pb-24 sm:px-6'
-		: 'article-page mx-auto grid w-full max-w-[1300px] animate-fadein gap-10 px-4 pb-24 sm:px-6 lg:grid-cols-[minmax(0,700px)_401px] lg:gap-[125px]'
+		? 'article-page mx-auto grid w-full max-w-[760px] animate-fadein gap-10 px-4 pb-8 sm:px-6'
+		: 'article-page mx-auto grid w-full max-w-[1300px] animate-fadein gap-10 px-4 pb-8 sm:px-6 lg:grid-cols-[minmax(0,700px)_401px] lg:gap-[125px]'
 
 	const isInterview = article.section === 'interview'
 	const bylineLabel = isInterview ? 'Interviewer' : 'By'
@@ -1082,7 +1082,7 @@ export function ArticleRenderer({
 							</div>
 						) : null}
 						{article.pageAssets && article.pageAssets.length > 0 ? (
-							<div className="pr-2">
+							<div className="pr-2 transition-[margin] duration-300 ease-out has-[[aria-expanded=false]]:-my-8">
 								<ArticlePageAssets pageAssets={article.pageAssets} />
 							</div>
 						) : null}

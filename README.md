@@ -31,10 +31,12 @@ bun install
 #### 3. Configure environment variables:
 
 ```bash
-cp .env.example .env.local
+cp .env.local.example .env.local
 ```
 
-`ENABLE_LLAMASWAP_PROTOCOLS_CHAINS` is disabled by default. Set it to `true` or `1` only if you want metadata generation to build the buy-on-LlamaSwap protocol-chain dataset. When the variable is missing or set to `false`/`0`, that dataset stays empty.
+Fill in `API_KEY` and `CG_KEY` from your team credentials. `API_KEY` routes DefiLlama upstreams through pro-api; without it, most no-key fallbacks in `src/constants/index.ts` are invalid or rate-limited (aside from `api.llama.fi` and `coins.llama.fi`). `CG_KEY` avoids CoinGecko free-tier rate limits on token charts, unlocks, and related pages.
+
+For the **main site**, leave `NEXT_PUBLIC_INVESTORS_SITE` unset. For **investors / enterprise dashboard** work locally, see the view-selection comments in `.env.local.example`. Production deploy variables for all four profiles (main, investors, staging, enterprise) are in `.env.example`.
 
 #### 4. Start the development server:
 

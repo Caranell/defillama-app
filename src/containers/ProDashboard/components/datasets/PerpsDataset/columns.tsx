@@ -1,5 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import { PercentChange } from '~/components/PercentChange'
+import { TokenLogo } from '~/components/TokenLogo'
 import { formattedNum } from '~/utils'
 import { percentageSortingFn } from '../../../utils/tableSorting'
 
@@ -12,18 +13,7 @@ export const perpsDatasetColumns: ColumnDef<any>[] = [
 		cell: ({ row }) => {
 			return (
 				<div className="flex items-center gap-3">
-					{row.original.logo ? (
-						<img
-							src={row.original.logo}
-							alt={row.original.name}
-							width={28}
-							height={28}
-							className="size-7 rounded-full object-cover"
-							onError={(e) => {
-								e.currentTarget.style.display = 'none'
-							}}
-						/>
-					) : null}
+					<TokenLogo src={row.original.logo} alt={`Logo of ${row.original.name}`} size={28} />
 					<span className="font-medium pro-text1">{row.original.name}</span>
 				</div>
 			)

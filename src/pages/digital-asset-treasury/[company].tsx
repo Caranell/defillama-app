@@ -6,6 +6,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect, safeDecodeURIComponent } from '~/utils/route'
 
 export const getStaticProps = withPerformanceLogging(
 	'digital-asset-treasury/[company]',
@@ -14,10 +15,16 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 
-		const company = slug(params.company)
+		const companyParam = safeDecodeURIComponent(params.company)
+		const company = slug(companyParam)
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		if (!metadataCache.digitalAssetTreasuryCompanySlugsSet.has(company)) {
+		const canonicalCompany = metadataCache.digitalAssetTreasuryCompanyRouteBySlug[company]
+		if (!canonicalCompany) {
 			return { notFound: true }
+		}
+
+		if (companyParam !== canonicalCompany) {
+			return canonicalRouteRedirect(`/digital-asset-treasury/${encodeURIComponent(canonicalCompany)}`)
 		}
 
 		const props = await getDATCompanyData(company)
@@ -27,7 +34,7 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		return {
-			props,
+			props: { ...props, canonicalCompanyRoute: canonicalCompany },
 			revalidate: maxAgeForNext([22])
 		}
 	}
@@ -43,7 +50,7 @@ export async function getStaticPaths() {
 
 	const { getDATCompanyStaticPaths } = await import('~/containers/DAT/server/routes')
 	const paths = await getDATCompanyStaticPaths()
-	return { paths, fallback: false }
+	return { paths, fallback: 'blocking' }
 }
 
 export default function DigitalAssetTreasuryPage(props: InferGetStaticPropsType<typeof getStaticProps>) {
@@ -51,7 +58,7 @@ export default function DigitalAssetTreasuryPage(props: InferGetStaticPropsType<
 		<Layout
 			title={`${props.name} Digital Asset Treasury - DefiLlama`}
 			description={`Track ${props.name}'s live digital asset treasury holdings, cost basis, average purchase price, mNAV, share price and acquisition timeline.`}
-			canonicalUrl={`/digital-asset-treasury/${slug(props.ticker)}`}
+			canonicalUrl={`/digital-asset-treasury/${encodeURIComponent(props.canonicalCompanyRoute)}`}
 		>
 			<DATCompany {...props} />
 		</Layout>

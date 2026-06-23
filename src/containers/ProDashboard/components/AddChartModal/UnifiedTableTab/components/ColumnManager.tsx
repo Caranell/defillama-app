@@ -1058,7 +1058,7 @@ function SortableChip({
 			<span
 				{...attributes}
 				{...listeners}
-				className="cursor-grab text-(--text-tertiary) hover:text-(--text-secondary) active:cursor-grabbing"
+				className="cursor-grab touch-none text-(--text-tertiary) hover:text-(--text-secondary) active:cursor-grabbing"
 			>
 				<Icon name="menu" width={10} height={10} />
 			</span>

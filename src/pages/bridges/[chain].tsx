@@ -7,6 +7,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 type BridgesPageData = Awaited<ReturnType<typeof getBridgeOverviewPageData>>
 
@@ -31,10 +32,8 @@ export const getStaticProps = withPerformanceLogging(
 
 		const chainSlug = slug(params.chain)
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const supportedChainSlugs = metadataCache.bridgeChainSlugs ?? []
-		const isKnownChainRoute = supportedChainSlugs.includes(chainSlug)
 
-		if (!isKnownChainRoute) {
+		if (!metadataCache.bridgeChainSlugsSet.has(chainSlug)) {
 			return {
 				notFound: true,
 				revalidate: maxAgeForNext([22])
@@ -42,6 +41,9 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const canonicalChain = metadataCache.bridgeChainSlugToName?.[chainSlug] ?? params.chain
+		if (params.chain !== chainSlug) {
+			return canonicalRouteRedirect(`/bridges/${chainSlug}`)
+		}
 
 		try {
 			const data = await getBridgeOverviewPageData(canonicalChain, { includeBridgeTxCounts: true })

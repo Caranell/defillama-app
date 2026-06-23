@@ -37,7 +37,7 @@ function createPayload(overrides: Partial<CoreMetadataPayload> = {}): CoreMetada
 		rwaList: { canonicalMarketIds: [], platforms: [], chains: [], categories: [], assetGroups: [], idMap: {} },
 		rwaPerpsList: { contracts: [], venues: [], categories: [], assetGroups: [], total: 0 },
 		tokenlist: { aave: tokenEntry },
-		tokenDirectory: { aave: { name: 'Aave', symbol: 'AAVE' } },
+		tokenDirectory: { aave: { name: 'Aave', symbol: 'AAVE', route: '/token/AAVE' } },
 		protocolDisplayNames: { aave: 'Aave' },
 		chainDisplayNames: { ethereum: 'Ethereum' },
 		chainCategories: ['EVM'],
@@ -56,7 +56,7 @@ function createPayload(overrides: Partial<CoreMetadataPayload> = {}): CoreMetada
 			chainNameBySlug: { ethereum: 'Ethereum' },
 			chainSlugsByOracleSlug: { chainlink: ['ethereum'] }
 		},
-		digitalAssetTreasuryRoutes: { assetSlugs: ['bitcoin'], companySlugs: ['mstr'] },
+		digitalAssetTreasuryRoutes: { assetSlugs: ['bitcoin'], companySlugs: ['MSTR'] },
 		stablecoinPeggedAssetSlugs: ['tether'],
 		equitiesCompanyRoutes: [{ ticker: 'NVDA', country: 'US' }],
 		...overrides
@@ -97,16 +97,34 @@ describe('metadata artifact contract', () => {
 		const metadata = createMetadataCacheFromArtifacts(createPayload())
 
 		expect(metadata.protocolMetadata['parent#aave'].displayName).toBe('Aave')
+		expect(metadata.protocolRouteIdBySlug.aave).toBe('parent#aave')
 		expect(metadata.protocolDisplayNames.get('aave')).toBe('Aave')
+		expect(metadata.chainRouteKeyBySlug.ethereum).toBe('Ethereum')
 		expect(metadata.chainDisplayNames.get('ethereum')).toBe('Ethereum')
 		expect(metadata.chainCategories).toEqual(['EVM'])
 		expect(metadata.liquidationsTokenSymbolsSet.has('ETH')).toBe(true)
+		expect(metadata.emissionsProtocolBySlug.aave).toBe('aave')
+		expect(metadata.bridgeProtocolSlugsSet.has('stargate')).toBe(true)
+		expect(metadata.bridgeChainSlugsSet.has('ethereum')).toBe(true)
 		expect(metadata.narrativeCategoryIdsSet.has('ai')).toBe(true)
 		expect(metadata.oracleRoutes.oracleNameBySlug.chainlink).toBe('Chainlink')
+		expect(metadata.tokenDirectoryRecordByRouteSegment.AAVE?.symbol).toBe('AAVE')
 		expect(metadata.digitalAssetTreasuryAssetSlugsSet.has('bitcoin')).toBe(true)
-		expect(metadata.digitalAssetTreasuryCompanySlugsSet.has('mstr')).toBe(true)
+		expect(metadata.digitalAssetTreasuryCompanyRouteBySlug.mstr).toBe('MSTR')
 		expect(metadata.stablecoinPeggedAssetSlugsSet.has('tether')).toBe(true)
-		expect(metadata.equitiesCompanySlugsSet.has('nvda:us')).toBe(true)
+		expect(metadata.equitiesCompanySlugsSet.has('NVDA:US')).toBe(true)
+	})
+
+	it('indexes token route segments that overlap object prototype names', () => {
+		const metadata = createMetadataCacheFromArtifacts(
+			createPayload({
+				tokenDirectory: {
+					ctor: { name: 'Constructor Token', symbol: 'CTOR', route: '/token/constructor' }
+				}
+			})
+		)
+
+		expect(metadata.tokenDirectoryRecordByRouteSegment['constructor']?.symbol).toBe('CTOR')
 	})
 
 	it('applies refresh payloads directly', () => {

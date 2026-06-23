@@ -4,10 +4,11 @@ import { DEFAULT_CHART_VIEW } from '~/containers/RWA/Perps/chartState'
 import { RWAPerpsDashboard } from '~/containers/RWA/Perps/Dashboard'
 import { getRWAPerpsVenuePage } from '~/containers/RWA/Perps/queries'
 import { RWAPerpsTabNav } from '~/containers/RWA/Perps/TabNav'
-import { rwaSlug } from '~/containers/RWA/rwaSlug'
+import { resolveCanonicalRwaSlug, rwaSlug } from '~/containers/RWA/rwaSlug'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export async function getStaticPaths() {
 	if (SKIP_BUILD_STATIC_GENERATION) {
@@ -32,10 +33,13 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const venue = params.venue
-		const validVenues = new Set(metadataCache.rwaPerpsList.venues.map((item) => rwaSlug(item)))
-		if (!validVenues.has(venue)) {
+		const venue = resolveCanonicalRwaSlug(params.venue, metadataCache.rwaPerpsList.venues)
+		if (!venue) {
 			return { notFound: true }
+		}
+
+		if (params.venue !== venue) {
+			return canonicalRouteRedirect(`/rwa/perps/venue/${venue}`)
 		}
 
 		const data = await getRWAPerpsVenuePage({ venue, activeView: DEFAULT_CHART_VIEW })

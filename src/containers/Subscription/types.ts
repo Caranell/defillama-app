@@ -49,6 +49,7 @@ export interface ComparisonSection {
 export interface PlanMeta {
 	title: string
 	price: string
+	priceSecondary?: string
 	action: string
 }
 

@@ -23,7 +23,7 @@ export function getRWARoutesFromMetadata(metadataCache: MetadataCache): string[]
 	}
 
 	for (const contract of rwaPerpsList.contracts) {
-		routes.push(`rwa/perps/contract/${rwaSlug(contract)}`)
+		routes.push(`rwa/perps/contract/${encodeURIComponent(contract)}`)
 	}
 	for (const venue of rwaPerpsList.venues) {
 		routes.push(`rwa/perps/venue/${rwaSlug(venue)}`)

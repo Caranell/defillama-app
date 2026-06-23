@@ -401,7 +401,7 @@ const protocolsByChainColumns: ColumnDef<IProtocolRow>[] = [
 
 					<span className="shrink-0">{index + 1}</span>
 
-					<TokenLogo name={value} kind="token" alt={`Logo of ${value}`} data-lgonly />
+					<TokenLogo src={row.original.logo} alt={`Logo of ${value}`} data-lgonly />
 
 					<span className="-my-2 flex flex-col">
 						{row.original?.deprecated ? (

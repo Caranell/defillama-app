@@ -13,7 +13,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 		import('~/containers/ProtocolOverview/server/routes')
 	])
 	const protocolRoute = resolveProtocolParamFromMetadata(protocol, metadataModule.default)
-	if (!protocolRoute || !metadataModule.default.emissionsProtocolsList.includes(protocolRoute.canonicalSlug)) {
+	if (!protocolRoute || !metadataModule.default.emissionsProtocolBySlug[protocolRoute.canonicalSlug]) {
 		return res.status(404).json({ error: 'Protocol emissions not found' })
 	}
 

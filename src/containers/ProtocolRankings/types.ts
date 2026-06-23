@@ -63,6 +63,7 @@ export type ProtocolRankingTvlEntry = {
 export interface IChildProtocol {
 	name: string
 	slug: string
+	logo?: string | null
 	category: string | null
 	tvl: Record<TVL_TYPES, ProtocolRankingTvlEntry> | null
 	tvlChange: { change1d: number | null; change7d: number | null; change1m: number | null } | null

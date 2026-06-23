@@ -10,9 +10,21 @@ interface AddSourcesMenuProps {
 	trigger: React.ReactNode
 	menuClassName?: string
 	gutter?: number
+	// When set, the menu leads with a "This message" section that attaches files to the next
+	// chat (ephemeral) rather than to permanent project knowledge.
+	onAddPhotosFiles?: () => void
 }
 
-export function AddSourcesMenu({ projectId, trigger, menuClassName, gutter = 6 }: AddSourcesMenuProps) {
+const SECTION_LABEL_CLASS =
+	'px-3 pt-1.5 pb-1 text-[10px] font-medium uppercase tracking-wider text-[#999] dark:text-[#666]'
+
+export function AddSourcesMenu({
+	projectId,
+	trigger,
+	menuClassName,
+	gutter = 6,
+	onAddPhotosFiles
+}: AddSourcesMenuProps) {
 	const { handleFiles } = useProjectFileUpload(projectId)
 	const addTextStore = Ariakit.useDialogStore()
 	const githubStore = Ariakit.useDialogStore()
@@ -30,6 +42,20 @@ export function AddSourcesMenu({ projectId, trigger, menuClassName, gutter = 6 }
 						'z-50 min-w-[240px] rounded-xl border border-[#e6e6e6] bg-(--cards-bg) p-1 text-sm shadow-xl dark:border-[#222324] dark:bg-[#161718]'
 					}
 				>
+					{onAddPhotosFiles ? (
+						<>
+							<div className={SECTION_LABEL_CLASS}>This message</div>
+							<Ariakit.MenuItem
+								onClick={onAddPhotosFiles}
+								className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[#f0f0f0] dark:hover:bg-[#1c1d1e]"
+							>
+								<Icon name="image-plus" height={15} width={15} className="text-[#666] dark:text-[#919296]" />
+								Add photos &amp; files
+							</Ariakit.MenuItem>
+							<div className="mx-2 my-1 h-px bg-[#e6e6e6] dark:bg-[#222324]" />
+							<div className={SECTION_LABEL_CLASS}>Add to project</div>
+						</>
+					) : null}
 					<Ariakit.MenuItem
 						onClick={() => fileInputRef.current?.click()}
 						className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[#f0f0f0] dark:hover:bg-[#1c1d1e]"

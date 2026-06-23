@@ -1,5 +1,7 @@
 import { ARTICLE_SECTION_SLUGS, type ArticleSection, type LocalArticleDocument } from '~/containers/Articles/types'
 
+const DEFILLAMA_RESEARCH_AUTHOR_HREF = '/research/authors/defillama-research'
+
 export type ArticleBylineAuthorEntry = {
 	name: string
 	href: string | null
@@ -11,7 +13,7 @@ export function getArticleBylineAuthorEntries(article: LocalArticleDocument): Ar
 		href: `/research/authors/${profile.slug}`
 	}))
 	if (article.brandByline === true) {
-		return [{ name: 'DefiLlama Research', href: '/research' }, ...coAuthors]
+		return [{ name: 'DefiLlama Research', href: DEFILLAMA_RESEARCH_AUTHOR_HREF }, ...coAuthors]
 	}
 	if (!article.author) return coAuthors.length > 0 ? coAuthors : null
 	const owner: ArticleBylineAuthorEntry = {

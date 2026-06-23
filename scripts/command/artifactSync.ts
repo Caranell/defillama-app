@@ -13,7 +13,7 @@ type ArtifactSyncOptions = {
 }
 
 type ArtifactSyncResult =
-	| { status: 'failed'; step: 'download' | 'upload'; result: RunChildResult }
+	| { status: 'failed'; step: 'upload'; result: RunChildResult }
 	| { status: 'skipped'; reason: string }
 	| { status: 'success' }
 
@@ -40,7 +40,7 @@ export async function syncBuildArtifacts({
 	runCommand = runChild
 }: ArtifactSyncOptions): Promise<ArtifactSyncResult> {
 	if (env.SKIP_ARTIFACT_SYNC === '1') {
-		logger.log('SKIP_ARTIFACT_SYNC=1, skipping rclone sync')
+		logger.log('SKIP_ARTIFACT_SYNC=1, skipping artifact upload')
 		return { reason: 'skip flag', status: 'skipped' }
 	}
 	if (result.exitCode !== 0) {
@@ -50,7 +50,7 @@ export async function syncBuildArtifacts({
 	const missingArtifactRemoteEnv = getMissingArtifactRemoteEnv(env)
 	if (missingArtifactRemoteEnv.length > 0) {
 		logger.log(
-			`Artifact sync remote is not configured; missing ${missingArtifactRemoteEnv.join(', ')}, skipping rclone sync`
+			`Artifact remote is not configured; missing ${missingArtifactRemoteEnv.join(', ')}, skipping artifact upload`
 		)
 		return { reason: 'missing rclone env', status: 'skipped' }
 	}
@@ -58,8 +58,6 @@ export async function syncBuildArtifacts({
 	const configPath = path.join('scripts', 'rclone.conf')
 	const staticPath = path.join('.', '.next', 'static')
 	const remotePath = 'artifacts:defillama-app-artifacts'
-	// Intentionally upload and then download .next/static so each deploy shares
-	// the multi-node artifact set; both directions are checked before success.
 	const upload = await runCommand('rclone', ['--config', configPath, 'copy', staticPath, remotePath], {
 		activeChildren,
 		cwd: projectDir,
@@ -69,17 +67,6 @@ export async function syncBuildArtifacts({
 	if (upload.exitCode !== 0) {
 		logger.log('rclone artifact upload failed')
 		return { result: upload, status: 'failed', step: 'upload' }
-	}
-
-	const download = await runCommand('rclone', ['--config', configPath, 'copy', remotePath, staticPath], {
-		activeChildren,
-		cwd: projectDir,
-		env,
-		logger
-	})
-	if (download.exitCode !== 0) {
-		logger.log('rclone artifact download failed')
-		return { result: download, status: 'failed', step: 'download' }
 	}
 
 	return { status: 'success' }

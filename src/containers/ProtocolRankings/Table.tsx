@@ -602,7 +602,7 @@ const columns = [
 
 					<span className="vf-row-index shrink-0" aria-hidden="true" />
 
-					<TokenLogo name={row.original.name} kind="token" data-lgonly alt={`Logo of ${row.original.name}`} />
+					<TokenLogo src={row.original.logo} data-lgonly alt={`Logo of ${row.original.name}`} />
 
 					<span className="-my-2 flex flex-col">
 						<BasicLink

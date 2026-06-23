@@ -15,6 +15,7 @@ import {
 import { ArticleProxyAuthProvider } from '~/containers/Articles/ArticleProxyAuthProvider'
 import { canEditResearchArticle } from '~/containers/Articles/ArticlesAccessGate'
 import { ArticleSeo } from '~/containers/Articles/ArticleSeo'
+import { ResearchFooter } from '~/containers/Articles/landing/ResearchFooter'
 import {
 	ArticleBannerStrip,
 	type ArticleBannerStripInitialData
@@ -260,6 +261,7 @@ function SectionArticleContent({
 				<ArticleRenderer article={article} />
 				<OwnerEditChip article={article} />
 			</AppMetadataProvider>
+			<ResearchFooter maxWidthClassName="max-w-[1300px]" />
 		</>
 	)
 }

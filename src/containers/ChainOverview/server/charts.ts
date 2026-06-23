@@ -270,7 +270,7 @@ export const chainCharts = defineApiRoute({
 					import('~/containers/ProtocolOverview/server/routes')
 				])
 				const protocolRoute = resolveProtocolParamFromMetadata(protocol, metadataCache)
-				if (!protocolRoute || !metadataCache.emissionsProtocolsList.includes(protocolRoute.canonicalSlug)) {
+				if (!protocolRoute || !metadataCache.emissionsProtocolBySlug[protocolRoute.canonicalSlug]) {
 					return notFound('protocol emissions not found')
 				}
 

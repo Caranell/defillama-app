@@ -2,6 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { Icon } from '~/components/Icon'
 import { ApiUsageBreakdown } from './ApiUsageBreakdown'
+import { ToggleSwitch } from './ToggleSwitch'
 
 const API_CREDITS_LIMIT = 1_000_000
 
@@ -13,6 +14,10 @@ interface ApiAccessCardProps {
 	isUsageStatsError: boolean
 	onRegenerateKey: () => void
 	isRegenerateLoading?: boolean
+	canManageOverage?: boolean
+	isOverageEnabled?: boolean
+	onToggleOverage?: () => void
+	isOverageToggleLoading?: boolean
 }
 
 export function ApiAccessCard({
@@ -22,7 +27,11 @@ export function ApiAccessCard({
 	isUsageStatsLoading,
 	isUsageStatsError,
 	onRegenerateKey,
-	isRegenerateLoading
+	isRegenerateLoading,
+	canManageOverage,
+	isOverageEnabled,
+	onToggleOverage,
+	isOverageToggleLoading
 }: ApiAccessCardProps) {
 	const [copied, setCopied] = useState(false)
 	const [showKey, setShowKey] = useState(false)
@@ -116,6 +125,30 @@ export function ApiAccessCard({
 					</div>
 				</div>
 			</div>
+
+			{/* Overage */}
+			{canManageOverage && (
+				<div className="flex flex-col gap-2 rounded-lg bg-(--sub-surface-panel) p-3 dark:bg-(--sub-ink-primary)">
+					<div className="flex items-center justify-between gap-4">
+						<span className="text-sm text-(--sub-ink-primary) dark:text-white">
+							Allow extra usage charges{' '}
+							<span className="text-(--sub-text-muted)">({isOverageEnabled ? 'Enabled' : 'Disabled'})</span>
+						</span>
+						<ToggleSwitch
+							checked={Boolean(isOverageEnabled)}
+							onClick={onToggleOverage}
+							disabled={isOverageToggleLoading}
+							aria-label="Allow extra usage charges"
+						/>
+					</div>
+					<p className="text-xs leading-4 text-(--sub-text-muted)">
+						When enabled, API usage beyond your plan's included limits continues uninterrupted and the additional usage
+						is billed to your card. Pricing after included limits: $0.60 per 1,000 calls.
+						<br />
+						We will notify you via email if you approach your plan limits.
+					</p>
+				</div>
+			)}
 
 			{/* API Usage Breakdown */}
 			<ApiUsageBreakdown usageStats={usageStats} isLoading={isUsageStatsLoading} isError={isUsageStatsError} />

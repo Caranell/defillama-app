@@ -73,11 +73,16 @@ vi.mock('~/containers/Unlocks/queries', () => ({
 }))
 
 vi.mock('~/containers/Cexs/server/routes', () => ({
-	resolveCexParam: resolveCexParamMock
+	resolveCexParamFromMetadata: resolveCexParamMock
 }))
 
 vi.mock('~/containers/ProtocolOverview/server/routes', () => ({
-	resolveProtocolParam: resolveProtocolParamMock
+	resolveProtocolParamFromMetadata: resolveProtocolParamMock
+}))
+
+vi.mock('~/utils/metadata', () => ({
+	__esModule: true,
+	default: {}
 }))
 
 vi.mock('~/utils/async', async (importOriginal) => {
@@ -99,8 +104,8 @@ beforeEach(() => {
 	vi.clearAllMocks()
 	fetchProtocolTvlChartMock.mockResolvedValue([])
 	fetchProtocolTreasuryChartMock.mockResolvedValue([])
-	resolveProtocolParamMock.mockResolvedValue({ canonicalSlug: 'aave', id: '1', metadata: { displayName: 'Aave' } })
-	resolveCexParamMock.mockResolvedValue(null)
+	resolveProtocolParamMock.mockReturnValue({ canonicalSlug: 'aave', id: '1', metadata: { displayName: 'Aave' } })
+	resolveCexParamMock.mockReturnValue(null)
 })
 
 describe('/api/public/protocols/charts', () => {
@@ -162,7 +167,7 @@ describe('/api/public/protocols/charts', () => {
 
 		await handler(req, res)
 
-		expect(resolveProtocolParamMock).toHaveBeenCalledWith('Aave V3')
+		expect(resolveProtocolParamMock).toHaveBeenCalledWith('Aave V3', expect.any(Object))
 		expect(row.fetcher).toHaveBeenCalledWith(row.expected)
 		expect(row.oppositeFetcher).not.toHaveBeenCalled()
 		expect(res.status).toHaveBeenCalledWith(200)
@@ -170,8 +175,8 @@ describe('/api/public/protocols/charts', () => {
 	})
 
 	it('does not fetch TVL or treasury charts for unknown protocols', async () => {
-		resolveProtocolParamMock.mockResolvedValue(null)
-		resolveCexParamMock.mockResolvedValue(null)
+		resolveProtocolParamMock.mockReturnValue(null)
+		resolveCexParamMock.mockReturnValue(null)
 		const req = {
 			method: 'GET',
 			query: { kind: 'treasury', protocol: 'missing', key: 'ownTokens' }
@@ -187,8 +192,8 @@ describe('/api/public/protocols/charts', () => {
 	})
 
 	it('falls back to CEX route cache entries for protocol chart requests', async () => {
-		resolveProtocolParamMock.mockResolvedValue(null)
-		resolveCexParamMock.mockResolvedValue({
+		resolveProtocolParamMock.mockReturnValue(null)
+		resolveCexParamMock.mockReturnValue({
 			canonicalSlug: 'binance',
 			id: 'cex-1',
 			metadata: { displayName: 'Binance' }
@@ -201,8 +206,8 @@ describe('/api/public/protocols/charts', () => {
 
 		await handler(req, res)
 
-		expect(resolveProtocolParamMock).toHaveBeenCalledWith('Binance')
-		expect(resolveCexParamMock).toHaveBeenCalledWith('Binance')
+		expect(resolveProtocolParamMock).toHaveBeenCalledWith('Binance', expect.any(Object))
+		expect(resolveCexParamMock).toHaveBeenCalledWith('Binance', expect.any(Object))
 		expect(fetchProtocolTvlChartMock).toHaveBeenCalledWith({ protocol: 'binance' })
 		expect(fetchProtocolTreasuryChartMock).not.toHaveBeenCalled()
 		expect(res.status).toHaveBeenCalledWith(200)

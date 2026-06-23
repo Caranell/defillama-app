@@ -2,17 +2,11 @@ import type { GetStaticPropsContext, InferGetStaticPropsType } from 'next'
 import { SKIP_BUILD_STATIC_GENERATION } from '~/constants'
 import { RWAPerpsContractPage } from '~/containers/RWA/Perps/Contract'
 import { getRWAPerpsContractData } from '~/containers/RWA/Perps/queries'
+import { rwaSlug } from '~/containers/RWA/rwaSlug'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
-
-function safeDecodeContractParam(value: string): string {
-	try {
-		return decodeURIComponent(value)
-	} catch {
-		return value
-	}
-}
+import { canonicalRouteRedirect, safeDecodeURIComponent } from '~/utils/route'
 
 function resolveCanonicalContract(contractParam: string, contracts: string[]): string | null {
 	const normalizedContractParam = contractParam.toLowerCase()
@@ -23,7 +17,15 @@ function resolveCanonicalContract(contractParam: string, contracts: string[]): s
 		}
 	}
 
-	return null
+	const contractParamSlug = rwaSlug(contractParam)
+	let slugMatch = null
+	for (const contract of contracts) {
+		if (rwaSlug(contract) !== contractParamSlug) continue
+		if (slugMatch !== null) return null
+		slugMatch = contract
+	}
+
+	return slugMatch
 }
 
 export async function getStaticPaths() {
@@ -49,10 +51,14 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const contractParam = safeDecodeContractParam(params.contract)
+		const contractParam = safeDecodeURIComponent(params.contract)
 		const canonicalContract = resolveCanonicalContract(contractParam, metadataCache.rwaPerpsList.contracts)
 		if (!canonicalContract) {
 			return { notFound: true }
+		}
+
+		if (contractParam !== canonicalContract) {
+			return canonicalRouteRedirect(`/rwa/perps/contract/${encodeURIComponent(canonicalContract)}`)
 		}
 
 		const contract = await getRWAPerpsContractData({ contract: canonicalContract })
@@ -61,7 +67,7 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		return {
-			props: { contract },
+			props: { contract, canonicalContract },
 			revalidate: maxAgeForNext([22])
 		}
 	}
@@ -69,15 +75,18 @@ export const getStaticProps = withPerformanceLogging(
 
 const pageName = ['RWA Perps']
 
-export default function RWAPerpsContractDetailPage({ contract }: InferGetStaticPropsType<typeof getStaticProps>) {
-	const canonicalContract = encodeURIComponent(contract.contract.contract)
+export default function RWAPerpsContractDetailPage({
+	contract,
+	canonicalContract
+}: InferGetStaticPropsType<typeof getStaticProps>) {
+	const canonicalContractSegment = encodeURIComponent(canonicalContract)
 
 	return (
 		<Layout
 			title={`${contract.contract.contract} - RWA Perps Analytics - DefiLlama`}
 			description={`Track the ${contract.contract.contract} perpetual market on ${contract.contract.venue}, including price, open interest, funding, market history, and detailed market data.`}
 			pageName={pageName}
-			canonicalUrl={`/rwa/perps/contract/${canonicalContract}`}
+			canonicalUrl={`/rwa/perps/contract/${canonicalContractSegment}`}
 		>
 			<RWAPerpsContractPage contract={contract} />
 		</Layout>

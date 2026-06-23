@@ -1,6 +1,7 @@
 import type { NextApiHandler, NextApiRequest } from 'next'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockNextApiResponse } from '~/utils/test/nextApiMocks'
+import { binanceCexMetadataCache } from './metadataFixture'
 
 const { fetchWithPoolingOnServerMock, recordRouteRuntimeErrorMock, validateSubscriptionMock } = vi.hoisted(() => ({
 	fetchWithPoolingOnServerMock: vi.fn(),
@@ -27,9 +28,7 @@ vi.mock('~/utils/telemetry', () => ({
 
 vi.mock('~/utils/metadata', () => ({
 	__esModule: true,
-	default: {
-		cexs: [{ name: 'Binance', slug: 'Binance-CEX' }]
-	}
+	default: binanceCexMetadataCache
 }))
 
 import inflowsHandler from '~/pages/api/private/cex/inflows'

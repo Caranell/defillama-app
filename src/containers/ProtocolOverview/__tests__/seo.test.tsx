@@ -127,6 +127,9 @@ describe('ProtocolOverview final page SEO', () => {
 		vi.doMock('~/components/Tooltip', () => ({
 			Tooltip: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children)
 		}))
+		vi.doMock('~/containers/Subscription/auth', () => ({
+			useAuthContext: () => ({ user: null })
+		}))
 		vi.doMock('../AdditionalInfo', () => ({
 			AdditionalInfo: () => null
 		}))
@@ -187,6 +190,9 @@ function setupLayoutMocks() {
 	}))
 	vi.doMock('~/components/TokenLogo', () => ({
 		TokenLogo: () => null
+	}))
+	vi.doMock('~/containers/Subscription/auth', () => ({
+		useAuthContext: () => ({ user: null })
 	}))
 	vi.doMock('~/layout', async () => {
 		const { SEO } = await vi.importActual<typeof import('~/components/SEO')>('~/components/SEO')
@@ -344,6 +350,32 @@ describe('ProtocolOverviewLayout SEO', () => {
 		expect(withMarkets).not.toMatch(robotsNoindexRegex)
 		expect(withoutMarkets).not.toContain('href="/cex/markets/crypto-com"')
 	})
+
+	it.each(['Vesper', 'Odyssey Finance', 'Metronome', 'Metronome Synth'])(
+		'shows the Odyssey enterprise dashboard announcement for %s',
+		async (name) => {
+			setupLayoutMocks()
+
+			const { ProtocolOverviewLayout } = await import('../Layout')
+			const markup = renderToStaticMarkup(
+				React.createElement(
+					ProtocolOverviewLayout as React.ComponentType<any>,
+					{
+						name,
+						category: 'Lending',
+						metrics,
+						tab: 'information'
+					},
+					null
+				)
+			)
+
+			expect(markup).toContain('href="https://enterprise.defillama.com/odyssey-ecosystem"')
+			expect(markup).toContain('Enterprise Dashboard')
+			expect(markup).toContain('Odyssey Enterprise')
+			expect(markup).not.toContain('investor relations dashboard')
+		}
+	)
 })
 
 describe('ProtocolOverview SEO contract', () => {

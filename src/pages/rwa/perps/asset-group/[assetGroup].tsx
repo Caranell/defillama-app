@@ -4,10 +4,11 @@ import { DEFAULT_CHART_VIEW } from '~/containers/RWA/Perps/chartState'
 import { RWAPerpsDashboard } from '~/containers/RWA/Perps/Dashboard'
 import { getRWAPerpsAssetGroupPage } from '~/containers/RWA/Perps/queries'
 import { RWAPerpsTabNav } from '~/containers/RWA/Perps/TabNav'
-import { rwaSlug } from '~/containers/RWA/rwaSlug'
+import { resolveCanonicalRwaSlug, rwaSlug } from '~/containers/RWA/rwaSlug'
 import Layout from '~/layout'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export async function getStaticPaths() {
 	if (SKIP_BUILD_STATIC_GENERATION) {
@@ -34,10 +35,13 @@ export const getStaticProps = withPerformanceLogging(
 		}
 
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const assetGroup = params.assetGroup
-		const validAssetGroups = new Set(metadataCache.rwaPerpsList.assetGroups.map((group) => rwaSlug(group)))
-		if (!validAssetGroups.has(assetGroup)) {
+		const assetGroup = resolveCanonicalRwaSlug(params.assetGroup, metadataCache.rwaPerpsList.assetGroups)
+		if (!assetGroup) {
 			return { notFound: true }
+		}
+
+		if (params.assetGroup !== assetGroup) {
+			return canonicalRouteRedirect(`/rwa/perps/asset-group/${assetGroup}`)
 		}
 
 		const data = await getRWAPerpsAssetGroupPage({

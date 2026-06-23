@@ -8,10 +8,11 @@ import {
 	getProtocolUnlocksStaticPropsData
 } from '~/containers/Unlocks/protocolUnlocksStaticProps'
 import Layout from '~/layout'
-import { formattedNum } from '~/utils'
+import { formattedNum, slug } from '~/utils'
 import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export const getStaticProps = withPerformanceLogging(
 	'unlocks/[protocol]',
@@ -22,9 +23,20 @@ export const getStaticProps = withPerformanceLogging(
 
 		const metadataModule = await import('~/utils/metadata')
 		const metadataCache = metadataModule.default
+		const protocolSlug = slug(params.protocol)
+		const canonicalProtocol = metadataCache.emissionsProtocolBySlug[protocolSlug]
+		if (!canonicalProtocol) {
+			return {
+				notFound: true,
+				revalidate: maxAgeForNext([22])
+			}
+		}
+		if (params.protocol !== canonicalProtocol) {
+			return canonicalRouteRedirect(`/unlocks/${canonicalProtocol}`)
+		}
 
 		const { emissions, tokenSymbol, initialTokenMarketData } = await getProtocolUnlocksStaticPropsData(
-			params.protocol,
+			canonicalProtocol,
 			metadataCache.tokenlist,
 			metadataCache.emissionsProtocolsList
 		)
@@ -54,6 +66,7 @@ export const getStaticProps = withPerformanceLogging(
 				eventCountdown: getEventCountdown(emissions?.upcomingEvent?.[0]?.timestamp),
 				noUpcomingEvent,
 				initialTokenMarketData,
+				canonicalProtocol,
 				seoTitle,
 				seoDescription
 			},
@@ -82,11 +95,12 @@ export default function Protocol({
 	eventCountdown,
 	noUpcomingEvent,
 	initialTokenMarketData,
+	canonicalProtocol,
 	seoTitle,
 	seoDescription
 }: InferGetStaticPropsType<typeof getStaticProps>) {
 	return (
-		<Layout title={seoTitle} description={seoDescription} canonicalUrl={`/unlocks/${emissions.name}`}>
+		<Layout title={seoTitle} description={seoDescription} canonicalUrl={`/unlocks/${canonicalProtocol}`}>
 			<LinkPreviewCard
 				unlockPage={true}
 				cardName={emissions.name}

@@ -8,6 +8,7 @@ import { SelectWithCombobox } from '~/components/Select/SelectWithCombobox'
 import { TokenLogo } from '~/components/TokenLogo'
 import { SKIP_BUILD_STATIC_GENERATION } from '~/constants'
 import { fetchProtocolOverviewMetrics } from '~/containers/ProtocolOverview/api'
+import { reconcileChartSelection } from '~/containers/ProtocolOverview/chartSeries.utils'
 import { ProtocolOverviewLayout } from '~/containers/ProtocolOverview/Layout'
 import { getProtocolMetricFlags } from '~/containers/ProtocolOverview/queries'
 import { useProtocolBreakdownCharts } from '~/containers/ProtocolOverview/useProtocolBreakdownCharts'
@@ -16,8 +17,8 @@ import { TVL_SETTINGS_KEYS_SET } from '~/contexts/LocalStorage'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
-import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const MultiSeriesChart2 = React.lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
 
@@ -26,13 +27,6 @@ const PieChart = React.lazy(() => import('~/components/ECharts/PieChart')) as Re
 const EMPTY_OTHER_PROTOCOLS: string[] = []
 
 type MultiSeriesCharts = NonNullable<IMultiSeriesChart2Props['charts']>
-
-function updateSelectionOnListChange(selected: string[], all: string[]) {
-	if (all.length === 0) return []
-	if (selected.length === 0) return all
-	const next = selected.filter((x) => all.includes(x))
-	return next.length > 0 ? next : all
-}
 
 function MultiSeriesChartCard({
 	title,
@@ -55,7 +49,7 @@ function MultiSeriesChartCard({
 }) {
 	const [selectedSeriesRaw, setSelectedSeriesRaw] = React.useState<string[]>(() => allSeries)
 	const selectedSeries = React.useMemo(
-		() => updateSelectionOnListChange(selectedSeriesRaw, allSeries),
+		() => reconcileChartSelection(selectedSeriesRaw, allSeries),
 		[selectedSeriesRaw, allSeries]
 	)
 
@@ -104,7 +98,7 @@ function TokensBreakdownPieChartCard({
 	const allTokens = React.useMemo(() => chartData.map((d) => d.name), [chartData])
 	const [selectedTokensRaw, setSelectedTokensRaw] = React.useState<string[]>(() => allTokens)
 	const selectedTokens = React.useMemo(
-		() => updateSelectionOnListChange(selectedTokensRaw, allTokens),
+		() => reconcileChartSelection(selectedTokensRaw, allTokens),
 		[selectedTokensRaw, allTokens]
 	)
 
@@ -150,28 +144,32 @@ export const getStaticProps = withPerformanceLogging(
 			return { notFound: true }
 		}
 		const { protocol } = params
-		const normalizedName = slug(protocol)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const { protocolMetadata } = metadataCache
-		let metadata: [string, IProtocolMetadata] | undefined
-		for (const key in protocolMetadata) {
-			if (slug(protocolMetadata[key].displayName) === normalizedName) {
-				metadata = [key, protocolMetadata[key]]
-				break
-			}
-		}
-
-		if (!metadata || !metadata[1].borrowed) {
+		const [{ default: metadataCache }, { resolveProtocolFeatureRouteFromMetadata }] = await Promise.all([
+			import('~/utils/metadata'),
+			import('~/containers/ProtocolOverview/server/routes')
+		])
+		const protocolRoute = resolveProtocolFeatureRouteFromMetadata({
+			hasMetric: (metadata) => Boolean(metadata.borrowed),
+			metadataCache,
+			protocol,
+			routePrefix: 'protocol/active-loans'
+		})
+		if (!protocolRoute) {
 			return { notFound: true }
 		}
+		if (protocolRoute.type === 'redirect') {
+			return canonicalRouteRedirect(protocolRoute.destination)
+		}
+		const metadata = protocolRoute.route.metadata
+		const canonicalProtocol = protocolRoute.route.canonicalSlug
 
-		const protocolData = await fetchProtocolOverviewMetrics(protocol)
+		const protocolData = await fetchProtocolOverviewMetrics(canonicalProtocol)
 
 		if (!protocolData || protocolData.currentChainTvls?.borrowed == null) {
 			return { notFound: true }
 		}
 
-		const metrics = getProtocolMetricFlags({ protocolData, metadata: metadata[1] })
+		const metrics = getProtocolMetricFlags({ protocolData, metadata })
 		const seoTitle = `${protocolData.name} Active Loans & Lending - DefiLlama`
 		const seoDescription = `Monitor ${protocolData.name} active loans, utilization rates, and lending pools on DefiLlama.`
 

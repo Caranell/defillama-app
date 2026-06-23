@@ -5,7 +5,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '~/components/Icon'
 import { LoadingSpinner } from '~/components/Loaders'
 import { Tooltip } from '~/components/Tooltip'
+import { DragOverlay, ImageUpload } from '~/containers/LlamaAI/components/input/ImageUpload'
+import { PastedContentModal } from '~/containers/LlamaAI/components/PastedContentModal'
 import { useClearUnseenCompletion } from '~/containers/LlamaAI/hooks/useClearUnseenCompletion'
+import { fileToBase64, useImageUpload } from '~/containers/LlamaAI/hooks/useImageUpload'
 import { useSessionMutations } from '~/containers/LlamaAI/hooks/useSessionMutations'
 import type { ChatSession } from '~/containers/LlamaAI/types'
 import { AddSourcesMenu } from './AddSourcesMenu'
@@ -15,6 +18,9 @@ import { useProjectDetail, useProjectSessions, useProjectUsage } from './hooks'
 import { ProjectFilesPanel } from './ProjectFilesPanel'
 import { ProjectInstructionsEditor } from './ProjectInstructionsEditor'
 import type { ProjectTier } from './types'
+
+// Match PromptInput: text pastes above this length collapse into a file chip instead of flooding the field.
+const PASTE_TO_FILE_THRESHOLD = 1500
 
 function relativeTime(iso: string | null): string {
 	if (!iso) return ''
@@ -35,7 +41,11 @@ interface ProjectLandingProps {
 	tier: ProjectTier
 	initialTab?: 'chats' | 'sources'
 	sessionList?: ChatSession[]
-	onSubmit: (prompt: string) => void
+	onSubmit: (
+		prompt: string,
+		preResolvedEntities?: Array<{ term: string; slug: string; type?: string }>,
+		images?: Array<{ data: string; mimeType: string; filename?: string; isPasted?: boolean }>
+	) => void | Promise<void>
 	isStreaming: boolean
 	onPickSession: (sessionId: string) => void
 	enterToSend: boolean
@@ -64,6 +74,8 @@ export function ProjectLanding({
 	const tab = initialTab
 	const [prompt, setPrompt] = useState('')
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
+	const imageUpload = useImageUpload()
+	const shiftHeldRef = useRef(false)
 	const sessionById = useMemo(() => new Map(sessionList.map((session) => [session.sessionId, session])), [sessionList])
 	const sessions = useMemo(
 		() =>
@@ -84,6 +96,27 @@ export function ProjectLanding({
 		el.style.height = 'auto'
 		el.style.height = `${Math.min(el.scrollHeight, 200)}px`
 	}, [prompt])
+
+	// Track Shift so a held Shift+paste bypasses the paste-to-file collapse, matching PromptInput.
+	useEffect(() => {
+		const onDown = (e: KeyboardEvent) => {
+			if (e.key === 'Shift') shiftHeldRef.current = true
+		}
+		const onUp = (e: KeyboardEvent) => {
+			if (e.key === 'Shift') shiftHeldRef.current = false
+		}
+		const onBlur = () => {
+			shiftHeldRef.current = false
+		}
+		window.addEventListener('keydown', onDown)
+		window.addEventListener('keyup', onUp)
+		window.addEventListener('blur', onBlur)
+		return () => {
+			window.removeEventListener('keydown', onDown)
+			window.removeEventListener('keyup', onUp)
+			window.removeEventListener('blur', onBlur)
+		}
+	}, [])
 
 	if (project.isLoading) {
 		return (
@@ -111,11 +144,25 @@ export function ProjectLanding({
 		)
 	}
 
-	const handleSubmit = () => {
+	const handleSubmit = async () => {
 		const trimmed = prompt.trim()
-		if (!trimmed || isStreaming) return
-		onSubmit(trimmed)
+		const imagesToSend = [...imageUpload.selectedImages]
+		if ((!trimmed && imagesToSend.length === 0) || isStreaming) return
+		const images = imagesToSend.length
+			? await Promise.all(
+					imagesToSend.map(({ file, isPasted }) =>
+						fileToBase64(file).then((data) => ({
+							data,
+							mimeType: file.type,
+							filename: file.name,
+							...(isPasted ? { isPasted: true } : {})
+						}))
+					)
+				)
+			: undefined
+		await Promise.resolve(onSubmit(trimmed, undefined, images))
 		setPrompt('')
+		imageUpload.clearImages()
 	}
 
 	const handlePickSession = (session: (typeof sessions)[number]) => {
@@ -157,7 +204,25 @@ export function ProjectLanding({
 	const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (e.key === 'Enter' && e.shiftKey !== enterToSend && !e.nativeEvent.isComposing) {
 			e.preventDefault()
-			handleSubmit()
+			void handleSubmit()
+		}
+	}
+
+	const handlePaste = (e: React.ClipboardEvent) => {
+		const data = e.clipboardData
+		if (!data) return
+
+		const hasFile = Array.from(data.items).some((item) => item.kind === 'file')
+		if (hasFile) {
+			imageUpload.handlePaste(e)
+			return
+		}
+
+		const text = data.getData('text/plain')
+		if (!text || text.length < PASTE_TO_FILE_THRESHOLD || shiftHeldRef.current) return
+
+		if (imageUpload.addPastedText(text)) {
+			e.preventDefault()
 		}
 	}
 
@@ -234,40 +299,61 @@ export function ProjectLanding({
 				<form
 					onSubmit={(e) => {
 						e.preventDefault()
-						handleSubmit()
+						void handleSubmit()
 					}}
-					className="group/composer relative mb-5 flex items-center gap-2.5 rounded-3xl border border-[#e6e6e6] bg-(--cards-bg) py-2 pr-2 pl-3 shadow-sm transition-all focus-within:border-(--old-blue)/60 focus-within:shadow-md dark:border-[#222324] dark:bg-[#161718] dark:focus-within:border-(--old-blue)/60"
+					onDragEnter={imageUpload.handleDragEnter}
+					onDragLeave={imageUpload.handleDragLeave}
+					onDragOver={(e) => e.preventDefault()}
+					onDrop={imageUpload.handleDrop}
+					className="relative mb-5"
 				>
-					<AddSourcesMenu
-						projectId={projectId}
-						trigger={
-							<button
-								type="button"
-								aria-label="Add sources"
-								className="-ml-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[#666] transition-colors hover:bg-[#f0f0f0] hover:text-(--old-blue) dark:text-[#919296] dark:hover:bg-[#1c1d1e]"
-							>
-								<Icon name="plus" height={15} width={15} />
-							</button>
-						}
-					/>
-					<textarea
-						ref={textareaRef}
-						value={prompt}
-						onChange={(e) => setPrompt(e.target.value)}
-						onKeyDown={handleKey}
-						rows={1}
-						placeholder={`New chat in ${project.data.name}`}
-						className="block flex-1 resize-none self-center bg-transparent text-[13px] leading-5 text-inherit placeholder:text-[#999] focus:outline-none dark:placeholder:text-[#555]"
-						style={{ height: 20 }}
-					/>
-					<button
-						type="submit"
-						disabled={!prompt.trim() || isStreaming}
-						aria-label="Send message"
-						className="flex size-7 shrink-0 items-center justify-center rounded-full bg-(--old-blue) text-white transition-all hover:scale-105 hover:bg-(--old-blue)/90 disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-30"
-					>
-						<Icon name="arrow-up" height={13} width={13} />
-					</button>
+					<DragOverlay isDragging={imageUpload.isDragging} />
+					<div className={imageUpload.selectedImages.length > 0 ? 'mb-2' : ''}>
+						<ImageUpload
+							selectedImages={imageUpload.selectedImages}
+							previewImage={imageUpload.previewImage}
+							setPreviewImage={imageUpload.setPreviewImage}
+							openPastedPreview={imageUpload.setPastedPreview}
+							removeImage={imageUpload.removeImage}
+							fileInputRef={imageUpload.fileInputRef}
+							handleImageSelect={imageUpload.handleImageSelect}
+						/>
+					</div>
+					<PastedContentModal preview={imageUpload.pastedPreview} onClose={() => imageUpload.setPastedPreview(null)} />
+					<div className="group/composer flex items-center gap-2.5 rounded-3xl border border-[#e6e6e6] bg-(--cards-bg) py-2 pr-2 pl-3 shadow-sm transition-all focus-within:border-(--old-blue)/60 focus-within:shadow-md dark:border-[#222324] dark:bg-[#161718] dark:focus-within:border-(--old-blue)/60">
+						<AddSourcesMenu
+							projectId={projectId}
+							onAddPhotosFiles={imageUpload.openFilePicker}
+							trigger={
+								<button
+									type="button"
+									aria-label="Add files"
+									className="-ml-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[#666] transition-colors hover:bg-[#f0f0f0] hover:text-(--old-blue) dark:text-[#919296] dark:hover:bg-[#1c1d1e]"
+								>
+									<Icon name="plus" height={15} width={15} />
+								</button>
+							}
+						/>
+						<textarea
+							ref={textareaRef}
+							value={prompt}
+							onChange={(e) => setPrompt(e.target.value)}
+							onKeyDown={handleKey}
+							onPaste={handlePaste}
+							rows={1}
+							placeholder={`New chat in ${project.data.name}`}
+							className="block flex-1 resize-none self-center bg-transparent text-[13px] leading-5 text-inherit placeholder:text-[#999] focus:outline-none dark:placeholder:text-[#555]"
+							style={{ height: 20 }}
+						/>
+						<button
+							type="submit"
+							disabled={(!prompt.trim() && imageUpload.selectedImages.length === 0) || isStreaming}
+							aria-label="Send message"
+							className="flex size-7 shrink-0 items-center justify-center rounded-full bg-(--old-blue) text-white transition-all hover:scale-105 hover:bg-(--old-blue)/90 disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-30"
+						>
+							<Icon name="arrow-up" height={13} width={13} />
+						</button>
+					</div>
 				</form>
 
 				<div role="tablist" className="flex items-center gap-1 border-b border-[#e6e6e6] dark:border-[#222324]">

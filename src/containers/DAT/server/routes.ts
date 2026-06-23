@@ -7,12 +7,16 @@ function dedupeSlugs(slugs: string[]): string[] {
 
 export async function getDATCompanyStaticPaths(): Promise<Array<StaticParamPath<'company'>>> {
 	const metadataCache = await getMetadataCache()
-	return dedupeSlugs(metadataCache.digitalAssetTreasuryRoutes.companySlugs).map((company) => ({ params: { company } }))
+	return dedupeSlugs(metadataCache.digitalAssetTreasuryRoutes.companySlugs)
+		.slice(0, 10)
+		.map((company) => ({ params: { company } }))
 }
 
 export async function getDATAssetStaticPaths(): Promise<Array<StaticParamPath<'asset'>>> {
 	const metadataCache = await getMetadataCache()
-	return dedupeSlugs(metadataCache.digitalAssetTreasuryRoutes.assetSlugs).map((asset) => ({ params: { asset } }))
+	return dedupeSlugs(metadataCache.digitalAssetTreasuryRoutes.assetSlugs)
+		.slice(0, 10)
+		.map((asset) => ({ params: { asset } }))
 }
 
 export function getDATSitemapRoutes(metadataCache: MetadataCache): string[] {

@@ -306,7 +306,11 @@ export function SubscriptionSection() {
 		isSubscriptionLoading,
 		handleLlamapayTopup,
 		loading,
-		subscription
+		subscription,
+		enableOverage,
+		disableOverage,
+		isEnableOverageLoading,
+		isDisableOverageLoading
 	} = useSubscribe()
 
 	const isTeamMember = Boolean(team && !team.isAdmin)
@@ -401,6 +405,19 @@ export function SubscriptionSection() {
 	}
 
 	const isMonthlyLlamapay = subscription?.provider === 'llamapay' && subscription?.billing_interval === 'month'
+
+	const isOverageEnabled = Boolean(apiSubscription?.overage)
+	const canManageOverage = hasApiSubscription && apiSubscription?.provider === 'manual'
+	const isOverageToggleLoading = isEnableOverageLoading || isDisableOverageLoading
+
+	const handleToggleOverage = () => {
+		if (isOverageToggleLoading) return
+		if (isOverageEnabled) {
+			void disableOverage()
+		} else {
+			void enableOverage()
+		}
+	}
 
 	if (isPastDue && pastDueSubscription) {
 		const handlePastDuePayment = async () => {
@@ -560,6 +577,10 @@ export function SubscriptionSection() {
 					isUsageStatsError={isUsageStatsError}
 					onRegenerateKey={() => generateNewKeyMutation.mutate()}
 					isRegenerateLoading={generateNewKeyMutation.isPending}
+					canManageOverage={canManageOverage}
+					isOverageEnabled={isOverageEnabled}
+					onToggleOverage={handleToggleOverage}
+					isOverageToggleLoading={isOverageToggleLoading}
 				/>
 				{balanceCard}
 				{topupModal}

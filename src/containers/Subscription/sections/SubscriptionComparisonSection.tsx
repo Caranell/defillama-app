@@ -97,6 +97,11 @@ function ComparisonPlanHead({
 							</p>
 						) : null}
 					</div>
+					{meta.priceSecondary ? (
+						<p className="text-[10px] leading-3 text-(--sub-mobile-text-muted) md:text-[11px] md:text-(--sub-desktop-text-muted)">
+							{meta.priceSecondary}
+						</p>
+					) : null}
 				</div>
 				{isCurrentPlan || isLowerTier ? (
 					<p className="text-center text-[10px] leading-7 font-medium text-(--sub-brand-primary) md:text-xs dark:text-(--sub-brand-secondary)">

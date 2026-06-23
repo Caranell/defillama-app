@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { Icon } from '~/components/Icon'
+import { ResearchFooter } from '~/containers/Articles/landing/ResearchFooter'
 import { TitleLine } from '~/containers/Articles/landing/TitleLine'
 import { RESEARCH_FEED_URL } from '~/containers/Articles/researchFeed'
 import { feedSchemeUrl } from './readers'
@@ -178,6 +179,7 @@ export function ResearchFeedLanding({ items }: { items: ResearchFeedPreviewItem[
 					</a>
 				</div>
 			</div>
+			<ResearchFooter maxWidthClassName="max-w-6xl" />
 		</>
 	)
 }

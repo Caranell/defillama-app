@@ -13,7 +13,7 @@ import { RowLinksWithDropdown } from '~/components/RowLinksWithDropdown'
 import { TableWithSearch } from '~/components/Table/TableWithSearch'
 import { Tooltip } from '~/components/Tooltip'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
-import { formattedNum, slug } from '~/utils'
+import { formattedNum } from '~/utils'
 import { pushShallowQuery, readSingleQueryValue } from '~/utils/routerQuery'
 import type { IDATOverviewFlowSeries, IDATOverviewPageProps } from './types'
 
@@ -117,7 +117,7 @@ const overviewColumns = [
 				<span className="relative flex items-center gap-2">
 					<span className="vf-row-index shrink-0" aria-hidden="true" />
 					<BasicLink
-						href={`/digital-asset-treasury/${slug(row.original.ticker)}`}
+						href={`/digital-asset-treasury/${encodeURIComponent(row.original.ticker)}`}
 						title={name}
 						className="overflow-hidden text-sm font-medium text-ellipsis whitespace-nowrap text-(--link-text)"
 					>

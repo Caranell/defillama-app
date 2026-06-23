@@ -7,7 +7,7 @@ async function importConstantsWithEnv(env: Record<string, string | undefined>) {
 	vi.resetModules()
 
 	delete process.env.API_KEY
-	delete process.env.PRO_API_URL
+
 	for (const key of DIRECT_URL_ENV_NAMES) {
 		delete process.env[key]
 	}
@@ -29,27 +29,17 @@ afterEach(() => {
 })
 
 describe('PRO_API_BASE_URL', () => {
-	it('uses the default pro API URL outside production', async () => {
-		const constants = await importConstantsWithEnv({
-			API_KEY: 'secret-api-key',
-			NODE_ENV: 'development',
-			PRO_API_URL: 'https://pro-api.example.com'
-		})
+	it('is the fixed pro API host', async () => {
+		const constants = await importConstantsWithEnv({})
 
 		expect(constants.PRO_API_BASE_URL).toBe('https://pro-api.llama.fi')
-		expect(constants.SERVER_URL).toBe('https://pro-api.llama.fi/secret-api-key/api')
 	})
 
-	it('uses the configured pro API URL in production', async () => {
-		const constants = await importConstantsWithEnv({
-			API_KEY: 'secret-api-key',
-			NODE_ENV: 'production',
-			PRO_API_URL: 'https://pro-api.example.com'
-		})
+	it('routes server URLs through the pro API when an API key is set', async () => {
+		const constants = await importConstantsWithEnv({ API_KEY: 'secret-api-key' })
 
-		expect(constants.PRO_API_BASE_URL).toBe('https://pro-api.example.com')
-		expect(constants.SERVER_URL).toBe('https://pro-api.example.com/secret-api-key/api')
-		expect(constants.DATASETS_SERVER_URL).toBe('https://pro-api.example.com/secret-api-key/datasets')
+		expect(constants.SERVER_URL).toBe('https://pro-api.llama.fi/secret-api-key/api')
+		expect(constants.DATASETS_SERVER_URL).toBe('https://pro-api.llama.fi/secret-api-key/datasets')
 	})
 })
 
@@ -72,6 +62,7 @@ describe('server URL constants', () => {
 		expect(constants.YIELDS_SERVER_URL).toBe('https://yields.llama.fi')
 		expect(constants.LIQUIDATIONS_SERVER_URL_V2).toBe('https://api.llama.fi/liquidations')
 		expect(constants.RISK_SERVER_URL).toBe('https://risks.llama.fi')
+		expect(constants.MARKETS_SERVER_URL).toBe('https://markets.llama.fi')
 	})
 
 	it('uses direct URL overrides before pro API fallbacks', async () => {
@@ -129,9 +120,9 @@ describe('MARKETS_SERVER_URL', () => {
 		expect(constants.MARKETS_SERVER_URL).toBe('https://pro-api.llama.fi/secret-api-key/markets')
 	})
 
-	it('is undefined without an API key', async () => {
+	it('uses the public markets URL without an API key', async () => {
 		const constants = await importConstantsWithEnv({})
 
-		expect(constants.MARKETS_SERVER_URL).toBeUndefined()
+		expect(constants.MARKETS_SERVER_URL).toBe('https://markets.llama.fi')
 	})
 })

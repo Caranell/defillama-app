@@ -14,9 +14,11 @@ const TEST_ASSET = {
 }
 
 function setupPageModule({
+	canonicalMarketIds,
 	idMap = { USDE: 'asset-1' },
 	assetData = TEST_ASSET
 }: {
+	canonicalMarketIds?: string[]
 	idMap?: Record<string, string>
 	assetData?: unknown
 } = {}) {
@@ -26,7 +28,7 @@ function setupPageModule({
 	vi.doMock('~/utils/metadata', () => ({
 		default: {
 			rwaList: {
-				canonicalMarketIds: Object.keys(idMap),
+				canonicalMarketIds: canonicalMarketIds ?? Object.keys(idMap),
 				platforms: [],
 				chains: [],
 				categories: [],
@@ -59,17 +61,55 @@ describe('rwa asset page', () => {
 		const page = await setupPageModule()
 
 		await expect(page.getStaticProps({ params: { asset: 'USDE' } } as never)).resolves.toEqual({
-			props: { asset: TEST_ASSET },
+			props: { asset: TEST_ASSET, canonicalMarketId: 'USDE' },
 			revalidate: 123
 		})
 	})
 
-	it('getStaticProps resolves lowercase asset params to the canonical asset', async () => {
+	it('getStaticProps redirects lowercase asset params to the canonical asset', async () => {
 		const page = await setupPageModule()
 
 		await expect(page.getStaticProps({ params: { asset: 'usde' } } as never)).resolves.toEqual({
-			props: { asset: TEST_ASSET },
+			redirect: {
+				destination: '/rwa/asset/USDE',
+				permanent: false
+			}
+		})
+	})
+
+	it('getStaticProps redirects mixed-case punctuation asset params to the exact canonical asset', async () => {
+		const page = await setupPageModule({ idMap: { 'USDf-Falcon': 'asset-1' }, assetData: TEST_ASSET })
+
+		await expect(page.getStaticProps({ params: { asset: 'usdf-falcon' } } as never)).resolves.toEqual({
+			redirect: {
+				destination: '/rwa/asset/USDf-Falcon',
+				permanent: false
+			}
+		})
+	})
+
+	it('getStaticProps resolves canonical asset ids through differently-cased idMap keys', async () => {
+		const page = await setupPageModule({
+			canonicalMarketIds: ['USDf-Falcon'],
+			idMap: { 'usdf-falcon': 'asset-1' },
+			assetData: TEST_ASSET
+		})
+
+		await expect(page.getStaticProps({ params: { asset: 'USDf-Falcon' } } as never)).resolves.toEqual({
+			props: { asset: TEST_ASSET, canonicalMarketId: 'USDf-Falcon' },
 			revalidate: 123
+		})
+	})
+
+	it('getStaticProps returns notFound when a canonical asset has no detail id', async () => {
+		const page = await setupPageModule({
+			canonicalMarketIds: ['USDf-Falcon'],
+			idMap: {},
+			assetData: TEST_ASSET
+		})
+
+		await expect(page.getStaticProps({ params: { asset: 'USDf-Falcon' } } as never)).resolves.toEqual({
+			notFound: true
 		})
 	})
 
@@ -84,7 +124,9 @@ describe('rwa asset page', () => {
 	it('uses the canonical-cased asset slug in the canonical URL', async () => {
 		const page = await setupPageModule()
 
-		const element = page.default({ asset: TEST_ASSET } as never) as ReactElement<{ canonicalUrl: string }>
+		const element = page.default({ asset: TEST_ASSET, canonicalMarketId: 'USDE' } as never) as ReactElement<{
+			canonicalUrl: string
+		}>
 
 		expect(element.props.canonicalUrl).toBe('/rwa/asset/USDE')
 	})

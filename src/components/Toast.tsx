@@ -37,6 +37,21 @@ export function Toast() {
 	)
 }
 
+const SUCCESS_TOAST_DURATION = 4000
+
+export function successToast({ title, description }: { title: string; description?: string }) {
+	if (!description) {
+		return toast.success(title, { duration: SUCCESS_TOAST_DURATION })
+	}
+	return toast.success(
+		<div className="flex flex-col gap-1">
+			<p className="font-semibold text-(--text-primary)">{title}</p>
+			<p className="text-[#484848] dark:text-[#C6C6C6]">{description}</p>
+		</div>,
+		{ duration: SUCCESS_TOAST_DURATION }
+	)
+}
+
 export function errorToast({ title, description }: { title: string; description: string }) {
 	return toast.error(
 		(t) => (

@@ -1,5 +1,4 @@
 import { getChainOverviewData } from '~/containers/ChainOverview/queries.server'
-import { tokenIconUrl } from '~/utils/icons'
 import type { CompareProtocolsProps } from './types'
 
 export async function getCompareProtocolsPageData(): Promise<CompareProtocolsProps> {
@@ -20,7 +19,7 @@ export async function getCompareProtocolsPageData(): Promise<CompareProtocolsPro
 				acc.push({
 					value: protocol.name,
 					label: protocol.name,
-					logo: tokenIconUrl(protocol.name),
+					logo: protocol.logo ?? '',
 					score: protocol.tvl?.default?.tvl ?? 0
 				})
 				if (protocol.childProtocols) {
@@ -28,7 +27,7 @@ export async function getCompareProtocolsPageData(): Promise<CompareProtocolsPro
 						acc.push({
 							value: childProtocol.name,
 							label: childProtocol.name,
-							logo: tokenIconUrl(childProtocol.name),
+							logo: childProtocol.logo ?? '',
 							score: 1
 						})
 					}

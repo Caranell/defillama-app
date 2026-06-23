@@ -1,14 +1,13 @@
 import type { GetServerSideProps } from 'next'
 import Layout from '~/layout'
+import { canonicalRouteRedirect, encodeRouteSegment, getSingleRouteParam } from '~/utils/route'
 import { withServerSidePropsTelemetry } from '~/utils/telemetry'
 
 const getServerSidePropsHandler: GetServerSideProps = async (context) => {
-	return Promise.resolve({
-		redirect: {
-			destination: `/yields/pool/${context.params?.pool}`,
-			permanent: true
-		}
-	})
+	const pool = getSingleRouteParam(context.params?.pool)
+	if (!pool) return { notFound: true }
+
+	return canonicalRouteRedirect(`/yields/pool/${encodeRouteSegment(pool)}`, true)
 }
 
 export default function YieldPoolPage() {

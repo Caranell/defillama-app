@@ -189,7 +189,7 @@ function createPoolsColumns({ hasPremiumAccess, isClient, serverMode, onRequestU
 				)
 			},
 			meta: {
-				headerClassName: 'w-[120px]',
+				headerClassName: 'w-[100px]',
 				align: 'end',
 				headerHelperText: 'Note for lending pools: TVL = Available Liquidity = (Supplied - Borrowed)'
 			}
@@ -272,7 +272,7 @@ function createPoolsColumns({ hasPremiumAccess, isClient, serverMode, onRequestU
 				)
 			},
 			meta: {
-				headerClassName: 'w-[140px]',
+				headerClassName: 'w-[127px]',
 				align: 'end',
 				headerHelperText: 'Annualised percentage yield from incentives.'
 			}

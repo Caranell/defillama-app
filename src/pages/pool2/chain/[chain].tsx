@@ -6,6 +6,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 export const getStaticPaths = () => {
 	if (SKIP_BUILD_STATIC_GENERATION) {
@@ -22,13 +23,19 @@ export const getStaticProps = withPerformanceLogging(
 	`pool2/chain/[chain]`,
 	async ({ params }: GetStaticPropsContext<{ chain: string }>) => {
 		const chain = slug(params.chain)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		if (!metadataCache.chainMetadata[chain]) {
+		const [{ default: metadataCache }, { getChainRouteRedirectDestination, resolveChainParamFromMetadata }] =
+			await Promise.all([import('~/utils/metadata'), import('~/containers/ChainOverview/server/routes')])
+		const chainRoute = resolveChainParamFromMetadata(params.chain, metadataCache)
+		if (!chainRoute) {
 			return { notFound: true }
+		}
+		const redirectDestination = getChainRouteRedirectDestination(params.chain, chainRoute, 'pool2/chain')
+		if (redirectDestination) {
+			return canonicalRouteRedirect(redirectDestination)
 		}
 
 		const data = await getExtraTvlByChain({
-			chain: metadataCache.chainMetadata[chain].name,
+			chain: chainRoute.canonicalName,
 			metric: 'pool2',
 			protocolMetadata: metadataCache.protocolMetadata
 		})

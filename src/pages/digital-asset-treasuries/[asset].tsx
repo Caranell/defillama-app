@@ -6,6 +6,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const pageName = ['Digital Asset Treasuries', 'by', 'Institution']
 
@@ -20,6 +21,10 @@ export const getStaticProps = withPerformanceLogging(
 		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
 		if (!metadataCache.digitalAssetTreasuryAssetSlugsSet.has(asset)) {
 			return { notFound: true }
+		}
+
+		if (params.asset !== asset) {
+			return canonicalRouteRedirect(`/digital-asset-treasuries/${asset}`)
 		}
 
 		const props = await getDATOverviewDataByAsset(asset)
@@ -46,7 +51,7 @@ export async function getStaticPaths() {
 	const { getDATAssetStaticPaths } = await import('~/containers/DAT/server/routes')
 	const paths = await getDATAssetStaticPaths()
 
-	return { paths, fallback: false }
+	return { paths, fallback: 'blocking' }
 }
 
 export default function TreasuriesByAssetPage(props: InferGetStaticPropsType<typeof getStaticProps>) {

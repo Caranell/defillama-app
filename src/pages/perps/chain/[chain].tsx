@@ -10,6 +10,7 @@ import Layout from '~/layout'
 import { slug } from '~/utils'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
+import { canonicalRouteRedirect } from '~/utils/route'
 
 const adapterType = ADAPTER_TYPES.PERPS
 const dataType = ADAPTER_DATA_TYPES.DAILY_VOLUME
@@ -47,8 +48,12 @@ export const getStaticProps = withPerformanceLogging(
 	`${type}/chain/[chain]`,
 	async ({ params }: GetStaticPropsContext<{ chain: string }>) => {
 		const chain = slug(params.chain)
-		const metadataCache = await import('~/utils/metadata').then((m) => m.default)
-		const metadata = metadataCache.chainMetadata[chain]
+		const [{ default: metadataCache }, { getChainRouteRedirectDestination, resolveChainFeatureParamFromMetadata }] =
+			await Promise.all([import('~/utils/metadata'), import('~/containers/ChainOverview/server/routes')])
+		const chainRoute = resolveChainFeatureParamFromMetadata(params.chain, metadataCache, (metadata) =>
+			Boolean(metadata.perps)
+		)
+		const metadata = chainRoute?.metadata
 
 		addDimensionChainRouteTelemetry({
 			adapterType,
@@ -58,8 +63,12 @@ export const getStaticProps = withPerformanceLogging(
 			metadataFlag: 'perps'
 		})
 
-		if (!metadata?.perps) {
+		if (!chainRoute) {
 			return { notFound: true }
+		}
+		const redirectDestination = getChainRouteRedirectDestination(params.chain, chainRoute, 'perps/chain')
+		if (redirectDestination) {
+			return canonicalRouteRedirect(redirectDestination)
 		}
 
 		const data = await getAdapterByChainPageData({
@@ -72,7 +81,7 @@ export const getStaticProps = withPerformanceLogging(
 
 		if (!data) throw new Error(`Missing page data for route=/perps/chain/[chain] chain=${chain}`)
 
-		const { questions: entityQuestions } = await fetchEntityQuestions(chain, 'chain', {
+		const { questions: entityQuestions } = await fetchEntityQuestions(chainRoute.canonicalSlug, 'chain', {
 			subPage: 'perps',
 			total24h: data.total24h ?? null,
 			total7d: data.total7d ?? null,

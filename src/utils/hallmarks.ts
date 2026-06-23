@@ -12,16 +12,6 @@ function normalizeHallmarkTimestampToSeconds(timestamp: number): number {
 	return timestamp >= 1e12 ? Math.floor(timestamp / 1e3) : timestamp
 }
 
-function buildHackHallmarkMap(hacks?: IHackApiItem[] | null): Map<number, string> {
-	const hallmarkMap = new Map<number, string>()
-
-	for (const hack of hacks ?? []) {
-		hallmarkMap.set(hack.date, `Hack: ${hack.classification ?? ''}`)
-	}
-
-	return hallmarkMap
-}
-
 function buildPointHallmarkMap({
 	protocolHallmarks,
 	dimensions
@@ -111,19 +101,20 @@ export function buildProtocolOverviewHallmarks({
 	hallmarks: HallmarkPoint[]
 	rangeHallmarks: HallmarkRange[]
 } {
-	const hallmarkMap = buildHackHallmarkMap(hacks)
+	const hallmarks: HallmarkPoint[] = []
+	for (const hack of hacks ?? []) {
+		if (hack.date == null) continue
+		hallmarks.push([hack.date, hack.classification || hack.technique || 'Exploit'])
+	}
+
 	const pointHallmarks = buildHallmarksWithGenuineSpikes({ protocolHallmarks, dimensions }) ?? []
 
 	for (const [timestamp, label] of pointHallmarks) {
-		if (!hallmarkMap.has(timestamp)) {
-			hallmarkMap.set(timestamp, label)
-		}
+		hallmarks.push([timestamp, label])
 	}
 
 	return {
-		hallmarks: Array.from(hallmarkMap.entries())
-			.sort((a, b) => a[0] - b[0])
-			.map(([timestamp, label]) => [timestamp * 1e3, label]),
+		hallmarks: hallmarks.sort((a, b) => a[0] - b[0]).map(([timestamp, label]) => [timestamp * 1e3, label]),
 		rangeHallmarks: buildRangeHallmarksInMs(protocolHallmarks)
 	}
 }
