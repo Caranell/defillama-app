@@ -1081,6 +1081,12 @@
       ]
     },
     {
+      "name": "Equities",
+      "route": "/equities",
+      "icon": "trending-up",
+      "isNew": true
+    },
+    {
       "name": "Support",
       "route": "/support",
       "icon": "headset"
