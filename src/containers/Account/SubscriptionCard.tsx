@@ -9,8 +9,10 @@ interface SubscriptionCardProps {
 	isCancelPending: boolean
 	onManage: () => void
 	onCancel: () => void
+	onTopup?: () => void
 	isManageLoading?: boolean
 	isCancelLoading?: boolean
+	isTopupLoading?: boolean
 }
 
 function InfoRow({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
@@ -34,8 +36,10 @@ export function SubscriptionCard({
 	isCancelPending,
 	onManage,
 	onCancel,
+	onTopup,
 	isManageLoading,
-	isCancelLoading
+	isCancelLoading,
+	isTopupLoading
 }: SubscriptionCardProps) {
 	const isManageable = provider === 'stripe' || provider === 'llamapay'
 	const manageLabel = provider === 'stripe' ? 'Manage on Stripe' : 'Manage on LlamaPay'
@@ -90,6 +94,16 @@ export function SubscriptionCard({
 				<p className="text-xs font-medium text-(--sub-orange-400)">Cancellation scheduled</p>
 			) : isManageable ? (
 				<div className="flex gap-2">
+					{onTopup && (
+						<button
+							onClick={onTopup}
+							disabled={isTopupLoading}
+							className="flex h-8 items-center gap-1 rounded-lg bg-(--sub-brand-primary) px-3 text-xs font-medium whitespace-nowrap text-white disabled:opacity-50"
+						>
+							{isTopupLoading ? 'Loading...' : 'Top Up'}
+							{!isTopupLoading && <Icon name="circle-external-link" height={16} width={16} className="shrink-0" />}
+						</button>
+					)}
 					<button
 						onClick={onManage}
 						disabled={isManageLoading}

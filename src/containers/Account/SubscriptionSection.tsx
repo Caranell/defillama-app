@@ -60,14 +60,18 @@ function SubscriptionCardWithProps({
 	subscription,
 	onManage,
 	onCancel,
+	onTopup,
 	isManageLoading,
-	isCancelLoading
+	isCancelLoading,
+	isTopupLoading
 }: {
 	subscription: Subscription
 	onManage: () => void
 	onCancel: () => void
+	onTopup?: () => void
 	isManageLoading: boolean
 	isCancelLoading: boolean
+	isTopupLoading?: boolean
 }) {
 	const isCancelPending = subscription.metadata?.isCanceled === 'true'
 	const expiryDate = parseExpiryDate(subscription.expires_at)
@@ -81,8 +85,10 @@ function SubscriptionCardWithProps({
 			isCancelPending={isCancelPending}
 			onManage={onManage}
 			onCancel={onCancel}
+			onTopup={onTopup}
 			isManageLoading={isManageLoading}
 			isCancelLoading={isCancelLoading}
+			isTopupLoading={isTopupLoading}
 		/>
 	)
 }
@@ -298,6 +304,9 @@ export function SubscriptionSection() {
 		endTrialSubscription,
 		isEndTrialLoading,
 		isSubscriptionLoading,
+		handleLlamapayTopup,
+		loading,
+		subscription,
 		enableOverage,
 		disableOverage,
 		isEnableOverageLoading,
@@ -389,6 +398,13 @@ export function SubscriptionSection() {
 		setYearlyUpgradeType(type)
 		setIsYearlyUpgradeModalOpen(true)
 	}
+
+	const handleTopup = () => {
+		if (!activeSubscription) return
+		void handleLlamapayTopup(activeSubscription.type === 'api' ? 'api' : 'llamafeed', 'month')
+	}
+
+	const isMonthlyLlamapay = subscription?.provider === 'llamapay' && subscription?.billing_interval === 'month'
 
 	const isOverageEnabled = Boolean(apiSubscription?.overage)
 	const canManageOverage = hasApiSubscription && apiSubscription?.provider === 'manual'
@@ -544,8 +560,10 @@ export function SubscriptionSection() {
 						subscription={activeSubscription}
 						onManage={handleManageSubscription}
 						onCancel={handleCancelSubscription}
+						onTopup={isMonthlyLlamapay ? handleTopup : undefined}
 						isManageLoading={isPortalSessionLoading}
 						isCancelLoading={isCancelSubscriptionLoading}
+						isTopupLoading={loading === 'llamapay'}
 					/>
 					{isApiMonthly && !isCancelPending && apiSubscription?.provider === 'stripe' && (
 						<YearlyUpgradeBanner onUpgrade={() => handleUpgradeToYearly('api')} planType="api" />
@@ -579,8 +597,10 @@ export function SubscriptionSection() {
 					subscription={activeSubscription}
 					onManage={handleManageSubscription}
 					onCancel={handleCancelSubscription}
+					onTopup={isMonthlyLlamapay ? handleTopup : undefined}
 					isManageLoading={isPortalSessionLoading}
 					isCancelLoading={isCancelSubscriptionLoading}
+					isTopupLoading={loading === 'llamapay'}
 				/>
 				{isProMonthly && !isCancelPending && llamafeedSubscription?.provider === 'stripe' && (
 					<YearlyUpgradeBanner onUpgrade={() => handleUpgradeToYearly('llamafeed')} planType="pro" />
