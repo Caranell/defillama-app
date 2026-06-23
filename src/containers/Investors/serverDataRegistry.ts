@@ -7,7 +7,10 @@ const SERVER_DATA_FETCHERS: Record<string, Fetcher> = {
 		),
 	bfqwxro9m0xnc9z: () =>
 		import('./dashboards/thorchain/serverData').then((m) =>
-			m.fetchThorchainUnlocksServerData().then((d) => ({ thorchainUnlocks: d }))
+			m.fetchThorchainServerData().then((d) => ({
+				thorchainUnlocks: { emissions: d.emissions, initialTokenMarketData: d.initialTokenMarketData },
+				thorchainChainIncome: d.chainIncomeStatement
+			}))
 		)
 }
 

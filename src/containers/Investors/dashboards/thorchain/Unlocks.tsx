@@ -1,6 +1,6 @@
 import { useCustomServerData } from '~/containers/Investors/CustomServerDataContext'
 import { EmissionsByProtocol } from '~/containers/Unlocks/EmissionsByProtocol'
-import type { ThorchainUnlocksServerData } from './serverData'
+import type { ThorchainUnlocks } from './serverData'
 import { SectionHeader } from './ui'
 
 // RUNE token unlocks — rendered with the same EmissionsByProtocol component as /unlocks/thorchain-dex,
@@ -8,7 +8,7 @@ import { SectionHeader } from './ui'
 // the all-emissions list behind Locked/Unlocked % is rate-limited on the free public host, which is why
 // the in-browser ProDashboard cards (client-side, unkeyed) rendered it empty.
 export default function Unlocks() {
-	const data = useCustomServerData<ThorchainUnlocksServerData>('thorchainUnlocks')
+	const data = useCustomServerData<ThorchainUnlocks>('thorchainUnlocks')
 
 	return (
 		<div className="flex flex-col gap-6">

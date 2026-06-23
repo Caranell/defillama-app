@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useCustomServerData } from '~/containers/Investors/CustomServerDataContext'
 import { IncomeStatement } from '~/containers/ProtocolOverview/IncomeStatement'
 import { ChainBreakdownChart } from './ChainBreakdownChart'
+import type { ThorchainChainIncome } from './serverData'
 import type { ApiTableData, Chart, Distribution, Kpi as KpiT } from './transform'
 import {
 	ApiTable,
@@ -22,25 +24,32 @@ import {
 const DEX = 'thorchain-dex'
 const NAME = 'THORChain'
 
-// Same setup as odyssey's MetronomeIncomeStatement: fetch DefiLlama's internal income-statement
-// endpoint and render the shared ProtocolOverview component, with a Table/Sankey toggle.
+// Same setup as odyssey's MetronomeIncomeStatement: render the shared ProtocolOverview component with
+// a Table/Sankey toggle. The DEX statement comes from the internal income-statement route (`protocol`);
+// the chain statement is pre-fetched server-side (`statement`) since the chain isn't a DefiLlama
+// protocol and that route can't resolve it.
 function ThorchainIncomeStatement({
 	protocol,
 	title,
-	subtitle
+	subtitle,
+	statement
 }: {
-	protocol: string
+	protocol?: string
 	title: string
 	subtitle?: string
+	statement?: ThorchainChainIncome
 }) {
 	const [view, setView] = useState<'table' | 'sankey'>('table')
-	const { data, isLoading } = useQuery({
+	const query = useQuery({
 		queryKey: ['thorchain-income-statement', protocol],
 		queryFn: () => fetch(`/api/public/income-statement?protocol=${protocol}`).then((r) => (r.ok ? r.json() : null)),
+		enabled: !statement && Boolean(protocol),
 		retry: 2,
 		staleTime: 60 * 60 * 1000,
 		refetchOnWindowFocus: false
 	})
+	const data = statement ?? query.data
+	const isLoading = !statement && query.isLoading
 	const hasData =
 		data?.data && (['monthly', 'quarterly', 'yearly'] as const).some((k) => Object.keys(data.data[k] ?? {}).length > 0)
 
@@ -66,7 +75,7 @@ function ThorchainIncomeStatement({
 					name={NAME}
 					incomeStatement={data}
 					view={view}
-					anchorId={`thorchain-income-${protocol}`}
+					anchorId={`thorchain-income-${protocol ?? 'chain'}`}
 					showTitles={false}
 					className="border-none bg-transparent p-0"
 				/>
@@ -108,6 +117,7 @@ const BURN_KPIS: [string, string][] = [
 
 export default function Financials() {
 	const { data } = useThorchainData<FinancialsData>('financials')
+	const chainIncome = useCustomServerData<ThorchainChainIncome>('thorchainChainIncome')
 	if (!data) return <PageLoader />
 
 	const { kpis, distribution, affiliate, burn } = data
@@ -157,9 +167,9 @@ export default function Financials() {
 			<section className="flex flex-col gap-6">
 				<SectionHeader>Income Statements</SectionHeader>
 				<ThorchainIncomeStatement
-					protocol="thorchain"
 					title="THORChain (Chain) Income Statement"
 					subtitle="Chain-level fees & revenue across all THORChain activity."
+					statement={chainIncome}
 				/>
 				<ThorchainIncomeStatement
 					protocol={DEX}
