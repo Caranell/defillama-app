@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { lazy, useMemo, useState } from 'react'
 import type { IMultiSeriesChartProps } from '~/components/ECharts/types'
-import ChainCharts from '~/containers/ProDashboard/services/ChainCharts'
 import ProtocolChartBuilderData from '~/containers/ProDashboard/services/ProtocolChartBuilderData'
 import ProtocolCharts from '~/containers/ProDashboard/services/ProtocolCharts'
 import { getGroupedTimestampSec } from '~/containers/ProDashboard/utils'
@@ -158,11 +157,12 @@ export function ChainBreakdownChart({
 	)
 }
 
-// Fees + Revenue merged (two overlaid totals). `chain` → DefiLlama chain dimensions; `dex` → thorchain-dex protocol.
+// Fees + Revenue merged (two overlaid totals), both from the protocol fees adapter so the
+// chain figures match defillama.com/chain/thorchain. `chain` → native `thorchain` protocol
+// (NOT the chain-wide aggregate, which folds in unaffiliated apps like THORWallet); `dex` → thorchain-dex.
 function totalFn(source: 'chain' | 'dex', metric: 'fees' | 'revenue'): () => Promise<Pts> {
-	if (source === 'chain')
-		return metric === 'fees' ? () => ChainCharts.fees('thorchain') : () => ChainCharts.revenue('thorchain')
-	return metric === 'fees' ? () => ProtocolCharts.fees(DEX) : () => ProtocolCharts.revenue(DEX)
+	const protocol = source === 'chain' ? 'thorchain' : DEX
+	return metric === 'fees' ? () => ProtocolCharts.fees(protocol) : () => ProtocolCharts.revenue(protocol)
 }
 
 export function FeeRevenueChart({

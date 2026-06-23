@@ -24,7 +24,15 @@ const NAME = 'THORChain'
 
 // Same setup as odyssey's MetronomeIncomeStatement: fetch DefiLlama's internal income-statement
 // endpoint and render the shared ProtocolOverview component, with a Table/Sankey toggle.
-function ThorchainIncomeStatement({ protocol = DEX }: { protocol?: string }) {
+function ThorchainIncomeStatement({
+	protocol,
+	title,
+	subtitle
+}: {
+	protocol: string
+	title: string
+	subtitle?: string
+}) {
 	const [view, setView] = useState<'table' | 'sankey'>('table')
 	const { data, isLoading } = useQuery({
 		queryKey: ['thorchain-income-statement', protocol],
@@ -38,7 +46,8 @@ function ThorchainIncomeStatement({ protocol = DEX }: { protocol?: string }) {
 
 	return (
 		<ChartCard
-			title={`${NAME} DEX Income Statement`}
+			title={title}
+			subtitle={subtitle}
 			control={
 				<SegToggle
 					options={[
@@ -57,6 +66,7 @@ function ThorchainIncomeStatement({ protocol = DEX }: { protocol?: string }) {
 					name={NAME}
 					incomeStatement={data}
 					view={view}
+					anchorId={`thorchain-income-${protocol}`}
 					showTitles={false}
 					className="border-none bg-transparent p-0"
 				/>
@@ -132,9 +142,6 @@ export default function Financials() {
 					<Kpi kpi={kpis.topChainByFees} label="Top Chain by Fees" />
 				</KpiBand>
 
-				{/* Internal DefiLlama income statement (odyssey pattern) with Table/Sankey toggle. */}
-				<ThorchainIncomeStatement />
-
 				<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 					<ChainBreakdownChart metric="fees" title="DEX Fees by Chain" />
 					<ChainBreakdownChart metric="revenue" title="DEX Revenue by Chain" />
@@ -143,6 +150,21 @@ export default function Financials() {
 				<DonutCard
 					dist={distribution}
 					subtitle="30-day system income split across nodes, LPs, TCY stakers, funds and burn."
+				/>
+			</section>
+
+			{/* Internal DefiLlama income statements (odyssey pattern), one per protocol, each with a Table/Sankey toggle. */}
+			<section className="flex flex-col gap-6">
+				<SectionHeader>Income Statements</SectionHeader>
+				<ThorchainIncomeStatement
+					protocol="thorchain"
+					title="THORChain (Chain) Income Statement"
+					subtitle="Chain-level fees & revenue across all THORChain activity."
+				/>
+				<ThorchainIncomeStatement
+					protocol={DEX}
+					title="THORChain DEX Income Statement"
+					subtitle="Swap fees & protocol revenue from the THORChain DEX adapter."
 				/>
 			</section>
 

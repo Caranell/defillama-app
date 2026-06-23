@@ -8,7 +8,8 @@ const Network = lazy(() => import('./Network'))
 const Token = lazy(() => import('./Token'))
 const Unlocks = lazy(() => import('./Unlocks'))
 
-// Liquidity lives on Overview; native fees/revenue/income/unlocks come from ProDashboard.
+// Liquidity lives on Overview; native fees/revenue/income come from DefiLlama adapters,
+// unlocks from server-side emissions (see serverData.ts).
 export const tabs: DashboardTabConfig[] = [
 	{ id: 'overview', label: 'Overview', component: Overview },
 	{ id: 'financials', label: 'Financials', component: Financials },

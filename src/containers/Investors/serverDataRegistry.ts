@@ -4,6 +4,10 @@ const SERVER_DATA_FETCHERS: Record<string, Fetcher> = {
 	t62luatlj9thwx2: () =>
 		import('./dashboards/berachain/api').then((m) =>
 			m.fetchBerachainIncomeServerData().then((d) => ({ berachainIncome: d }))
+		),
+	bfqwxro9m0xnc9z: () =>
+		import('./dashboards/thorchain/serverData').then((m) =>
+			m.fetchThorchainUnlocksServerData().then((d) => ({ thorchainUnlocks: d }))
 		)
 }
 

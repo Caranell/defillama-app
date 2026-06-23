@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import ChainCharts from '~/containers/ProDashboard/services/ChainCharts'
 import ProtocolCharts from '~/containers/ProDashboard/services/ProtocolCharts'
 import { formattedNum } from '~/utils'
 import { FeeRevenueChart, MetricTrendChart, SeriesAreaChart } from './ChainBreakdownChart'
@@ -27,12 +26,13 @@ interface OverviewData {
 const DAY = 86400
 const DEX = 'thorchain-dex'
 
-// Chain-level fees/revenue (30d) from DefiLlama's dimensions API (ChainCharts is context-free).
-function useChain30d(metric: 'fees' | 'revenue') {
+// Trailing-30d USD total of a DefiLlama daily series, so chain & DEX KPIs match the protocol's
+// DefiLlama page (chain → native `thorchain`, DEX → `thorchain-dex`) rather than the ir-server values.
+function useTrailing30d(key: string, fetcher: () => Promise<[number, number][]>) {
 	return useQuery({
-		queryKey: ['thorchain-chain-30d', metric],
+		queryKey: ['thorchain-30d', key],
 		queryFn: async () => {
-			const series = metric === 'fees' ? await ChainCharts.fees('thorchain') : await ChainCharts.revenue('thorchain')
+			const series = await fetcher()
 			if (!series?.length) return null
 			const cutoff = series[series.length - 1][0] - 30 * DAY
 			const sum = series.reduce((acc, [t, v]) => (t > cutoff ? acc + (v || 0) : acc), 0)
@@ -49,8 +49,16 @@ export default function Overview() {
 	const { data } = useThorchainData<OverviewData>('overview')
 	// DEX liquidity composition currently lives on the network endpoint.
 	const { data: net } = useThorchainData<{ liquidity?: LiquidityData }>('network')
-	const chainFees = useChain30d('fees')
-	const chainRevenue = useChain30d('revenue')
+	const chainFees = useTrailing30d('chain-fees', () => ProtocolCharts.fees('thorchain'))
+	const chainRevenue = useTrailing30d('chain-revenue', () => ProtocolCharts.revenue('thorchain'))
+	// DEX KPIs sourced from DefiLlama's thorchain-dex adapter (match the protocol page), not the ir-server.
+	const dexFees = useTrailing30d('dex-fees', () => ProtocolCharts.fees(DEX))
+	const dexRevenue = useTrailing30d('dex-revenue', () => ProtocolCharts.revenue(DEX))
+	const dexHoldersRevenue = useTrailing30d('dex-holders-revenue', () => ProtocolCharts.holdersRevenue(DEX))
+	const dexSupplySideRevenue = useTrailing30d('dex-supply-side-revenue', () =>
+		ProtocolCharts.summary(DEX, 'fees', 'dailySupplySideRevenue')
+	)
+	const dexVolume = useTrailing30d('dex-volume', () => ProtocolCharts.volume(DEX))
 	if (!data) return <PageLoader />
 
 	const chain = data.kpis.thorchain ?? {}
@@ -58,33 +66,16 @@ export default function Overview() {
 
 	return (
 		<div className="flex flex-col gap-10">
-			{/* Chain data first. */}
-			<section className="flex flex-col gap-6">
-				<SectionHeader>THORChain (Chain)</SectionHeader>
-				<div className={GRID}>
-					<Kpi kpi={chain.tvl} label="TVL" />
-					<Kpi kpi={chainFees.data ?? undefined} label="Chain Fees (30d)" note="chain dailyAppFees" />
-					<Kpi kpi={chainRevenue.data ?? undefined} label="Chain Revenue (30d)" note="chain dailyAppRevenue" />
-				</div>
-
-				<TimeAreaCard
-					chart={data.tvlChart}
-					subtitle="Total value locked across the THORChain chain."
-					value={chain.tvl?.formatted}
-				/>
-				<FeeRevenueChart source="chain" title="Chain Fees & Revenue" subtitle="Chain-level app fees and revenue." />
-			</section>
-
-			{/* Then DEX data. */}
+			{/* DEX data first. */}
 			<section className="flex flex-col gap-6">
 				<SectionHeader>THORChain DEX</SectionHeader>
 				<div className={GRID}>
 					<Kpi kpi={dex.tvl} label="DEX TVL" />
-					<Kpi kpi={dex.dexVolume30d} label="DEX Volume (30d)" />
-					<Kpi kpi={dex.fees30d} label="Fees (30d)" />
-					<Kpi kpi={dex.revenue30d} label="Revenue (30d)" />
-					<Kpi kpi={dex.holdersRevenue30d} label="Holders Revenue (30d)" />
-					<Kpi kpi={dex.supplySideRevenue30d} label="Supply-side Revenue (30d)" />
+					<Kpi kpi={dexVolume.data ?? undefined} label="DEX Volume (30d)" />
+					<Kpi kpi={dexFees.data ?? undefined} label="Fees (30d)" />
+					<Kpi kpi={dexRevenue.data ?? undefined} label="Revenue (30d)" />
+					<Kpi kpi={dexHoldersRevenue.data ?? undefined} label="Holders Revenue (30d)" />
+					<Kpi kpi={dexSupplySideRevenue.data ?? undefined} label="Supply-side Revenue (30d)" />
 				</div>
 
 				<SeriesAreaChart
@@ -112,6 +103,23 @@ export default function Overview() {
 			</section>
 
 			{net?.liquidity && <LiquiditySection liquidity={net.liquidity} />}
+
+			{/* Chain data at the bottom. */}
+			<section className="flex flex-col gap-6">
+				<SectionHeader>THORChain (Chain)</SectionHeader>
+				<div className={GRID}>
+					<Kpi kpi={chain.tvl} label="TVL" />
+					<Kpi kpi={chainFees.data ?? undefined} label="Chain Fees (30d)" note="thorchain dailyFees" />
+					<Kpi kpi={chainRevenue.data ?? undefined} label="Chain Revenue (30d)" note="thorchain dailyRevenue" />
+				</div>
+
+				<TimeAreaCard
+					chart={data.tvlChart}
+					subtitle="Total value locked across the THORChain chain."
+					value={chain.tvl?.formatted}
+				/>
+				<FeeRevenueChart source="chain" title="Chain Fees & Revenue" subtitle="Chain-level app fees and revenue." />
+			</section>
 		</div>
 	)
 }
