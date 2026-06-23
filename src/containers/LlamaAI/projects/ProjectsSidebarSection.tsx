@@ -92,6 +92,9 @@ export function ProjectsSidebarSection({
 	const goToProject = (projectId: string) => {
 		setStorageItem(storageKey, projectId)
 		void navigate.toProject(projectId)
+		// On mobile the sidebar is a slide-over drawer; close it on navigation so the
+		// project page isn't left covered — matching the chat-tap behavior in AgenticSessionItem.
+		if (isDrawer) hideSidebar()
 	}
 
 	const onCreated = (project: { id: string }) => {

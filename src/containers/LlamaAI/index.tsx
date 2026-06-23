@@ -45,7 +45,9 @@ import { TokenLimitModal } from '~/containers/LlamaAI/components/TokenLimitModal
 import {
 	isTemporaryConnectivityError,
 	RECOVERY_ATTEMPT_DELAYS_MS,
-	RECOVERY_GRACE_MS
+	RECOVERY_GRACE_MS,
+	type RecoveryActiveSnapshot,
+	shouldGiveUpRecovery
 } from '~/containers/LlamaAI/connectionErrors'
 import { dashboardPanelReducer, INITIAL_DASHBOARD_PANEL_STATE } from '~/containers/LlamaAI/dashboardPanelState'
 import {
@@ -158,6 +160,7 @@ type RecoveryController = {
 	expiryTimerId: number | null
 	attemptInFlight: boolean
 	streamAttached: boolean
+	lastSnapshot: RecoveryActiveSnapshot | null
 }
 
 function getErrorMessage(error: unknown): string {
@@ -781,9 +784,17 @@ export function AgenticChat({
 			onTemporaryDisconnect?: (error: Error, streamBuffer: StreamBuffer) => void
 		}) => {
 			let activeExecution: Awaited<ReturnType<typeof checkActiveExecution>>
+			const recordSnapshot = (snapshot: RecoveryActiveSnapshot | null) => {
+				const rc = recoveryControllerRef.current
+				if (rc && rc.sessionId === targetSessionId) {
+					rc.lastSnapshot = snapshot
+				}
+			}
 			try {
 				activeExecution = await checkActiveExecution(targetSessionId, authorizedFetchCompat)
+				recordSnapshot(activeExecution)
 			} catch (checkActiveExecutionError) {
+				recordSnapshot(null)
 				const checkError =
 					checkActiveExecutionError instanceof Error
 						? checkActiveExecutionError
@@ -1037,7 +1048,7 @@ export function AgenticChat({
 			dispatchStream({ type: 'RESET_STREAM' })
 			dispatchStream({
 				type: 'SET_ERROR',
-				value: controller.lastErrorMessage || 'Failed to reconnect. Please try again.'
+				value: 'Lost connection and could not reconnect. Refresh to see if your response completed, or retry.'
 			})
 			dispatchStream({ type: 'SET_LAST_FAILED_REQUEST', value: controller.failedRequest })
 		},
@@ -1081,7 +1092,7 @@ export function AgenticChat({
 						attemptCount: latest.attemptCount,
 						lastErrorMessage: latest.lastErrorMessage
 					})
-					if (Date.now() >= latest.startedAt + RECOVERY_GRACE_MS) {
+					if (shouldGiveUpRecovery(latest.lastSnapshot, Date.now() - latest.startedAt)) {
 						exhaustRecovery(latest)
 						return
 					}
@@ -1110,9 +1121,15 @@ export function AgenticChat({
 
 			const latest = recoveryControllerRef.current
 			if (!latest || latest.id !== recoveryId) return
-			if (Date.now() >= latest.startedAt + RECOVERY_GRACE_MS) {
+			if (shouldGiveUpRecovery(latest.lastSnapshot, Date.now() - latest.startedAt)) {
 				exhaustRecovery(latest)
+				return
 			}
+			// Run is still alive (or its result is still landing) server-side: keep polling
+			// instead of stalling, so a long run that outlasts the grace window still recovers.
+			const baseMs = Math.min(1000 * Math.pow(2, latest.attemptCount - 1), 8000)
+			const backoffMs = Math.round(baseMs * (0.5 + Math.random() * 0.5))
+			queueRecoveryAttempt(recoveryId, backoffMs)
 		})().then(
 			() => {
 				const latest = recoveryControllerRef.current
@@ -1174,7 +1191,8 @@ export function AgenticChat({
 				retryTimerIds: [],
 				expiryTimerId: null,
 				attemptInFlight: false,
-				streamAttached: false
+				streamAttached: false,
+				lastSnapshot: null
 			}
 			recoveryIdRef.current = controller.id
 			recoveryControllerRef.current = controller
@@ -1192,6 +1210,7 @@ export function AgenticChat({
 			controller.expiryTimerId = window.setTimeout(() => {
 				const latest = recoveryControllerRef.current
 				if (!latest || latest.id !== controller.id || latest.attemptInFlight || latest.streamAttached) return
+				if (!shouldGiveUpRecovery(latest.lastSnapshot, Date.now() - latest.startedAt)) return
 				exhaustRecovery(latest)
 			}, RECOVERY_GRACE_MS)
 			return true
@@ -2153,6 +2172,7 @@ export function AgenticChat({
 			controller.expiryTimerId = window.setTimeout(() => {
 				const latest = recoveryControllerRef.current
 				if (!latest || latest.id !== controller.id || latest.attemptInFlight || latest.streamAttached) return
+				if (!shouldGiveUpRecovery(latest.lastSnapshot, Date.now() - latest.startedAt)) return
 				exhaustRecovery(latest)
 			}, RECOVERY_GRACE_MS)
 			attemptRecoveryForController(controller.id)

@@ -60,7 +60,15 @@ export function ExternalLinkInterstitial({ href, onClose, onAllowPermanently }: 
 						href={href ?? '#'}
 						target="_blank"
 						rel="noopener noreferrer nofollow ugc"
-						onClick={onClose}
+						onClick={(event) => {
+							if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+								onClose()
+								return
+							}
+							event.preventDefault()
+							if (href) window.open(href, '_blank', 'noopener,noreferrer')
+							onClose()
+						}}
 						className="rounded-md bg-(--old-blue) px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
 					>
 						Continue
