@@ -495,6 +495,41 @@ export const useSubscribe = () => {
 		}
 	})
 
+	const disableOverageMutation = useMutation({
+		mutationFn: async () => {
+			if (!isAuthenticated) {
+				throw new Error('Please sign in to disable overage')
+			}
+
+			if (apiSubscription.status !== 'active') {
+				throw new Error('No active API subscription found')
+			}
+
+			const data = await authorizedFetch(
+				`${AUTH_SERVER}/subscription/disable-overage`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					}
+				},
+				true
+			)
+				.then(handleSimpleFetchResponse)
+				.then((res) => res.json())
+
+			return data
+		},
+		onSuccess: () => {
+			toast.success('Overage has been disabled successfully')
+			void queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] })
+		},
+		onError: (error) => {
+			console.log('Failed to disable overage:', error)
+			toast.error(error.message || 'Failed to disable overage. Please try again.')
+		}
+	})
+
 	const cancelSubscriptionMutation = useMutation({
 		mutationFn: async (message?: string) => {
 			if (!isAuthenticated) {
@@ -551,6 +586,24 @@ export const useSubscribe = () => {
 		}
 	}, [isAuthenticated, apiSubscription.status, enableOverageMutation])
 
+	const disableOverage = useCallback(async () => {
+		if (!isAuthenticated) {
+			toast.error('Please sign in to disable overage')
+			return
+		}
+
+		if (apiSubscription.status !== 'active') {
+			toast.error('No active API subscription found')
+			return
+		}
+
+		try {
+			await disableOverageMutation.mutateAsync()
+		} catch (error) {
+			console.log('Disable overage error:', error)
+		}
+	}, [isAuthenticated, apiSubscription.status, disableOverageMutation])
+
 	return {
 		handleSubscribe,
 		isLoading: createSubscription.isPending,
@@ -573,6 +626,8 @@ export const useSubscribe = () => {
 		isPortalSessionLoading,
 		enableOverage,
 		isEnableOverageLoading: enableOverageMutation.isPending,
+		disableOverage,
+		isDisableOverageLoading: disableOverageMutation.isPending,
 		apiSubscription: apiSubscription,
 		llamafeedSubscription: llamafeedSubscription,
 		legacySubscription: legacySubscription,
