@@ -30,6 +30,7 @@ type InvestorsSite = {
 	landingProjectIds: readonly InvestorsProjectId[]
 	defaultProjectId: InvestorsProjectId
 	comingSoonProjectIds: readonly InvestorsProjectId[]
+	umamiWebsiteId: string
 }
 
 export const INVESTORS_SITES = {
@@ -38,14 +39,16 @@ export const INVESTORS_SITES = {
 		projectIds: INVESTORS_DOMAIN_PROJECT_IDS,
 		landingProjectIds: INVESTORS_LIVE_PROJECT_IDS,
 		defaultProjectId: 'spark',
-		comingSoonProjectIds: [...INVESTORS_PREVIEW_PROJECT_IDS, ...INVESTORS_COMING_SOON_PROJECT_IDS]
+		comingSoonProjectIds: [...INVESTORS_PREVIEW_PROJECT_IDS, ...INVESTORS_COMING_SOON_PROJECT_IDS],
+		umamiWebsiteId: '11de15eb-61d0-41c5-9e73-0bf496cc653c'
 	},
 	enterprise: {
 		hosts: ['enterprise.defillama.com'],
 		projectIds: ENTERPRISE_DOMAIN_PROJECT_IDS,
 		landingProjectIds: [...INVESTORS_LIVE_PROJECT_IDS, ...ENTERPRISE_DOMAIN_PROJECT_IDS],
 		defaultProjectId: 'odyssey-ecosystem',
-		comingSoonProjectIds: []
+		comingSoonProjectIds: [],
+		umamiWebsiteId: '1c194e22-d31d-4816-b803-8074419f1b3e'
 	}
 } as const satisfies Record<string, InvestorsSite>
 

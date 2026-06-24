@@ -197,6 +197,14 @@ describe('investors proxy routing', () => {
 })
 
 describe('investors landing links', () => {
+	it('uses separate umami website ids for investors and enterprise domains', async () => {
+		const investorsConfig = await loadInvestorsConfig('investors')
+		const enterpriseConfig = await loadInvestorsConfig('enterprise')
+
+		expect(investorsConfig.ACTIVE_INVESTORS_SITE?.umamiWebsiteId).toBe('11de15eb-61d0-41c5-9e73-0bf496cc653c')
+		expect(enterpriseConfig.ACTIVE_INVESTORS_SITE?.umamiWebsiteId).toBe('1c194e22-d31d-4816-b803-8074419f1b3e')
+	})
+
 	it('shows investor-domain dashboards as external enterprise cards', async () => {
 		const config = await loadInvestorsConfig('enterprise')
 		const [investorsHost] = config.INVESTORS_SITES.investors.hosts
