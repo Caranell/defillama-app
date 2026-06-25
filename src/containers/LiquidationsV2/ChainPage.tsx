@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { RowLinksWithDropdown } from '~/components/RowLinksWithDropdown'
+import { tokenIconUrl } from '~/utils/icons'
 import type { LiquidationsChainPageProps } from './api.types'
 import { LiquidationsDistributionChart } from './LiquidationsDistributionChart'
 import { LiquidationsPageHeader, LiquidationsSummaryStats } from './Summary'
@@ -39,6 +40,7 @@ export function LiquidationsChainPage(props: LiquidationsChainPageProps) {
 					chart={props.distributionChart}
 					timestamp={props.timestamp}
 					title={`${props.protocolName} on ${props.chainName}`}
+					iconUrl={tokenIconUrl(props.protocolName)}
 					allowedBreakdownModes={['total']}
 				/>
 			</div>

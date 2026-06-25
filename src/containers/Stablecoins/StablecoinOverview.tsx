@@ -23,7 +23,6 @@ import {
 	getStablecoinAssetDashboardChartType,
 	getStablecoinAssetSeriesChart,
 	getStablecoinAssetVolumeChartKind,
-	getStablecoinChartTypeLabel,
 	getStablecoinChartTypeOptions,
 	getStablecoinChartTypeQueryValue,
 	getStablecoinChartViewLabel,
@@ -182,7 +181,14 @@ export const PeggedAssetInfo = ({
 	const groupedChains = useGroupBridgeData(chainTotals, bridgeInfo)
 
 	const getImageExportTitle = () => {
-		return `${name} - ${getStablecoinChartTypeLabel(chartType)} ${getStablecoinChartViewLabel(chartView)}`
+		if (chartType === 'marketCap') {
+			return chartView === 'total' ? name : `${name} Circulating Supply`
+		}
+		if (chartType === 'volume') {
+			return chartView === 'total' ? name : `${name} Volume`
+		}
+
+		return name
 	}
 
 	const getImageExportFilename = () => {
@@ -328,6 +334,7 @@ export const PeggedAssetInfo = ({
 							chartInstance={exportChartInstance}
 							filename={getImageExportFilename()}
 							title={getImageExportTitle()}
+							iconUrl={peggedAssetIconUrl(name)}
 						/>
 					</div>
 					{chartType === 'marketCap' && chartView === 'pie' ? (

@@ -14,6 +14,7 @@ import {
 import { Tooltip } from '~/components/Tooltip'
 import { useChartImageExport } from '~/hooks/useChartImageExport'
 import { abbreviateNumber } from '~/utils'
+import { tokenIconUrl } from '~/utils/icons'
 import type { IProtocolOverviewPageData } from './types'
 
 const SankeyChart = lazy(() => import('~/components/ECharts/SankeyChart'))
@@ -782,6 +783,7 @@ export const IncomeStatement = ({
 									chartInstance={sankeyChartInstance}
 									filename={`${name}-income-statement`}
 									title={`Income Statement for ${name}`}
+									iconUrl={tokenIconUrl(name)}
 								/>
 							</div>
 							<SankeyChart

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { getChartExportIconFetchUrl } from '../chartPngExportIcon'
 import { computeExportLayout } from '../chartPngExportLayout'
 
 describe('computeExportLayout', () => {
@@ -26,5 +27,24 @@ describe('computeExportLayout', () => {
 		})
 
 		expect(layout.hasLegend).toBe(false)
+	})
+})
+
+describe('getChartExportIconFetchUrl', () => {
+	it('routes protocol icons through the protocol icon API', () => {
+		expect(getChartExportIconFetchUrl('https://icons.llamao.fi/icons/protocols/aave?w=48&h=48')).toBe(
+			'/api/public/protocol-icon?slug=aave'
+		)
+	})
+
+	it('routes chain icons through the chain icon API', () => {
+		expect(getChartExportIconFetchUrl('https://icons.llamao.fi/icons/chains/rsz_ethereum?w=48&h=48')).toBe(
+			'/api/public/chain-icon?slug=ethereum'
+		)
+	})
+
+	it('falls back to the generic icon proxy for other allowed icon URLs', () => {
+		const url = 'https://token-icons.llamao.fi/icons/tokens/gecko/ethereum?w=48&h=48'
+		expect(getChartExportIconFetchUrl(url)).toBe(`/api/public/icon-proxy?url=${encodeURIComponent(url)}`)
 	})
 })

@@ -18,6 +18,7 @@ import { getProtocolWarningBanners } from '~/containers/ProtocolOverview/utils'
 import { TVL_SETTINGS_KEYS_SET, useLocalStorageSettingsManager } from '~/contexts/LocalStorage'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { slug } from '~/utils'
+import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 import { canonicalRouteRedirect } from '~/utils/route'
@@ -123,7 +124,8 @@ function ChainsChartCard({
 	dataset,
 	charts,
 	exportFilenameBase,
-	exportTitle
+	exportTitle,
+	exportIconUrl
 }: {
 	title: string
 	allValues: string[]
@@ -131,6 +133,7 @@ function ChainsChartCard({
 	charts: MultiSeriesCharts
 	exportFilenameBase: string
 	exportTitle: string
+	exportIconUrl?: string
 }) {
 	const [selected, setSelected] = React.useState<string[]>(() => allValues)
 
@@ -155,7 +158,12 @@ function ChainsChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -178,7 +186,8 @@ function TokenLineChartCard({
 	charts,
 	valueSymbol,
 	exportFilenameBase,
-	exportTitle
+	exportTitle,
+	exportIconUrl
 }: {
 	title: string
 	allValues: string[]
@@ -187,6 +196,7 @@ function TokenLineChartCard({
 	valueSymbol?: string
 	exportFilenameBase: string
 	exportTitle: string
+	exportIconUrl?: string
 }) {
 	const [selected, setSelected] = React.useState<string[]>(() => allValues)
 
@@ -211,7 +221,12 @@ function TokenLineChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -231,12 +246,14 @@ function TokensBreakdownPieChartCard({
 	title,
 	tokenBreakdownLatest,
 	exportFilenameBase,
-	exportTitle
+	exportTitle,
+	exportIconUrl
 }: {
 	title: string
 	tokenBreakdownLatest: Record<string, number>
 	exportFilenameBase: string
 	exportTitle: string
+	exportIconUrl?: string
 }) {
 	const allTokens = React.useMemo(
 		() =>
@@ -272,7 +289,12 @@ function TokensBreakdownPieChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<PieChart chartData={deferredChartData} onReady={handleChartReady} />
@@ -285,12 +307,14 @@ function USDInflowsChartCard({
 	title,
 	dataset,
 	exportFilenameBase,
-	exportTitle
+	exportTitle,
+	exportIconUrl
 }: {
 	title: string
 	dataset: MultiSeriesChart2Dataset
 	exportFilenameBase: string
 	exportTitle: string
+	exportIconUrl?: string
 }) {
 	const allSeries = React.useMemo(() => ['USD Inflows'], [])
 
@@ -301,7 +325,12 @@ function USDInflowsChartCard({
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
 			<div className="flex flex-wrap items-center justify-end gap-2 p-2 pb-0">
 				<h2 className="mr-auto text-base font-semibold">{title}</h2>
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -322,7 +351,8 @@ function InflowsByTokenChartCard({
 	dataset,
 	charts,
 	exportFilenameBase,
-	exportTitle
+	exportTitle,
+	exportIconUrl
 }: {
 	title: string
 	allValues: string[]
@@ -330,6 +360,7 @@ function InflowsByTokenChartCard({
 	charts: MultiSeriesCharts
 	exportFilenameBase: string
 	exportTitle: string
+	exportIconUrl?: string
 }) {
 	const [selected, setSelected] = React.useState<string[]>(allValues)
 
@@ -354,7 +385,12 @@ function InflowsByTokenChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -410,6 +446,7 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 	const protocolSlug = slug(props.name || 'protocol')
 	const buildFilename = (suffix: string) => `${protocolSlug}-${slug(suffix)}`
 	const buildTitle = (suffix: string) => (props.name ? `${props.name} – ${suffix}` : suffix)
+	const protocolIconUrl = props.name ? tokenIconUrl(props.name) : undefined
 
 	return (
 		<ProtocolOverviewLayout
@@ -448,7 +485,8 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 							dataset={chainsDataset}
 							charts={chainsCharts}
 							exportFilenameBase={buildFilename('chains')}
-							exportTitle={buildTitle('Chains')}
+							exportTitle={buildTitle('TVL by Chain')}
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -461,7 +499,8 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 							charts={tokenUSDCharts}
 							valueSymbol="$"
 							exportFilenameBase={buildFilename('token-values-usd')}
-							exportTitle={buildTitle('Token Values (USD)')}
+							exportTitle={buildTitle('TVL by Token (USD)')}
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -471,7 +510,8 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 							title="Tokens Breakdown (USD)"
 							tokenBreakdownLatest={tokenBreakdownLatest}
 							exportFilenameBase={buildFilename('tokens-breakdown-usd')}
-							exportTitle={buildTitle('Tokens Breakdown (USD)')}
+							exportTitle={buildTitle('TVL by Token (USD)')}
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -484,7 +524,8 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 							charts={tokenRawCharts}
 							valueSymbol=""
 							exportFilenameBase={buildFilename('token-balances')}
-							exportTitle={buildTitle('Token Balances (Raw Quantities)')}
+							exportTitle={buildTitle('Token Balances')}
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -493,7 +534,8 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 							title="USD Inflows"
 							dataset={usdInflowsDataset}
 							exportFilenameBase={buildFilename('usd-inflows')}
-							exportTitle={buildTitle('USD Inflows')}
+							exportTitle={props.name}
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -505,7 +547,8 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 							dataset={tokenInflowsDataset}
 							charts={tokenInflowsCharts}
 							exportFilenameBase={buildFilename('inflows-by-token')}
-							exportTitle={buildTitle('Inflows by Token')}
+							exportTitle={buildTitle('Inflows')}
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 				</div>

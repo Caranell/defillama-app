@@ -754,7 +754,7 @@ export default function MultiSeriesChart2(props: IMultiSeriesChart2Props) {
 	)
 
 	const exportFilename = exportButtonsConfig?.filename || (title ? slug(title) : 'multi-series-chart')
-	const exportTitle = exportButtonsConfig?.pngTitle
+	const exportTitle = exportButtonsConfig?.pngTitle || title
 	const emitReady = useEffectEvent((instance: echarts.ECharts | null) => {
 		onReady?.(instance)
 	})
@@ -1188,6 +1188,7 @@ export default function MultiSeriesChart2(props: IMultiSeriesChart2Props) {
 								chartInstance={chartInstance}
 								filename={exportFilename}
 								title={exportTitle}
+								iconUrl={exportButtonsConfig?.pngIconUrl}
 								showCsv={shouldEnableCSVDownload}
 								showPng={shouldEnableImageExport}
 							/>

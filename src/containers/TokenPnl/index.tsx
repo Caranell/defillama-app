@@ -161,6 +161,7 @@ const TokenPnlContent = ({
 	}
 
 	const { metrics, timeline, coinInfo, currentPrice, chartData } = pnlData
+	const tokenExportName = coinInfo?.name ?? selectedCoinId
 	const { percentChange, isProfit, holdingPeriodDays, annualizedReturn, absoluteChange } = metrics
 	const quantityValue = quantity !== 0 ? absoluteChange * quantity : absoluteChange
 	const formattedQuantityValue = formattedNum(Math.abs(quantityValue), false)
@@ -211,7 +212,11 @@ const TokenPnlContent = ({
 						<Icon name="arrow-right" width={14} height={14} />
 						<span>{formatDateLabel(end)}</span>
 					</p>
-					<ChartExportButtons chartInstance={exportChartInstance} filename="token-pnl-price" title="Price Over Time" />
+					<ChartExportButtons
+						chartInstance={exportChartInstance}
+						filename="token-pnl-price"
+						title={`${tokenExportName} Price Over Time`}
+					/>
 				</div>
 				<Suspense fallback={<div className="min-h-[360px]" />}>
 					<MultiSeriesChart2

@@ -83,7 +83,12 @@ export function DATByAsset({
 							}
 							hideDataZoom={dailyFlowsChart.dataset.source.length < 2}
 							title="Inflows"
-							exportButtons="auto"
+							exportButtons={{
+								png: true,
+								csv: true,
+								filename: `${metadata.name}-inflows`,
+								pngTitle: `${metadata.name} Inflows`
+							}}
 						/>
 					</Suspense>
 				</div>

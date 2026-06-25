@@ -12,6 +12,11 @@ const SCROLL_LEGEND = {
 	legend: { type: 'scroll' as const, orient: 'horizontal' as const, top: 0 }
 }
 
+function sparkExportTitle(title: string) {
+	const lowerTitle = title.toLowerCase()
+	return lowerTitle.includes('spark') || title.startsWith('SPK') ? title : `Spark ${title}`
+}
+
 function ChartCard({
 	title,
 	actions,
@@ -130,7 +135,7 @@ export default function DistributionRewards() {
 					<ChartPngExportButton
 						chartInstance={actualRev.getInstance}
 						filename="actual-revenue-user"
-						title="Actual Revenue - User"
+						title={sparkExportTitle('Actual Revenue - User')}
 						smol
 					/>
 				}
@@ -154,7 +159,7 @@ export default function DistributionRewards() {
 					<ChartPngExportButton
 						chartInstance={revProjection.getInstance}
 						filename="revenue-projection-user"
-						title="Revenue Projection - User"
+						title={sparkExportTitle('Revenue Projection - User')}
 						smol
 					/>
 				}
@@ -180,7 +185,7 @@ export default function DistributionRewards() {
 					<ChartPngExportButton
 						chartInstance={susdsTvl.getInstance}
 						filename="susds-susdc-tvl-spark-referrals"
-						title="sUSDS & sUSDC TVL by Spark Referrals"
+						title={sparkExportTitle('sUSDS & sUSDC TVL by Spark Referrals')}
 						smol
 					/>
 				}
@@ -206,7 +211,7 @@ export default function DistributionRewards() {
 					<ChartPngExportButton
 						chartInstance={xrSusds.getInstance}
 						filename="xr-rewards-susds-crosschain"
-						title="XR Rewards - sUSDS Crosschain"
+						title={sparkExportTitle('XR Rewards - sUSDS Crosschain')}
 						smol
 					/>
 				}
@@ -230,7 +235,7 @@ export default function DistributionRewards() {
 					<ChartPngExportButton
 						chartInstance={xrSusdc.getInstance}
 						filename="xr-rewards-susdc-crosschain"
-						title="XR Rewards - sUSDC Crosschain"
+						title={sparkExportTitle('XR Rewards - sUSDC Crosschain')}
 						smol
 					/>
 				}
@@ -254,7 +259,7 @@ export default function DistributionRewards() {
 					<ChartPngExportButton
 						chartInstance={stakedUsds.getInstance}
 						filename="staked-usds-tvl-spark-referrals"
-						title="Staked USDS TVL by Spark Referrals"
+						title={sparkExportTitle('Staked USDS TVL by Spark Referrals')}
 						smol
 					/>
 				}

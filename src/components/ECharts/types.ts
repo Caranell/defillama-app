@@ -161,6 +161,8 @@ type MultiSeriesChart2ExportButtons =
 			filename?: string
 			/** Title passed to the PNG export (e.g. watermark/title text). */
 			pngTitle?: string
+			/** Icon shown next to the PNG export title. */
+			pngIconUrl?: string
 	  }
 
 type MultiSeriesChart2BaseProps = {

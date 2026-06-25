@@ -15,6 +15,11 @@ const SCROLL_LEGEND = {
 	legend: { type: 'scroll' as const, orient: 'horizontal' as const, top: 0 }
 }
 
+function sparkExportTitle(title: string) {
+	const lowerTitle = title.toLowerCase()
+	return lowerTitle.includes('spark') || title.startsWith('SPK') ? title : `Spark ${title}`
+}
+
 function ChartCard({
 	title,
 	actions,
@@ -233,7 +238,7 @@ function MonthlyReturnsSection({ data }: { data: NonNullable<ReturnType<typeof u
 						<ChartPngExportButton
 							chartInstance={gross.getInstance}
 							filename="gross-returns"
-							title={data.monthlyGross.title}
+							title={sparkExportTitle(data.monthlyGross.title)}
 							smol
 						/>
 					}
@@ -256,7 +261,7 @@ function MonthlyReturnsSection({ data }: { data: NonNullable<ReturnType<typeof u
 						<ChartPngExportButton
 							chartInstance={net.getInstance}
 							filename="net-returns"
-							title={data.monthlyNet.title}
+							title={sparkExportTitle(data.monthlyNet.title)}
 							smol
 						/>
 					}
@@ -292,7 +297,7 @@ function SusdsDistributionSection({ data }: { data: NonNullable<ReturnType<typeo
 						<ChartPngExportButton
 							chartInstance={total.getInstance}
 							filename="spark-distributed-usds"
-							title="Spark-distributed USDS"
+							title={sparkExportTitle('Spark-distributed USDS')}
 							smol
 						/>
 					}
@@ -313,7 +318,7 @@ function SusdsDistributionSection({ data }: { data: NonNullable<ReturnType<typeo
 						<ChartPngExportButton
 							chartInstance={byChain.getInstance}
 							filename="susds-by-chain"
-							title={data.supplyByChain.title}
+							title={sparkExportTitle(data.supplyByChain.title)}
 							smol
 						/>
 					}
@@ -347,7 +352,14 @@ function TvlSection({ data }: { data: FinData }) {
 			<KpiCard label="Current TVL" value={data.tvl.currentFormatted} />
 			<ChartCard
 				title={data.tvl.title}
-				actions={<ChartPngExportButton chartInstance={tvl.getInstance} filename="tvl" title={data.tvl.title} smol />}
+				actions={
+					<ChartPngExportButton
+						chartInstance={tvl.getInstance}
+						filename="tvl"
+						title={sparkExportTitle(data.tvl.title)}
+						smol
+					/>
+				}
 			>
 				<AreaChart
 					chartData={data.tvl.data}
@@ -380,7 +392,7 @@ function DepositsAndBorrowsSection({ data }: { data: FinData }) {
 						<ChartPngExportButton
 							chartInstance={deposits.getInstance}
 							filename="sparklend-deposits"
-							title={data.deposits.title}
+							title={sparkExportTitle(data.deposits.title)}
 							smol
 						/>
 					}
@@ -401,7 +413,7 @@ function DepositsAndBorrowsSection({ data }: { data: FinData }) {
 						<ChartPngExportButton
 							chartInstance={borrows.getInstance}
 							filename="sparklend-borrows"
-							title={data.borrows.title}
+							title={sparkExportTitle(data.borrows.title)}
 							smol
 						/>
 					}
@@ -433,7 +445,7 @@ function SllTvlSection({ data }: { data: FinData }) {
 					<ChartPngExportButton
 						chartInstance={sllTvl.getInstance}
 						filename="sll-tvl-by-chain"
-						title={data.sllTvl.title}
+						title={sparkExportTitle(data.sllTvl.title)}
 						smol
 					/>
 				}
@@ -467,7 +479,7 @@ function SavingsTvlSection({ data }: { data: FinData }) {
 					<ChartPngExportButton
 						chartInstance={savingsTvl.getInstance}
 						filename="spark-savings-tvl-by-chain"
-						title={data.savingsTvl.title}
+						title={sparkExportTitle(data.savingsTvl.title)}
 						smol
 					/>
 				}
@@ -553,7 +565,7 @@ function TreasurySection({ data }: { data: FinData }) {
 						<ChartPngExportButton
 							chartInstance={treasury.getInstance}
 							filename="total-treasury"
-							title="Total Treasury"
+							title={sparkExportTitle('Total Treasury')}
 							smol
 						/>
 					}
@@ -572,7 +584,7 @@ function TreasurySection({ data }: { data: FinData }) {
 						<ChartPngExportButton
 							chartInstance={buybacks.getInstance}
 							filename="spk-buybacks"
-							title="SPK Buybacks"
+							title={sparkExportTitle('SPK Buybacks')}
 							smol
 						/>
 					}

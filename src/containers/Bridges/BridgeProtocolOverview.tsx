@@ -109,7 +109,8 @@ export const BridgeInfo = ({
 	const deferredTokenWithdrawals = React.useDeferredValue(tokenWithdrawals)
 	const deferredTokenDeposits = React.useDeferredValue(tokenDeposits)
 
-	const chartFilename = `${slug(displayName)}-${chartType === 'Volume' ? 'volume' : chartType === 'Inflows' ? 'inflows' : chartType === 'Tokens To' ? 'tokens-to' : 'tokens-from'}`
+	const chartScopeTitle = isAllChains ? displayName : `${displayName} on ${currentChain}`
+	const chartFilename = `${slug(displayName)}-${isAllChains ? 'all-chains' : slug(currentChain)}-${chartType === 'Volume' ? 'volume' : chartType === 'Inflows' ? 'inflows' : chartType === 'Tokens To' ? 'tokens-to' : 'tokens-from'}`
 
 	return (
 		<>
@@ -203,7 +204,8 @@ export const BridgeInfo = ({
 						<ChartExportButtons
 							chartInstance={exportChartInstance}
 							filename={chartFilename}
-							title={`${displayName} ${chartType}`}
+							title={`${chartScopeTitle} ${chartType}`}
+							iconUrl={logo}
 						/>
 					</div>
 					<>

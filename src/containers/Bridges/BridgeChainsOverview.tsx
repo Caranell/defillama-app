@@ -33,7 +33,7 @@ export function BridgeChainsOverview({ allChains, tableData, chart }) {
 					<ChartExportButtons
 						chartInstance={exportChartInstance}
 						filename={`bridge-inflows-by-chain`}
-						title={`Bridge Inflows by Chain`}
+						title="Bridge Inflows"
 					/>
 				</div>
 

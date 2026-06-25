@@ -619,6 +619,10 @@ const PageView = ({ pool, config, poolId }: { pool: IYieldTableRow; config: any;
 	const projectSlug = poolData.projectslug ?? ''
 	const url = poolData.url ?? ''
 	const category = config?.category ?? poolData.category ?? ''
+	const poolExportTitlePrefix =
+		poolName && projectName && chain
+			? `${poolName} - ${projectName} (${chain})`
+			: poolName || projectName || chain || poolId
 
 	const isLoading = fetchingChartData || fetchingChartDataBorrow
 
@@ -879,7 +883,7 @@ const PageView = ({ pool, config, poolId }: { pool: IYieldTableRow; config: any;
 						<ChartExportButtons
 							chartInstance={tvlApyChartInstance}
 							filename={`${poolId}-tvl-apy`}
-							title={`${poolName} - ${projectName} (${chain})`}
+							title={poolExportTitlePrefix}
 						/>
 					</div>
 					<Suspense fallback={<div className="min-h-[360px]" />}>
@@ -910,7 +914,7 @@ const PageView = ({ pool, config, poolId }: { pool: IYieldTableRow; config: any;
 									<ChartExportButtons
 										chartInstance={supplyApyChartInstance}
 										filename={`${poolId}-supply-apy`}
-										title="Supply APY"
+										title={`${poolExportTitlePrefix} Supply APY`}
 									/>
 								</div>
 								<Suspense fallback={<div className="min-h-[360px]" />}>
@@ -932,7 +936,7 @@ const PageView = ({ pool, config, poolId }: { pool: IYieldTableRow; config: any;
 									<ChartExportButtons
 										chartInstance={supplyApy7dChartInstance}
 										filename={`${poolId}-supply-apy-7d-avg`}
-										title="7 day moving average of Supply APY"
+										title={`${poolExportTitlePrefix} 7 day moving average of Supply APY`}
 									/>
 								</div>
 								<Suspense fallback={<div className="min-h-[360px]" />}>
@@ -963,7 +967,7 @@ const PageView = ({ pool, config, poolId }: { pool: IYieldTableRow; config: any;
 								<ChartExportButtons
 									chartInstance={borrowApyChartInstance}
 									filename={`${poolId}-borrow-apy`}
-									title="Borrow APY"
+									title={`${poolExportTitlePrefix} Borrow APY`}
 								/>
 							</div>
 							<Suspense fallback={<div className="min-h-[360px]" />}>
@@ -985,7 +989,7 @@ const PageView = ({ pool, config, poolId }: { pool: IYieldTableRow; config: any;
 								<ChartExportButtons
 									chartInstance={netBorrowApyChartInstance}
 									filename={`${poolId}-net-borrow-apy`}
-									title="Net Borrow APY"
+									title={`${poolExportTitlePrefix} Net Borrow APY`}
 								/>
 							</div>
 							<Suspense fallback={<div className="min-h-[360px]" />}>
@@ -1016,7 +1020,7 @@ const PageView = ({ pool, config, poolId }: { pool: IYieldTableRow; config: any;
 								<ChartExportButtons
 									chartInstance={poolLiquidityChartInstance}
 									filename={`${poolId}-pool-liquidity`}
-									title="Pool Liquidity"
+									title={`${poolExportTitlePrefix} Pool Liquidity`}
 								/>
 							</div>
 							<Suspense fallback={<div className="min-h-[360px]" />}>
@@ -1051,7 +1055,12 @@ const PageView = ({ pool, config, poolId }: { pool: IYieldTableRow; config: any;
 										const val = typeof param.value === 'number' ? param.value : Number(param.value ?? 0)
 										return `${param.marker ?? ''}${param.name ?? ''}: <b>${val.toFixed(2)}%</b>`
 									}}
-									exportButtons="auto"
+									exportButtons={{
+										png: true,
+										csv: true,
+										filename: `${poolId}-top-10-holder-distribution`,
+										pngTitle: `${poolExportTitlePrefix} Top 10 Holder Distribution`
+									}}
 									onReady={setHolderDonutInstance}
 								/>
 							</Suspense>

@@ -9,6 +9,7 @@ import { TokenLogo } from '~/components/TokenLogo'
 import { Tooltip } from '~/components/Tooltip'
 import { getCategoryRoute } from '~/containers/ProtocolTaxonomy/categoryRoutes'
 import { formattedNum, slug } from '~/utils'
+import { chainIconUrl } from '~/utils/icons'
 import type { ExtraTvlMetric, IExtraTvlByChainPageData, IExtraTvlProtocolRow } from './types'
 
 const MultiSeriesChart2 = lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
@@ -32,6 +33,8 @@ const DEFAULT_SORTING_STATE = [{ id: 'value', desc: true }]
 
 export function ExtraTvlByChain(props: IExtraTvlByChainPageData) {
 	const metricInfo = METRIC_LABELS[props.metric]
+	const chartTitle = props.chain === 'All' ? metricInfo.header : props.chain
+	const chartFilenameTitle = props.chain === 'All' ? metricInfo.header : `${props.chain} ${metricInfo.header}`
 
 	return (
 		<>
@@ -78,7 +81,17 @@ export function ExtraTvlByChain(props: IExtraTvlByChainPageData) {
 				</div>
 				<div className="col-span-2 flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg)">
 					<Suspense fallback={<div className="min-h-[398px]" />}>
-						<MultiSeriesChart2 exportButtons="auto" dataset={props.dataset} charts={props.charts} />
+						<MultiSeriesChart2
+							exportButtons={{
+								png: true,
+								csv: true,
+								filename: slug(chartFilenameTitle),
+								pngTitle: chartTitle,
+								pngIconUrl: props.chain !== 'All' ? chainIconUrl(props.chain) : undefined
+							}}
+							dataset={props.dataset}
+							charts={props.charts}
+						/>
 					</Suspense>
 				</div>
 			</div>

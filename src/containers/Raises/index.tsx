@@ -40,6 +40,7 @@ const RaisesContainer = ({ raises, investors, rounds, sectors, chains, investorN
 		chains
 	})
 	const deferredMonthlyInvestmentChart = React.useDeferredValue(monthlyInvestmentChart)
+	const monthlyInvestmentTitle = investorName ? `${investorName} Monthly Funding` : 'Monthly Funding'
 
 	return (
 		<>
@@ -94,7 +95,12 @@ const RaisesContainer = ({ raises, investors, rounds, sectors, chains, investorN
 							charts={deferredMonthlyInvestmentChart.charts}
 							valueSymbol="$"
 							groupBy="monthly"
-							exportButtons="auto"
+							exportButtons={{
+								png: true,
+								csv: true,
+								filename: 'monthly-funding',
+								pngTitle: monthlyInvestmentTitle
+							}}
 						/>
 					</React.Suspense>
 				</div>

@@ -106,7 +106,5 @@ export async function fetchNftRoyalty(slug: string): Promise<RawRoyalty[]> {
  * Fetch parent-company mappings for NFT projects.
  */
 export async function fetchParentCompanies(): Promise<RawParentCompany[]> {
-	return fetchJson<RawParentCompany[]>(
-		'https://raw.githubusercontent.com/DefiLlama/defillama-server/master/defi/src/nfts/output/parentCompanies.json'
-	)
+	return fetchJson<RawParentCompany[]>('https://api.llama.fi/_internal/nfts/parent-companies')
 }

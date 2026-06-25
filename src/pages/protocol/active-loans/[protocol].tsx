@@ -16,6 +16,7 @@ import { getProtocolWarningBanners } from '~/containers/ProtocolOverview/utils'
 import { TVL_SETTINGS_KEYS_SET } from '~/contexts/LocalStorage'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { slug } from '~/utils'
+import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 import { canonicalRouteRedirect } from '~/utils/route'
@@ -36,7 +37,8 @@ function MultiSeriesChartCard({
 	dataset,
 	charts,
 	exportSuffix,
-	valueSymbol
+	valueSymbol,
+	exportIconUrl
 }: {
 	title: string
 	protocolName: string
@@ -46,6 +48,7 @@ function MultiSeriesChartCard({
 	charts: MultiSeriesCharts
 	exportSuffix: string
 	valueSymbol?: string
+	exportIconUrl?: string
 }) {
 	const [selectedSeriesRaw, setSelectedSeriesRaw] = React.useState<string[]>(() => allSeries)
 	const selectedSeries = React.useMemo(
@@ -73,7 +76,12 @@ function MultiSeriesChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -90,10 +98,12 @@ function MultiSeriesChartCard({
 
 function TokensBreakdownPieChartCard({
 	protocolName,
-	chartData
+	chartData,
+	exportIconUrl
 }: {
 	protocolName: string
 	chartData: Array<{ name: string; value: number }>
+	exportIconUrl?: string
 }) {
 	const allTokens = React.useMemo(() => chartData.map((d) => d.name), [chartData])
 	const [selectedTokensRaw, setSelectedTokensRaw] = React.useState<string[]>(() => allTokens)
@@ -128,7 +138,12 @@ function TokensBreakdownPieChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<PieChart chartData={filteredChartData} onReady={handleChartReady} />
@@ -236,6 +251,7 @@ export default function ActiveLoansProtocol(props: InferGetStaticPropsType<typeo
 		(tokenUSDDataset && tokensUnique?.length > 0) ||
 		(tokenBreakdownPieChart?.length ?? 0) > 0 ||
 		(tokenRawDataset && tokensUnique?.length > 0)
+	const protocolIconUrl = tokenIconUrl(props.name)
 
 	return (
 		<ProtocolOverviewLayout
@@ -274,6 +290,7 @@ export default function ActiveLoansProtocol(props: InferGetStaticPropsType<typeo
 							charts={borrowedByChainCharts}
 							exportSuffix="active-loans-by-chain"
 							valueSymbol="$"
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -288,6 +305,7 @@ export default function ActiveLoansProtocol(props: InferGetStaticPropsType<typeo
 							charts={tokenUSDCharts}
 							exportSuffix="active-loans-by-token-usd"
 							valueSymbol="$"
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -296,6 +314,7 @@ export default function ActiveLoansProtocol(props: InferGetStaticPropsType<typeo
 							key={tokenBreakdownPieChart.map((d) => d.name).join('|')}
 							protocolName={props.name}
 							chartData={tokenBreakdownPieChart}
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -310,6 +329,7 @@ export default function ActiveLoansProtocol(props: InferGetStaticPropsType<typeo
 							charts={tokenRawCharts}
 							exportSuffix="active-loans-by-token-raw"
 							valueSymbol=""
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 				</div>

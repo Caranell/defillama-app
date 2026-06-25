@@ -59,6 +59,7 @@ function LiquidationsDistributionChartCard({
 	setSelectedToken,
 	timestamp,
 	title,
+	iconUrl,
 	tokenOptions,
 	chartInstanceRef
 }: {
@@ -79,6 +80,7 @@ function LiquidationsDistributionChartCard({
 	setSelectedToken: (token: string) => void
 	timestamp: number
 	title: string | undefined
+	iconUrl?: string
 	tokenOptions: Array<{ key: string; name: string }>
 	chartInstanceRef: React.MutableRefObject<ECharts | null>
 }) {
@@ -173,6 +175,7 @@ function LiquidationsDistributionChartCard({
 					]
 						.filter(Boolean)
 						.join(' - ')}
+					iconUrl={iconUrl}
 					smol
 				/>
 			</div>
@@ -417,11 +420,13 @@ export function LiquidationsDistributionChart({
 	defaultBreakdownMode = 'total',
 	hideTokenSelector = false,
 	defaultChartMode = 'cumulative',
-	tokenStateMode = 'query'
+	tokenStateMode = 'query',
+	iconUrl
 }: {
 	chart: LiquidationsDistributionChartData
 	timestamp: number
 	title?: string
+	iconUrl?: string
 	allowedBreakdownModes?: ReadonlyArray<BreakdownMode>
 	defaultBreakdownMode?: BreakdownMode
 	hideTokenSelector?: boolean
@@ -667,6 +672,7 @@ export function LiquidationsDistributionChart({
 			setSelectedToken={setSelectedToken}
 			timestamp={timestamp}
 			title={title}
+			iconUrl={iconUrl}
 			tokenOptions={tokenOptions}
 			chartInstanceRef={chartInstanceRef}
 		/>

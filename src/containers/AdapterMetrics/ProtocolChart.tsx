@@ -19,6 +19,7 @@ import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { FEE_EXTRA_CONFIG_BY_SETTING, FEE_EXTRA_CONFIGS, type FeeExtraConfig } from '~/metrics/feeExtras'
 import { getNDistinctColors, slug } from '~/utils'
 import { fetchJson } from '~/utils/async'
+import { tokenIconUrl } from '~/utils/icons'
 import { ADAPTER_DATA_TYPES, ADAPTER_TYPES } from './constants'
 
 const MultiSeriesChart2 = React.lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
@@ -50,6 +51,7 @@ const buildAdapterProtocolBreakdownApiUrl = ({
 
 export const DimensionProtocolChartByType = ({
 	protocolName,
+	protocolDisplayName,
 	adapterType,
 	dataType,
 	chartType,
@@ -59,6 +61,7 @@ export const DimensionProtocolChartByType = ({
 	title
 }: {
 	protocolName: string
+	protocolDisplayName?: string
 	adapterType: `${ADAPTER_TYPES}`
 	dataType?: `${ADAPTER_DATA_TYPES}`
 	chartType: 'chain' | 'version'
@@ -190,6 +193,7 @@ export const DimensionProtocolChartByType = ({
 			title={title}
 			chartType={chartType}
 			protocolName={protocolName}
+			protocolDisplayName={protocolDisplayName}
 			adapterType={adapterType}
 			hallmarks={hallmarks}
 		/>
@@ -204,6 +208,7 @@ const ChartByType = ({
 	breakdownNames,
 	chartType,
 	protocolName,
+	protocolDisplayName,
 	adapterType,
 	hallmarks
 }: {
@@ -214,6 +219,7 @@ const ChartByType = ({
 	breakdownNames: string[]
 	chartType: 'chain' | 'version'
 	protocolName: string
+	protocolDisplayName?: string
 	adapterType: string
 	hallmarks?: [number, string][]
 }) => {
@@ -386,6 +392,9 @@ const ChartByType = ({
 		}
 	}, [uniqueBreakdownNames, chartInterval, selectedTypes, data, bribeData, tokenTaxData])
 	const deferredMainChartData = React.useDeferredValue(mainChartData)
+	const exportProtocolName = protocolDisplayName ?? protocolName
+	const exportMetricTitle = title?.replace(/\s+by\s+(?:chain|protocol version)$/i, '')
+	const exportTitle = exportMetricTitle ? `${exportProtocolName} ${exportMetricTitle}` : exportProtocolName
 
 	return (
 		<>
@@ -409,7 +418,8 @@ const ChartByType = ({
 				<ChartExportButtons
 					chartInstance={exportChartInstance}
 					filename={title ? title : `${protocolName}-${chartType}`}
-					title={title}
+					title={exportTitle}
+					iconUrl={tokenIconUrl(exportProtocolName)}
 				/>
 				{chartBuilderConfig ? <AddToDashboardButton chartConfig={chartBuilderConfig} smol /> : null}
 			</div>

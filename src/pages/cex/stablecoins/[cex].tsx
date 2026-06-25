@@ -20,6 +20,7 @@ import {
 import { fetchStablecoinAssetsApi } from '~/containers/Stablecoins/api'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { formattedNum, slug } from '~/utils'
+import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 import { canonicalRouteRedirect } from '~/utils/route'
@@ -136,7 +137,8 @@ function MultiSeriesChartCard({
 	valueSymbol,
 	hideDefaultLegend,
 	exportFilenameBase,
-	exportTitle
+	exportTitle,
+	exportIconUrl
 }: {
 	title: string
 	filterLabel: string
@@ -147,6 +149,7 @@ function MultiSeriesChartCard({
 	hideDefaultLegend?: boolean
 	exportFilenameBase: string
 	exportTitle: string
+	exportIconUrl?: string
 }) {
 	const [selected, setSelected] = React.useState<string[]>(() => allValues)
 
@@ -169,7 +172,12 @@ function MultiSeriesChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -189,12 +197,14 @@ function PieChartCard({
 	title,
 	chartData,
 	exportFilenameBase,
-	exportTitle
+	exportTitle,
+	exportIconUrl
 }: {
 	title: string
 	chartData: Array<{ name: string; value: number }>
 	exportFilenameBase: string
 	exportTitle: string
+	exportIconUrl?: string
 }) {
 	const allValues = React.useMemo(() => chartData.map((d) => d.name), [chartData])
 	const [selectedValues, setSelectedValues] = React.useState<string[]>(() => allValues)
@@ -223,7 +233,12 @@ function PieChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<PieChart chartData={filteredChartData} onReady={handleChartReady} />
@@ -376,7 +391,9 @@ export default function CEXStablecoins(props: {
 
 	const exchangeSlug = slug(props.name || 'cex')
 	const buildFilename = (suffix: string) => `${exchangeSlug}-${slug(suffix)}`
-	const buildTitle = (suffix: string) => (props.name ? `${props.name} – ${suffix}` : suffix)
+	const stablecoinsExportTitle = props.name ? `${props.name} Stablecoins` : 'Stablecoins'
+	const exchangeIconUrl = tokenIconUrl(props.name)
+	const totalStablecoinsSeriesName = 'Total Stablecoins'
 
 	const currentTotal = React.useMemo(() => {
 		if (!data?.totalStablecoins || data.totalStablecoins.length === 0) return null
@@ -416,13 +433,22 @@ export default function CEXStablecoins(props: {
 	const totalStablecoinsDataset = React.useMemo(() => {
 		if (!totalStablecoins?.length || totalStablecoins.length <= 1) return null
 		return {
-			source: totalStablecoins.map(({ date, value }) => ({ timestamp: +date * 1e3, Total: value })),
-			dimensions: ['timestamp', 'Total']
+			source: totalStablecoins.map(({ date, value }) => ({
+				timestamp: +date * 1e3,
+				[totalStablecoinsSeriesName]: value
+			})),
+			dimensions: ['timestamp', totalStablecoinsSeriesName]
 		}
-	}, [totalStablecoins])
+	}, [totalStablecoins, totalStablecoinsSeriesName])
 	const totalStablecoinsCharts = React.useMemo<MultiSeriesCharts>(
-		() => [{ type: 'line' as const, name: 'Total', encode: { x: 'timestamp', y: 'Total' } }],
-		[]
+		() => [
+			{
+				type: 'line' as const,
+				name: totalStablecoinsSeriesName,
+				encode: { x: 'timestamp', y: totalStablecoinsSeriesName }
+			}
+		],
+		[totalStablecoinsSeriesName]
 	)
 
 	const stablecoinsByPegMechanism = data?.stablecoinsByPegMechanism
@@ -547,7 +573,8 @@ export default function CEXStablecoins(props: {
 								charts={totalStablecoinsCharts}
 								valueSymbol="$"
 								exportFilenameBase={buildFilename('total-stablecoin-in-cex')}
-								exportTitle={buildTitle('Total Stablecoin in CEX')}
+								exportTitle={stablecoinsExportTitle}
+								exportIconUrl={exchangeIconUrl}
 							/>
 						) : null}
 
@@ -561,7 +588,8 @@ export default function CEXStablecoins(props: {
 								charts={stablecoinsByPegMechanismCharts}
 								valueSymbol="$"
 								exportFilenameBase={buildFilename('stablecoins-by-backing-type')}
-								exportTitle={buildTitle('Stablecoins by Backing Type')}
+								exportTitle={stablecoinsExportTitle}
+								exportIconUrl={exchangeIconUrl}
 							/>
 						) : null}
 
@@ -571,7 +599,8 @@ export default function CEXStablecoins(props: {
 								title="Distribution by Backing Type"
 								chartData={pegMechanismPieChartData}
 								exportFilenameBase={buildFilename('stablecoins-backing-type')}
-								exportTitle={buildTitle('Stablecoins by Backing Type')}
+								exportTitle={stablecoinsExportTitle}
+								exportIconUrl={exchangeIconUrl}
 							/>
 						) : null}
 
@@ -585,7 +614,8 @@ export default function CEXStablecoins(props: {
 								charts={stablecoinsByPegTypeCharts}
 								valueSymbol="$"
 								exportFilenameBase={buildFilename('stablecoins-by-currency-peg')}
-								exportTitle={buildTitle('Stablecoins by Currency Peg')}
+								exportTitle={stablecoinsExportTitle}
+								exportIconUrl={exchangeIconUrl}
 							/>
 						) : null}
 
@@ -600,7 +630,8 @@ export default function CEXStablecoins(props: {
 								valueSymbol="$"
 								hideDefaultLegend={true}
 								exportFilenameBase={buildFilename('individual-stablecoins')}
-								exportTitle={buildTitle('Individual Stablecoins')}
+								exportTitle={stablecoinsExportTitle}
+								exportIconUrl={exchangeIconUrl}
 							/>
 						) : null}
 					</div>

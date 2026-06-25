@@ -123,7 +123,12 @@ export function CompareProtocols({ protocols, protocolsList }: CompareProtocolsP
 									charts={charts}
 									valueSymbol="$"
 									showTotalInTooltip
-									exportButtons="auto"
+									exportButtons={{
+										png: true,
+										csv: true,
+										filename: 'compare-protocols',
+										pngTitle: 'Protocol TVL Comparison'
+									}}
 								/>
 							</React.Suspense>
 						)}

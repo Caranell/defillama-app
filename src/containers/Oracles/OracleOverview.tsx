@@ -9,6 +9,7 @@ import { TokenLogo } from '~/components/TokenLogo'
 import { CHART_COLORS } from '~/constants/colors'
 import { useLocalStorageSettingsManager } from '~/contexts/LocalStorage'
 import { formattedNum, getTokenDominance, slug } from '~/utils'
+import { chainIconUrl } from '~/utils/icons'
 import {
 	calculateTotalWithExtraToggles,
 	getEnabledExtraTvlApiKeys,
@@ -201,6 +202,8 @@ export const OracleOverview = ({
 	const dominanceText = dominance == null ? null : String(dominance)
 	const displayOracle = oracle ?? 'Oracle'
 	const dominanceLabel = topProtocol ? `${topProtocol.name} Dominance` : 'Top Protocol Dominance'
+	const chartTitle = chain ? `${displayOracle} on ${chain}` : displayOracle
+	const chartFilenameTitle = chain ? `${displayOracle} TVS on ${chain}` : `${displayOracle} TVS`
 
 	return (
 		<>
@@ -233,7 +236,13 @@ export const OracleOverview = ({
 								dataset={dataset}
 								charts={charts}
 								alwaysShowTooltip
-								exportButtons={{ png: true, csv: true }}
+								exportButtons={{
+									png: true,
+									csv: true,
+									filename: slug(chartFilenameTitle),
+									pngTitle: chartTitle,
+									pngIconUrl: chain ? chainIconUrl(chain) : undefined
+								}}
 							/>
 						</Suspense>
 					)}

@@ -24,6 +24,7 @@ import { getProtocolWarningBanners } from '~/containers/ProtocolOverview/utils'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { formattedNum, slug } from '~/utils'
 import { buildHallmarksWithGenuineSpikes } from '~/utils/hallmarks'
+import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 import { canonicalRouteRedirect } from '~/utils/route'
@@ -203,7 +204,8 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 						<ChartExportButtons
 							chartInstance={chartInstance}
 							filename={`${props.name}-bridge-aggregator-volume`}
-							title="Bridge Aggregator Volume"
+							title={props.name}
+							iconUrl={tokenIconUrl(props.name)}
 						/>
 					</div>
 					<Suspense fallback={<div className="min-h-[360px]" />}>
@@ -224,6 +226,7 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 						<DimensionProtocolChartByType
 							chartType="chain"
 							protocolName={slug(props.name)}
+							protocolDisplayName={props.name}
 							adapterType="bridge-aggregators"
 							breakdownNames={props.protocolChains}
 							hallmarks={props.hallmarks ?? undefined}
@@ -236,6 +239,7 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 						<DimensionProtocolChartByType
 							chartType="version"
 							protocolName={slug(props.name)}
+							protocolDisplayName={props.name}
 							adapterType="bridge-aggregators"
 							breakdownNames={props.protocolVersions}
 							hallmarks={props.hallmarks ?? undefined}
