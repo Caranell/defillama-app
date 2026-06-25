@@ -519,6 +519,18 @@
       "tab": "Protocols"
     },
     {
+      "name": "Markets",
+      "route": "/markets",
+      "category": "Token",
+      "description": "Spot and perpetual markets by token, exchange, and category",
+      "searchKeywords": [
+        "markets",
+        "token markets",
+        "crypto markets",
+        "perp markets"
+      ]
+    },
+    {
       "name": "RWA: Overview",
       "route": "/rwa",
       "category": "RWA",
