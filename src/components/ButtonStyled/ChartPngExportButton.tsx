@@ -7,6 +7,7 @@ import { Icon } from '~/components/Icon'
 import { LoadingSpinner } from '~/components/Loaders'
 import { useDarkModeManager } from '~/contexts/LocalStorage'
 import { downloadDataURL } from '~/utils/download'
+import { getChartExportIconFetchUrl } from './chartPngExportIcon'
 import {
 	BASE_TOP_PADDING,
 	computeExportLayout,
@@ -699,12 +700,8 @@ function computeHBarLeftGridForExport(categories: string[]): number {
 // --- Icon loading ---
 
 async function loadCircularIcon(url: string): Promise<string | null> {
-	const slugMatch = url.match(/\/protocols\/([^?]+)/)
-	const slug = slugMatch?.[1]
-	if (!slug) return null
-
 	try {
-		const response = await fetch(`/api/public/protocol-icon?slug=${encodeURIComponent(slug)}`)
+		const response = await fetch(getChartExportIconFetchUrl(url))
 		if (!response.ok) return null
 
 		const blob = await response.blob()

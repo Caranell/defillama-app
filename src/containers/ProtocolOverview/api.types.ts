@@ -106,8 +106,9 @@ export interface IProtocolChartV2Params {
 
 export interface IProtocolExpenses {
 	protocolId: string
-	headcount: number
+	headcount?: number
 	annualUsdCost: Record<string, number>
+	annualTokenCosts?: Record<string, Record<string, number>>
 	sources?: Array<string> | null
 	notes?: Array<string> | null
 	lastUpdate?: string | null

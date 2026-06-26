@@ -30,7 +30,6 @@ import type { StablecoinChartSeriesPayload } from '~/containers/Stablecoins/char
 import {
 	createStablecoinOverviewChartMode,
 	getStablecoinDashboardChartType,
-	getStablecoinChartTypeLabel,
 	getStablecoinChartTypeOptions,
 	getStablecoinChartTypeQueryValue,
 	getStablecoinChartViewLabel,
@@ -50,6 +49,7 @@ import { useStablecoinChartSeriesData, useStablecoinVolumeChartData } from '~/co
 import { type FormattedStablecoinAsset } from '~/containers/Stablecoins/utils'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { formattedNum, slug } from '~/utils'
+import { chainIconUrl } from '~/utils/icons'
 import { isTruthyQueryParam, pushShallowQuery } from '~/utils/routerQuery'
 import type { StablecoinVolumeChainChartKind, StablecoinVolumeGlobalChartKind } from './api.types'
 import { StablecoinsTable } from './StablecoinsAssetsTable'
@@ -304,8 +304,19 @@ export function StablecoinsByChain({
 		: null
 
 	const getImageExportTitle = () => {
-		const chainPrefix = selectedChain !== 'All' ? `${selectedChain} ` : ''
-		return `${chainPrefix}Stablecoins - ${getStablecoinChartTypeLabel(chartType)} ${getStablecoinChartViewLabel(chartView)}`
+		const baseTitle = selectedChain !== 'All' ? `${selectedChain} Stablecoins` : 'Stablecoins'
+
+		if (chartType === 'marketCap') {
+			return chartView === 'total' ? baseTitle : `${baseTitle} Market Cap`
+		}
+		if (chartType === 'volume') {
+			return chartView === 'total' ? baseTitle : `${baseTitle} Volume`
+		}
+		if (chartType === 'inflows') {
+			return chartView === 'usd' ? baseTitle : `${baseTitle} Inflows`
+		}
+
+		return baseTitle
 	}
 
 	const getImageExportFilename = () => {
@@ -466,6 +477,7 @@ export function StablecoinsByChain({
 							chartInstance={exportChartInstance}
 							filename={getImageExportFilename()}
 							title={getImageExportTitle()}
+							iconUrl={selectedChain !== 'All' ? chainIconUrl(selectedChain) : undefined}
 						/>
 					</div>
 					{chartType === 'marketCap' && chartView === 'pie' ? (

@@ -189,7 +189,7 @@ export function ProtocolsCategoriesPage(props: IProtocolsCategoriesPageData) {
 						labelType="smol"
 						variant="filter"
 					/>
-					<ChartExportButtons chartInstance={chartInstance} filename="categories-tvl" title="TVL by Category" />
+					<ChartExportButtons chartInstance={chartInstance} filename="categories-tvl" title="Protocol TVL" />
 				</div>
 				{shouldFetchChartData && chartDataQuery.isLoading ? (
 					<div className="flex min-h-[360px] items-center justify-center text-(--text-tertiary)">

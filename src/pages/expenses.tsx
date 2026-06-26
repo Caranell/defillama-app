@@ -6,20 +6,14 @@ import { TableWithSearch } from '~/components/Table/TableWithSearch'
 import { TokenLogo } from '~/components/TokenLogo'
 import { fetchProtocols } from '~/containers/ProtocolLists/api'
 import type { ParentProtocolLite, ProtocolLite } from '~/containers/ProtocolLists/api.types'
-import type { IProtocolExpenses } from '~/containers/ProtocolOverview/api.types'
+import { fetchProtocolExpenses } from '~/containers/ProtocolOverview/api'
 import Layout from '~/layout'
 import { formattedNum, slug } from '~/utils'
-import { fetchJson } from '~/utils/async'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 
 export const getStaticProps = withPerformanceLogging('expenses', async () => {
-	const [{ protocols, parentProtocols }, expenses] = await Promise.all([
-		fetchProtocols(),
-		fetchJson<IProtocolExpenses[]>(
-			'https://raw.githubusercontent.com/DefiLlama/defillama-server/master/defi/src/operationalCosts/output/expenses.json'
-		)
-	])
+	const [{ protocols, parentProtocols }, expenses] = await Promise.all([fetchProtocols(), fetchProtocolExpenses()])
 
 	const protocolById = new Map<string, ProtocolLite | (ParentProtocolLite & { defillamaId: string })>()
 	for (const p of protocols) protocolById.set(p.defillamaId, p)

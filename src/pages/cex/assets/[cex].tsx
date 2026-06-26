@@ -17,6 +17,7 @@ import type { IProtocolPageMetrics } from '~/containers/ProtocolOverview/types'
 import { useProtocolBreakdownCharts } from '~/containers/ProtocolOverview/useProtocolBreakdownCharts'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { slug } from '~/utils'
+import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 import { canonicalRouteRedirect } from '~/utils/route'
@@ -116,7 +117,7 @@ function ChainsChartCard({
 	const { chartInstance, handleChartReady } = useGetChartInstance()
 
 	const exportFilenameBase = `${slug(protocolName)}-chains`
-	const exportTitle = `${protocolName} Chains`
+	const exportTitle = `${protocolName} Assets by Chain`
 
 	return (
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
@@ -133,7 +134,12 @@ function ChainsChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={tokenIconUrl(protocolName)}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -167,7 +173,7 @@ function TokenValuesUSDChartCard({
 	const { chartInstance, handleChartReady } = useGetChartInstance()
 
 	const exportFilenameBase = `${slug(protocolName)}-token-values-usd`
-	const exportTitle = `${protocolName} Token Values (USD)`
+	const exportTitle = `${protocolName} Asset Values by Token`
 
 	return (
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
@@ -184,7 +190,12 @@ function TokenValuesUSDChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={tokenIconUrl(protocolName)}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -226,7 +237,7 @@ function TokensBreakdownPieChartCard({
 	const { chartInstance, handleChartReady } = useGetChartInstance()
 
 	const exportFilenameBase = `${slug(protocolName)}-tokens-breakdown`
-	const exportTitle = `${protocolName} Tokens Breakdown`
+	const exportTitle = `${protocolName} Assets by Token`
 
 	return (
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
@@ -243,7 +254,12 @@ function TokensBreakdownPieChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={tokenIconUrl(protocolName)}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<PieChart chartData={chartData} onReady={handleChartReady} />
@@ -270,7 +286,7 @@ function TokenBalancesRawChartCard({
 	const { chartInstance, handleChartReady } = useGetChartInstance()
 
 	const exportFilenameBase = `${slug(protocolName)}-token-balances-raw`
-	const exportTitle = `${protocolName} Token Balances (Raw Quantities)`
+	const exportTitle = `${protocolName} Token Balances`
 
 	return (
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
@@ -287,7 +303,12 @@ function TokenBalancesRawChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={tokenIconUrl(protocolName)}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -308,13 +329,18 @@ function USDInflowsChartCard({ protocolName, dataset }: { protocolName: string; 
 	const { chartInstance, handleChartReady } = useGetChartInstance()
 
 	const exportFilenameBase = `${slug(protocolName)}-usd-inflows`
-	const exportTitle = `${protocolName} USD Inflows`
+	const exportTitle = protocolName
 
 	return (
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
 			<div className="flex flex-wrap items-center justify-end gap-2 p-2 pb-0">
 				<h2 className="mr-auto text-base font-semibold">USD Inflows</h2>
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={tokenIconUrl(protocolName)}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -347,7 +373,7 @@ function InflowsByTokenChartCard({
 	const { chartInstance, handleChartReady } = useGetChartInstance()
 
 	const exportFilenameBase = `${slug(protocolName)}-inflows-by-token`
-	const exportTitle = `${protocolName} Inflows by Token`
+	const exportTitle = `${protocolName} Inflows`
 
 	return (
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
@@ -364,7 +390,12 @@ function InflowsByTokenChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={tokenIconUrl(protocolName)}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2

@@ -11,6 +11,7 @@ import { ChartSelector } from '~/containers/Bridges/ChartSelector'
 import { useBuildBridgeChartData } from '~/containers/Bridges/utils'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { formattedNum, getPrevVolumeFromChart, slug, toNiceCsvDate } from '~/utils'
+import { chainIconUrl } from '~/utils/icons'
 import { BridgesLargeTxsTable, type BridgesLargeTxsTableHandle } from './BridgesLargeTxsTable'
 
 const MultiSeriesChart2 = React.lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
@@ -169,6 +170,7 @@ export function BridgesOverviewByChain({
 	const deferredTokenWithdrawals = React.useDeferredValue(tokenWithdrawals)
 
 	const chartFilename = getBridgeChartFilename(selectedChain, chartType)
+	const selectedChainIconUrl = selectedChain !== 'All' ? chainIconUrl(selectedChain) : undefined
 
 	const prepareCsv = () => {
 		const resolvedFilteredBridges = filteredBridges ?? EMPTY_PROTOCOLS
@@ -304,7 +306,7 @@ export function BridgesOverviewByChain({
 								<ChartExportButtons
 									chartInstance={exportChartInstance}
 									filename={chartView === 'volume' ? 'bridge-volume' : 'bridge-netflow-by-chain'}
-									title={chartView === 'volume' ? 'Bridge Volume' : 'Net Flows By Chain'}
+									title={chartView === 'volume' ? 'Bridge Volume' : 'Bridge Net Flows'}
 								/>
 							</div>
 
@@ -329,6 +331,7 @@ export function BridgesOverviewByChain({
 										chartInstance={exportChartInstance}
 										filename={chartFilename}
 										title={`${selectedChain} ${chartType}`}
+										iconUrl={selectedChainIconUrl}
 									/>
 								</div>
 							)}
@@ -349,6 +352,7 @@ export function BridgesOverviewByChain({
 											chartInstance={exportChartInstance}
 											filename={chartFilename}
 											title={`${selectedChain} ${chartType}`}
+											iconUrl={selectedChainIconUrl}
 										/>
 									}
 								/>

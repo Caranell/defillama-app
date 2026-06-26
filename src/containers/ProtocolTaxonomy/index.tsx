@@ -17,6 +17,7 @@ import { useLocalStorageSettingsManager } from '~/contexts/LocalStorage'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { definitions } from '~/public/definitions'
 import { formatNum, formattedNum } from '~/utils'
+import { chainIconUrl } from '~/utils/icons'
 import { buildProtocolTaxonomyGroupedCharts } from './chartGrouping'
 import {
 	getProtocolCategoryDexVolumeLabel,
@@ -193,6 +194,7 @@ export function ProtocolTaxonomyPage(props: IProtocolTaxonomyPageData) {
 									? categoryPresentation.headingLabel
 									: `${categoryPresentation.headingLabel} on ${props.chain}`
 							}
+							iconUrl={props.chain && props.chain !== 'All' ? chainIconUrl(props.chain) : undefined}
 						/>
 					</div>
 					<Suspense fallback={<div className="min-h-[360px]" />}>

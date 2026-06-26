@@ -6,7 +6,7 @@ import { LocalLoader } from '~/components/Loaders'
 import { TokenLogo } from '~/components/TokenLogo'
 import { getNFTRoyaltyHistory } from '~/containers/Nft/queries'
 import Layout from '~/layout'
-import { formattedNum } from '~/utils'
+import { formattedNum, slug } from '~/utils'
 
 const MultiSeriesChart2 = lazy(() => import('~/components/ECharts/MultiSeriesChart2'))
 
@@ -100,7 +100,12 @@ export default function Collection() {
 							dataset={chartData.dataset}
 							charts={chartData.charts}
 							valueSymbol="$"
-							exportButtons="auto"
+							exportButtons={{
+								png: true,
+								csv: true,
+								filename: `${slug(props.name)}-royalty-earnings`,
+								pngTitle: `${props.name} Royalty Earnings`
+							}}
 						/>
 					</Suspense>
 				</div>

@@ -36,6 +36,7 @@ import {
 } from '~/metrics/feeExtras'
 import { formattedNum, slug } from '~/utils'
 import { buildHallmarksWithGenuineSpikes } from '~/utils/hallmarks'
+import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import type { IProtocolMetadata } from '~/utils/metadata/types'
 import { withPerformanceLogging } from '~/utils/perf'
@@ -423,7 +424,8 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 						<ChartExportButtons
 							chartInstance={chartInstance}
 							filename={`${props.name}-fees-revenue`}
-							title="Fees & Revenue"
+							title={props.name}
+							iconUrl={tokenIconUrl(props.name)}
 						/>
 					</div>
 					<Suspense fallback={<div className="min-h-[360px]" />}>
@@ -445,6 +447,7 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 						<DimensionProtocolChartByType
 							chartType="chain"
 							protocolName={slug(props.name)}
+							protocolDisplayName={props.name}
 							adapterType="fees"
 							breakdownNames={props.protocolChains}
 							metadata={{
@@ -461,6 +464,7 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 						<DimensionProtocolChartByType
 							chartType="version"
 							protocolName={slug(props.name)}
+							protocolDisplayName={props.name}
 							adapterType="fees"
 							breakdownNames={props.protocolFeesVersions}
 							metadata={{
@@ -479,6 +483,7 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 								<DimensionProtocolChartByType
 									chartType="chain"
 									protocolName={slug(props.name)}
+									protocolDisplayName={props.name}
 									adapterType="fees"
 									dataType="dailyRevenue"
 									breakdownNames={props.protocolChains}
@@ -496,6 +501,7 @@ export default function Protocols(props: InferGetStaticPropsType<typeof getStati
 							<DimensionProtocolChartByType
 								chartType="version"
 								protocolName={slug(props.name)}
+								protocolDisplayName={props.name}
 								adapterType="fees"
 								dataType="dailyRevenue"
 								breakdownNames={props.protocolRevenueVersions}

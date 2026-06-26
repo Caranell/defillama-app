@@ -19,6 +19,7 @@ import { getProtocolWarningBanners } from '~/containers/ProtocolOverview/utils'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
 import { slug } from '~/utils'
 import { fetchJson } from '~/utils/async'
+import { tokenIconUrl } from '~/utils/icons'
 import { maxAgeForNext } from '~/utils/maxAgeForNext'
 import { withPerformanceLogging } from '~/utils/perf'
 import { canonicalRouteRedirect } from '~/utils/route'
@@ -44,10 +45,12 @@ interface TreasuryPageProps {
 
 function TokensBreakdownPieChartCard({
 	protocolName,
-	chartData
+	chartData,
+	exportIconUrl
 }: {
 	protocolName: string
 	chartData: Array<{ name: string; value: number }>
+	exportIconUrl?: string
 }) {
 	const allTokens = React.useMemo(() => chartData.map((d) => d.name), [chartData])
 	const [selectedTokensRaw, setSelectedTokensRaw] = React.useState<string[]>(() => allTokens)
@@ -65,7 +68,7 @@ function TokensBreakdownPieChartCard({
 	const { chartInstance, handleChartReady } = useGetChartInstance()
 
 	const exportFilenameBase = `${slug(protocolName)}-treasury-tokens-breakdown`
-	const exportTitle = `${protocolName} Treasury Tokens Breakdown`
+	const exportTitle = `${protocolName} Treasury by Token`
 
 	return (
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
@@ -82,7 +85,12 @@ function TokensBreakdownPieChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<PieChart chartData={filteredChartData} onReady={handleChartReady} />
@@ -94,11 +102,13 @@ function TokensBreakdownPieChartCard({
 function HistoricalTreasuryChartCard({
 	protocolName,
 	dataset,
-	charts
+	charts,
+	exportIconUrl
 }: {
 	protocolName: string
 	dataset: MultiSeriesChart2Dataset
 	charts: MultiSeriesCharts
+	exportIconUrl?: string
 }) {
 	const allSeries = React.useMemo(() => ['Treasury'], [])
 
@@ -111,7 +121,12 @@ function HistoricalTreasuryChartCard({
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
 			<div className="flex flex-wrap items-center justify-end gap-2 p-2 pb-0">
 				<h2 className="mr-auto text-base font-semibold">Historical Treasury</h2>
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -133,7 +148,8 @@ function TokensMultiSeriesChartCard({
 	dataset,
 	charts,
 	exportSuffix,
-	valueSymbol
+	valueSymbol,
+	exportIconUrl
 }: {
 	title: string
 	protocolName: string
@@ -142,6 +158,7 @@ function TokensMultiSeriesChartCard({
 	charts: MultiSeriesCharts
 	exportSuffix: string
 	valueSymbol?: string
+	exportIconUrl?: string
 }) {
 	const [selectedTokensRaw, setSelectedTokensRaw] = React.useState<string[]>(() => allTokens)
 	const selectedTokens = React.useMemo(
@@ -152,7 +169,7 @@ function TokensMultiSeriesChartCard({
 	const { chartInstance, handleChartReady } = useGetChartInstance()
 
 	const exportFilenameBase = `${slug(protocolName)}-${slug(exportSuffix)}`
-	const exportTitle = `${protocolName} ${title}`
+	const exportTitle = `${protocolName} Treasury ${title}`
 
 	return (
 		<div className="relative col-span-full flex flex-col rounded-md border border-(--cards-border) bg-(--cards-bg) xl:col-span-1 xl:[&:last-child:nth-child(2n-1)]:col-span-full">
@@ -169,7 +186,12 @@ function TokensMultiSeriesChartCard({
 						portal
 					/>
 				) : null}
-				<ChartExportButtons chartInstance={chartInstance} filename={exportFilenameBase} title={exportTitle} />
+				<ChartExportButtons
+					chartInstance={chartInstance}
+					filename={exportFilenameBase}
+					title={exportTitle}
+					iconUrl={exportIconUrl}
+				/>
 			</div>
 			<React.Suspense fallback={<div className="min-h-[360px]" />}>
 				<MultiSeriesChart2
@@ -291,6 +313,7 @@ export default function Protocols(props: TreasuryPageProps) {
 	})
 
 	const hasOwnTokens = (ownTokensBreakdown?.length ?? 0) > 0
+	const protocolIconUrl = tokenIconUrl(props.name)
 
 	const toggleIncludeOwnTokens = React.useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -338,6 +361,7 @@ export default function Protocols(props: TreasuryPageProps) {
 							key={tokenBreakdownPieChart.map((d) => d.name).join('|')}
 							protocolName={props.name}
 							chartData={tokenBreakdownPieChart}
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -347,6 +371,7 @@ export default function Protocols(props: TreasuryPageProps) {
 							protocolName={props.name}
 							dataset={valueDataset}
 							charts={valueCharts}
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -360,6 +385,7 @@ export default function Protocols(props: TreasuryPageProps) {
 							charts={tokenRawCharts}
 							exportSuffix="treasury-tokens-breakdown-raw"
 							valueSymbol=""
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 
@@ -373,6 +399,7 @@ export default function Protocols(props: TreasuryPageProps) {
 							charts={tokenUSDCharts}
 							exportSuffix="treasury-tokens-usd"
 							valueSymbol="$"
+							exportIconUrl={protocolIconUrl}
 						/>
 					) : null}
 				</div>

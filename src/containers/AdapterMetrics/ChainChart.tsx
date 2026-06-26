@@ -30,6 +30,7 @@ import {
 } from '~/metrics/feeExtras'
 import { slug } from '~/utils'
 import { getErrorMessage, normalizeError } from '~/utils/error'
+import { chainIconUrl } from '~/utils/icons'
 import { parseArrayParam, parseExcludeParam, pushShallowQuery, readSingleQueryValue } from '~/utils/routerQuery'
 import {
 	fetchAdapterChainChartData,
@@ -740,33 +741,31 @@ export const AdapterByChainChart = ({
 		(deferredBreakdownPresentation.kind !== 'treemap' && deferredBreakdownPresentation.kind !== 'hbar') ||
 		deferredBreakdownPresentation.data.length > 0
 	const breakdownExportConfig = React.useMemo(() => {
-		const chartBaseTitle = `${chain === 'All' ? 'All Chains' : chain} - ${chartName} by Protocol`
+		const chartBaseTitle = `${chain === 'All' ? 'All Chains' : chain} ${chartName}`
 		const chainSlug = slug(chain === 'All' ? 'all-chains' : chain)
 
 		if (breakdownChartState.chartKind === 'dominance') {
 			return {
 				filename: `${chainSlug}-${slug(chartName)}-by-protocol-dominance-${breakdownChartState.groupBy}`,
-				title: `${chartBaseTitle} - Dominance Chart (${breakdownChartState.groupBy})`
+				title: chartBaseTitle
 			}
 		}
 		if (breakdownChartState.chartKind === 'treemap') {
 			return {
 				filename: `${chainSlug}-${slug(chartName)}-by-protocol-treemap-${breakdownChartState.groupBy}`,
-				title: `${chartBaseTitle} - Treemap (${breakdownChartState.groupBy})`
+				title: chartBaseTitle
 			}
 		}
 		if (breakdownChartState.chartKind === 'hbar') {
 			return {
 				filename: `${chainSlug}-${slug(chartName)}-by-protocol-hbar-${breakdownChartState.groupBy}`,
-				title: `${chartBaseTitle} - HBar (${breakdownChartState.groupBy})`
+				title: chartBaseTitle
 			}
 		}
 
 		return {
 			filename: `${chainSlug}-${slug(chartName)}-by-protocol-bar-${breakdownChartState.valueMode}-${breakdownChartState.barLayout}-${breakdownChartState.groupBy}`,
-			title: `${chartBaseTitle} - Bar (${breakdownChartState.valueMode === 'absolute' ? 'Absolute' : 'Relative'}, ${
-				breakdownChartState.barLayout === 'stacked' ? 'Stacked' : 'Separate'
-			}, ${breakdownChartState.groupBy})`
+			title: chartBaseTitle
 		}
 	}, [breakdownChartState, chain, chartName])
 
@@ -859,6 +858,7 @@ export const AdapterByChainChart = ({
 								chartInstance={exportChartInstance}
 								filename={breakdownExportConfig.filename}
 								title={breakdownExportConfig.title}
+								iconUrl={chain !== 'All' ? chainIconUrl(chain) : undefined}
 								pngProfile={breakdownChartState.chartKind === 'treemap' ? 'treemapNormalized' : undefined}
 							/>
 						) : null
@@ -866,7 +866,8 @@ export const AdapterByChainChart = ({
 						<ChartExportButtons
 							chartInstance={exportChartInstance}
 							filename={`${chain}-${adapterType}-${chartName}`}
-							title={`${chain === 'All' ? 'All Chains' : chain} - ${chartName}`}
+							title={chain === 'All' ? 'All Chains' : chain}
+							iconUrl={chain !== 'All' ? chainIconUrl(chain) : undefined}
 						/>
 					)}
 				</div>
@@ -1241,33 +1242,29 @@ export const ChainsByAdapterChart = ({
 	}
 
 	const exportConfig = React.useMemo(() => {
-		const chartBaseTitle = `${chartName} by Chain`
-
 		if (chartState.chartKind === 'dominance') {
 			return {
 				filename: `${slug(chartName)}-by-chain-dominance-${chartState.groupBy}`,
-				title: `${chartBaseTitle} - Dominance Chart (${chartState.groupBy})`
+				title: chartName
 			}
 		}
 
 		if (chartState.chartKind === 'treemap') {
 			return {
 				filename: `${slug(chartName)}-by-chain-treemap-${chartState.groupBy}`,
-				title: `${chartBaseTitle} - Treemap (${chartState.groupBy})`
+				title: chartName
 			}
 		}
 		if (chartState.chartKind === 'hbar') {
 			return {
 				filename: `${slug(chartName)}-by-chain-hbar-${chartState.groupBy}`,
-				title: `${chartBaseTitle} - HBar (${chartState.groupBy})`
+				title: chartName
 			}
 		}
 
 		return {
 			filename: `${slug(chartName)}-by-chain-bar-${chartState.valueMode}-${chartState.barLayout}-${chartState.groupBy}`,
-			title: `${chartBaseTitle} - Bar (${chartState.valueMode === 'absolute' ? 'Absolute' : 'Relative'}, ${
-				chartState.barLayout === 'stacked' ? 'Stacked' : 'Separate'
-			}, ${chartState.groupBy})`
+			title: chartName
 		}
 	}, [chartName, chartState])
 

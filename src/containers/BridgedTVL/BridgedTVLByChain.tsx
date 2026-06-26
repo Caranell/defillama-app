@@ -17,7 +17,8 @@ import { LinkPreviewCard } from '~/components/SEO'
 import { VirtualTable } from '~/components/Table/Table'
 import { TokenLogo } from '~/components/TokenLogo'
 import { useGetChartInstance } from '~/hooks/useGetChartInstance'
-import { formattedNum } from '~/utils'
+import { formattedNum, slug } from '~/utils'
+import { chainIconUrl } from '~/utils/icons'
 import type { RawChainAsset } from './api.types'
 
 interface BridgedChainRow {
@@ -111,6 +112,18 @@ export function BridgedTVLByChain({
 	}, [inflows, tokenInflowNames])
 	const deferredPieChartData = React.useDeferredValue(pieChartData)
 	const deferredInflowsData = React.useDeferredValue(inflowsData)
+	const chartTypeName =
+		chartType === 'inflows'
+			? 'Inflows'
+			: chartType === 'ownTokens'
+				? 'Own Tokens'
+				: (chartTypes.find((item) => item.type === chartType)?.name ?? 'Total')
+	const exportTitle =
+		chartType === 'total'
+			? `${chainName} Bridged TVL`
+			: chartType === 'inflows'
+				? `${chainName} Bridged Inflows`
+				: `${chainName} ${chartTypeName} Bridged TVL`
 
 	const [sorting, setSorting] = React.useState<SortingState>([{ id: 'value', desc: true }])
 	const instance = useReactTable({
@@ -218,8 +231,9 @@ export function BridgedTVLByChain({
 						) : null}
 						<ChartExportButtons
 							chartInstance={exportChartInstance}
-							filename={`${chainName}-bridged-tvl`}
-							title={`${chainName} Bridged TVL`}
+							filename={`${slug(chainName)}-bridged-tvl-${chartType}`}
+							title={exportTitle}
+							iconUrl={chainIconUrl(chain)}
 						/>
 					</div>
 					{chartType !== 'inflows' ? (

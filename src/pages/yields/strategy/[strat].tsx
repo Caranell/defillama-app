@@ -152,6 +152,15 @@ const PageView = () => {
 		return map
 	}, [configData])
 	const project = configsMap?.get(lendToken)?.project
+	const strategyLabel = useMemo(() => {
+		const lendSymbol = configsMap.get(lendToken)?.symbol ?? lendToken
+		const borrowConfig = configsMap.get(borrowToken)
+		const borrowSymbol = borrowConfig?.mintedCoin ?? borrowConfig?.symbol ?? borrowToken
+		const farmSymbol = configsMap.get(farmToken)?.symbol ?? farmToken
+		return [lendSymbol, borrowSymbol, farmSymbol].filter(Boolean).join(' / ')
+	}, [borrowToken, configsMap, farmToken, lendToken])
+	const strategyExportTitlePrefix = strategyLabel ? `${strategyLabel} Strategy` : 'Strategy'
+	const strategyExportFilenameBase = strategyParam ?? 'yield-strategy'
 
 	const { data: config, isLoading: fetchingConfig } = useYieldConfigData(project ?? '')
 	const lendProjectCategory = config?.category
@@ -382,7 +391,12 @@ const PageView = () => {
 							dataset={finalApyDataset}
 							charts={APY_LINE_CHARTS}
 							valueSymbol="%"
-							exportButtons="auto"
+							exportButtons={{
+								png: true,
+								csv: true,
+								filename: `${strategyExportFilenameBase}-strategy-apy`,
+								pngTitle: `${strategyExportTitlePrefix} APY`
+							}}
 						/>
 					</Suspense>
 				</div>
@@ -456,7 +470,12 @@ const PageView = () => {
 											charts={BAR_APY_CHARTS}
 											valueSymbol="%"
 											hideDefaultLegend={false}
-											exportButtons="auto"
+											exportButtons={{
+												png: true,
+												csv: true,
+												filename: `${strategyExportFilenameBase}-supply-apy`,
+												pngTitle: `${strategyExportTitlePrefix} Supply APY`
+											}}
 										/>
 									</Suspense>
 								</div>
@@ -471,7 +490,12 @@ const PageView = () => {
 											charts={BAR_APY_CHARTS}
 											valueSymbol="%"
 											hideDefaultLegend={false}
-											exportButtons="auto"
+											exportButtons={{
+												png: true,
+												csv: true,
+												filename: `${strategyExportFilenameBase}-borrow-apy`,
+												pngTitle: `${strategyExportTitlePrefix} Borrow APY`
+											}}
 										/>
 									</Suspense>
 								</div>
@@ -486,7 +510,12 @@ const PageView = () => {
 											charts={BAR_APY_CHARTS}
 											valueSymbol="%"
 											hideDefaultLegend={false}
-											exportButtons="auto"
+											exportButtons={{
+												png: true,
+												csv: true,
+												filename: `${strategyExportFilenameBase}-farm-apy`,
+												pngTitle: `${strategyExportTitlePrefix} Farm APY`
+											}}
 										/>
 									</Suspense>
 								</div>

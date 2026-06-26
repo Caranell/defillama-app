@@ -69,6 +69,7 @@
 			"Palladium token": "Tokens backed primarily by physical palladium.",
 			"Uranium token": "Tokens backed primarily by uranium or uranium inventory.",
 			"Other metal token": "Tokens backed by a metal that is not gold, silver, platinum, palladium or uranium.",
+			"Commodity Backed": "Tokens 1:1 collateralized by physical commodity holdings.",
 			"Commodity basket token": "Tokens backed by a basket of commodities rather than a single underlying asset.",
 			"Other commodity token": "Tokens backed primarily by a single physical commodity that is not a precious metal or uranium, such as crude oil, natural gas or agricultural products.",
 			"Single property equity token": "Tokens that give equity-style exposure to a single property or real estate project.",
@@ -78,6 +79,8 @@
 			"Real estate index / basket token": "Tokens that track an index or diversified basket of real estate exposures, such as city-level home price indices or composite property portfolios, rather than single properties or REIT units.",
 			"Single stock synthetic": "Tokens that track a single listed equity using synthetic replication rather than full custody of shares.",
 			"Single stock fully backed": "Tokens backed by held underlying shares in custody that map 1:1 to a single listed equity.",
+			"Blockchain-Native Equity": "Tokens that constitute a listed equity natively on a blockchain as the canonical share registry rather than tokenizing off-chain custody.",
+			"ETF Backed": "Tokens 1:1 collateralized by held shares of an exchange-traded fund, mapping one ETF unit to one token claim.",
 			"Equity index / basket token": "Tokens that track a basket or index of equities or equity ETFs.",
 			"Private equity / venture token": "Tokens that represent interests in private company equity, venture capital funds or similar vehicles.",
 			"Artwork / collectibles token": "Tokens backed by art, collectibles or other non-financial real assets such as luxury goods.",
@@ -104,7 +107,10 @@
 			"Governance / voting token (RWA protocol)": "Tokens that confer governance rights, voting power or protocol control over an RWA platform or product suite, without being a direct 1:1 claim on the underlying assets.",
 			"Revenue / fee share token (RWA protocol)": "Tokens that entitle holders to a share of protocol revenues or fees from an RWA platform while not being a direct claim on underlying asset pools.",
 			"Synthetic backed stablecoin": "Stablecoins backed by synthetic crypto or derivatives strategies (such as delta-neutral basis trades or perp hedging) rather than direct fiat or real-world asset reserves.",
-			"Actively-managed strategy vault": "Vault tokens representing deposits into a discretionary, manager-directed strategy that may allocate across RWAs and other onchain yield sources, and that issue a receipt token."
+			"Actively-managed strategy vault": "Vault tokens representing deposits into a discretionary, manager-directed strategy that may allocate across RWAs and other onchain yield sources, and that issue a receipt token.",
+			"Forex Perps": "Perpetual markets that track a major or minor fiat currency pair (USDJPY, EURUSD, USDCAD, and similar).",
+			"Crypto Index Perps": "Perpetual markets that track a basket or index of crypto assets rather than a single coin.",
+			"Equity Index Perps": "Perpetual markets that track a broad equity index: S&P 500, Nasdaq-100, Dow Jones, Nifty 50, Bovespa, or similar."
 		}
 	},
 	"assetGroup": {

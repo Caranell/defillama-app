@@ -57,6 +57,7 @@ export function DATCompany(props: IDATCompanyPageProps) {
 	const chartData = useMemo(() => {
 		return props.chartByAsset.find((asset) => asset.ticker === selectedAsset)
 	}, [selectedAsset, props.chartByAsset])
+	const holdingsExportTitle = selectedAsset ? `${props.name} ${selectedAsset} Holdings` : `${props.name} Holdings`
 
 	return (
 		<>
@@ -216,7 +217,7 @@ export function DATCompany(props: IDATCompanyPageProps) {
 						<ChartExportButtons
 							chartInstance={chartInstance}
 							filename={`${props.name}-holdings`}
-							title="Cumulative Holdings Over Time"
+							title={holdingsExportTitle}
 						/>
 					</div>
 					<Suspense fallback={<div className="min-h-[360px]" />}>
@@ -249,7 +250,7 @@ export function DATCompany(props: IDATCompanyPageProps) {
 									png: true,
 									csv: true,
 									filename: `${props.name}-mnav`,
-									pngTitle: 'mNAV'
+									pngTitle: `${props.name} mNAV`
 								}}
 							/>
 						</Suspense>
@@ -268,7 +269,7 @@ export function DATCompany(props: IDATCompanyPageProps) {
 									png: true,
 									csv: true,
 									filename: `${props.name}-fully-diluted-shares`,
-									pngTitle: 'Fully Diluted Shares'
+									pngTitle: `${props.name} Fully Diluted Shares`
 								}}
 							/>
 						</Suspense>
@@ -295,7 +296,7 @@ export function DATCompany(props: IDATCompanyPageProps) {
 									png: true,
 									csv: true,
 									filename: `${props.name}-total-asset-value`,
-									pngTitle: 'Total Asset Value'
+									pngTitle: `${props.name} Total Asset Value`
 								}}
 							/>
 						</Suspense>

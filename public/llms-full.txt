@@ -168,6 +168,7 @@ Common usage examples:
 - [Protocols by Market Cap](https://defillama.com/mcaps): Token price multiplied by circulating supply of each protocol Category: Token.
 - [Protocols by FDV](https://defillama.com/fdv): Token price multiplied by fully diluted supply of each protocol Category: Token.
 - [Protocols by Outstanding FDV](https://defillama.com/outstanding-fdv): Token price multiplied by outstanding supply of each protocol. Outstanding supply is the total supply minus the supply that is not yet allocated to anything (e.g., coins in treasury or reserve) Category: Token.
+- [Markets](https://defillama.com/markets): Spot and perpetual markets by token, exchange, and category Category: Token.
 - [RWA: Overview](https://defillama.com/rwa): Overview of all Real World Assets (RWAs) Category: RWA.
 - [RWA by Chain](https://defillama.com/rwa/chains): Overview of all Real World Assets (RWAs) by chain Category: RWA.
 - [RWA by Platform](https://defillama.com/rwa/platforms): Overview of all Real World Assets (RWAs) by platform Category: RWA.

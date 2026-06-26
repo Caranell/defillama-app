@@ -1,8 +1,9 @@
 import { SERVER_URL, V2_SERVER_URL } from '~/constants'
-import { fetchJson, getSlowJsonTimeoutMs } from '~/utils/async'
+import { fetchJson } from '~/utils/async'
 import type {
 	IProtocolChainBreakdownChart,
 	IProtocolChainBreakdownChartRaw,
+	IProtocolExpenses,
 	IProtocolMiniResponse,
 	IProtocolTokenBreakdownChart,
 	IProtocolTokenBreakdownChartRaw,
@@ -11,7 +12,6 @@ import type {
 	IProtocolChartV2Params,
 	IProtocolMetricsV2
 } from './api.types'
-import type { IProtocolExpenses } from './api.types'
 
 const PROTOCOL_API_URL = `${SERVER_URL}/updatedProtocol`
 const PROTOCOL_API_MINI_URL = `${SERVER_URL}/_fe/updatedProtocol-mini`
@@ -390,10 +390,7 @@ export async function fetchProtocolTreasuryChart({
  * Fetch protocol expense entries from the public expenses dataset.
  */
 export async function fetchProtocolExpenses(): Promise<IProtocolExpenses[]> {
-	return fetchJson<IProtocolExpenses[]>(
-		'https://raw.githubusercontent.com/DefiLlama/defillama-server/master/defi/src/operationalCosts/output/expenses.json',
-		{ timeout: getSlowJsonTimeoutMs() }
-	)
+	return fetchJson<IProtocolExpenses[]>('https://api.llama.fi/_internal/operational-costs/expenses')
 }
 
 export async function fetchProtocolBySlug<TProtocolResponse = unknown>(

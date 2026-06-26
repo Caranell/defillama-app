@@ -21,7 +21,6 @@ import {
 	getStablecoinChainsSeriesChart,
 	getStablecoinChainsVolumeChartKind,
 	getStablecoinDashboardChartType,
-	getStablecoinChartTypeLabel,
 	getStablecoinChartTypeOptions,
 	getStablecoinChartTypeQueryValue,
 	getStablecoinChartViewLabel,
@@ -228,10 +227,14 @@ export function ChainsWithStablecoins({
 	}, [chartType, chartView])
 
 	const exportMeta = React.useMemo(() => {
-		const label = `${getStablecoinChartTypeLabel(chartType)} ${getStablecoinChartViewLabel(chartView)}`
+		let title = 'Stablecoins Circulating Supply'
+		if (chartType === 'volume') {
+			title = 'Stablecoins Volume'
+		}
+
 		return {
 			filename: `stablecoins-chains-${chartType}-${chartView}`,
-			title: `Stablecoins by Chain - ${label}`
+			title
 		}
 	}, [chartType, chartView])
 

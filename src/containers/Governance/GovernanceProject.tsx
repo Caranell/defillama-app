@@ -55,6 +55,8 @@ export default function GovernanceProject({
 	const safeCategoryIndex = categoryIndex >= 0 && categoryIndex < governanceData.length ? categoryIndex : 0
 	const data = governanceData?.[safeCategoryIndex]
 	const governanceType = governanceTypes?.[safeCategoryIndex] ?? 'tally'
+	const governanceLabel =
+		categoryLabels[safeCategoryIndex] ?? categoryLabels[0] ?? governanceTypeToLabel(governanceType)
 
 	const filters =
 		categoryLabels.length > 1 ? (
@@ -173,7 +175,12 @@ export default function GovernanceProject({
 								dataset={activityDataset?.source?.length > 0 ? activityDataset : EMPTY_ACTIVITY_DATASET}
 								charts={ACTIVITY_CHARTS}
 								valueSymbol=""
-								exportButtons={{ png: true, csv: true }}
+								exportButtons={{
+									png: true,
+									csv: true,
+									filename: `${name}-${governanceLabel}-activity`,
+									pngTitle: `${name} ${governanceLabel} Governance Activity`
+								}}
 							/>
 						</React.Suspense>
 					</div>
@@ -184,7 +191,12 @@ export default function GovernanceProject({
 								dataset={maxVotesDataset?.source?.length > 0 ? maxVotesDataset : EMPTY_MAXVOTES_DATASET}
 								charts={MAX_VOTES_CHARTS}
 								valueSymbol=""
-								exportButtons={{ png: true, csv: true }}
+								exportButtons={{
+									png: true,
+									csv: true,
+									filename: `${name}-${governanceLabel}-max-votes`,
+									pngTitle: `${name} ${governanceLabel} Max Votes`
+								}}
 							/>
 						</React.Suspense>
 					</div>

@@ -172,11 +172,11 @@
 	},
 	"makerFeeRate": {
 		"label": "Maker Fee",
-		"description": "Fee rate charged on maker (limit) orders for this contract."
+		"description": "Fee rate charged on maker (limit) orders for this contract. For venues that price via the bid/ask spread instead of (or in addition to) explicit fees — e.g. RFQ, quote-based or oracle-priced venues — half the spread (the per-side cost of crossing it) is included here so costs are comparable across venues."
 	},
 	"takerFeeRate": {
 		"label": "Taker Fee",
-		"description": "Fee rate charged on taker (market) orders for this contract."
+		"description": "Fee rate charged on taker (market) orders for this contract. For venues that price via the bid/ask spread instead of (or in addition to) explicit fees — e.g. RFQ, quote-based or oracle-priced venues — half the spread (the per-side cost of crossing it) is included here so costs are comparable across venues."
 	},
 	"deployerFeeShare": {
 		"label": "Deployer Fee Share",

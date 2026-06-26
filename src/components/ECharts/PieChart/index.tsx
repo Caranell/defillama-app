@@ -463,6 +463,7 @@ export default function PieChart({
 								chartInstance={chartInstance}
 								filename={exportFilename}
 								title={exportTitle}
+								iconUrl={exportButtonsConfig?.pngIconUrl}
 								showCsv={csvDownloadEnabled}
 								showPng={imageExportEnabled}
 							/>

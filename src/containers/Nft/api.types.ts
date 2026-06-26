@@ -77,5 +77,7 @@ export type RawRoyalty = {
 
 export type RawParentCompany = {
 	name: string
-	nftCollections: Array<[string, ...unknown[]]>
+	url: string
+	twitter?: string
+	nftCollections: Array<[string, string]>
 }

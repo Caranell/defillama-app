@@ -5,7 +5,8 @@ import { TokenLogo } from '~/components/TokenLogo'
 import { CHART_COLORS } from '~/constants/colors'
 import { ChainProtocolsTable } from '~/containers/ProtocolRankings/Table'
 import { useLocalStorageSettingsManager } from '~/contexts/LocalStorage'
-import { formattedNum, getTokenDominance } from '~/utils'
+import { formattedNum, getTokenDominance, slug } from '~/utils'
+import { tokenIconUrl } from '~/utils/icons'
 import { getEnabledForkOracleExtraTvlChartApiKeys } from '~/utils/tvlOverlap'
 import { useForkByProtocolExtraSeries } from './queries.client'
 import type { ForkByProtocolPageData } from './types'
@@ -52,6 +53,8 @@ export const ForksByProtocol = ({ fork, forkLinks, protocolTableData, chartData 
 
 	const dominance = topProtocol ? getTokenDominance({ tvl: topProtocol.tvl?.default?.tvl ?? 0 }, totalValue) : null
 	const dominanceText = dominance == null ? null : String(dominance)
+	const chartTitle = `${fork} Forks`
+	const chartFilenameTitle = `${fork} Forks TVL`
 
 	const isLoading = enabledExtraApiKeys.length > 0 && isFetchingExtraSeries
 	return (
@@ -90,7 +93,13 @@ export const ForksByProtocol = ({ fork, forkLinks, protocolTableData, chartData 
 									dataset={dataset}
 									charts={charts}
 									alwaysShowTooltip
-									exportButtons={{ png: true, csv: true }}
+									exportButtons={{
+										png: true,
+										csv: true,
+										filename: slug(chartFilenameTitle),
+										pngTitle: chartTitle,
+										pngIconUrl: tokenIconUrl(fork)
+									}}
 								/>
 							</Suspense>
 						</div>
