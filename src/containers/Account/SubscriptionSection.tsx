@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { Icon } from '~/components/Icon'
 import { BasicLink } from '~/components/Link'
 import { useAuthContext } from '~/containers/Subscription/auth'
+import type { SubscriptionType } from '~/containers/Subscription/types'
 import { useSubscribe } from '~/containers/Subscription/useSubscribe'
 import type { Subscription } from '~/containers/Subscription/useSubscribe'
 import { useAiBalance } from '~/containers/Subscription/useTopup'
@@ -39,6 +40,9 @@ function getSubscriptionTypeLabel(subscription: { billing_interval?: string; typ
 	if (subscription.type === 'api') {
 		return isYearly ? 'Yearly ($3,000/year)' : 'Monthly ($300/month)'
 	}
+	if (subscription.type === 'advanced') {
+		return isYearly ? 'Yearly ($4,000/year)' : 'Monthly ($400/month)'
+	}
 	return isYearly ? 'Yearly ($490/year)' : 'Monthly ($49/month)'
 }
 
@@ -52,6 +56,7 @@ function getPaymentLabel(provider: string): string {
 
 function getPlanName(type: string): string {
 	if (type === 'api') return 'API'
+	if (type === 'advanced') return 'Advanced'
 	if (type === 'llamafeed') return 'Pro'
 	return 'Free'
 }
@@ -93,10 +98,22 @@ function SubscriptionCardWithProps({
 	)
 }
 
-function YearlyUpgradeBanner({ onUpgrade, planType = 'pro' }: { onUpgrade: () => void; planType?: 'pro' | 'api' }) {
-	const savings = planType === 'api' ? '$600/year' : '$98/year'
-	const subscriptionLabel = planType === 'api' ? 'API subscription' : 'Pro subscription'
-	const buttonLabel = planType === 'api' ? 'Upgrade API to Yearly' : 'Upgrade Pro to Yearly'
+function YearlyUpgradeBanner({
+	onUpgrade,
+	planType = 'pro'
+}: {
+	onUpgrade: () => void
+	planType?: 'pro' | 'api' | 'advanced'
+}) {
+	const savings = planType === 'api' ? '$600/year' : planType === 'advanced' ? '$800/year' : '$98/year'
+	const subscriptionLabel =
+		planType === 'api' ? 'API subscription' : planType === 'advanced' ? 'Advanced subscription' : 'Pro subscription'
+	const buttonLabel =
+		planType === 'api'
+			? 'Upgrade API to Yearly'
+			: planType === 'advanced'
+				? 'Upgrade Advanced to Yearly'
+				: 'Upgrade Pro to Yearly'
 
 	return (
 		<div className="flex items-center rounded-2xl border border-(--sub-brand-primary) bg-(--sub-brand-primary)/20 p-4">
@@ -243,6 +260,7 @@ function LegacyWarning() {
 
 function getTeamSubLabel(type: string | null): string {
 	if (type === 'api') return 'API'
+	if (type === 'advanced') return 'Advanced'
 	if (type === 'llamafeed') return 'Pro'
 	return ''
 }
@@ -286,10 +304,11 @@ export function SubscriptionSection() {
 	const [isCancelSubscriptionModalOpen, setIsCancelSubscriptionModalOpen] = useState(false)
 	const [isCancelSubModalOpen, setIsCancelSubModalOpen] = useState(false)
 	const [isYearlyUpgradeModalOpen, setIsYearlyUpgradeModalOpen] = useState(false)
-	const [yearlyUpgradeType, setYearlyUpgradeType] = useState<'api' | 'llamafeed' | null>(null)
+	const [yearlyUpgradeType, setYearlyUpgradeType] = useState<SubscriptionType | null>(null)
 	const {
 		apiSubscription,
 		llamafeedSubscription,
+		advancedSubscription,
 		pastDueSubscription,
 		credits,
 		usageStats,
@@ -369,10 +388,19 @@ export function SubscriptionSection() {
 
 	const hasProSubscription = llamafeedSubscription?.status === 'active'
 	const hasApiSubscription = apiSubscription?.status === 'active'
-	const activeSubscription = hasApiSubscription ? apiSubscription : hasProSubscription ? llamafeedSubscription : null
-	const isPastDue = Boolean(pastDueSubscription?.id) && !hasApiSubscription && !hasProSubscription
+	const hasAdvancedSubscription = advancedSubscription?.status === 'active'
+	const activeSubscription = hasApiSubscription
+		? apiSubscription
+		: hasAdvancedSubscription
+			? advancedSubscription
+			: hasProSubscription
+				? llamafeedSubscription
+				: null
+	const isPastDue =
+		Boolean(pastDueSubscription?.id) && !hasApiSubscription && !hasAdvancedSubscription && !hasProSubscription
 	const isProMonthly = hasProSubscription && llamafeedSubscription?.billing_interval === 'month'
 	const isApiMonthly = hasApiSubscription && apiSubscription?.billing_interval === 'month'
+	const isAdvancedMonthly = hasAdvancedSubscription && advancedSubscription?.billing_interval === 'month'
 	const isTrial = hasProSubscription && (isTrialFromAuth || String(llamafeedSubscription?.metadata?.isTrial) === 'true')
 
 	const isLegacy = activeSubscription?.provider === 'legacy'
@@ -394,14 +422,16 @@ export function SubscriptionSection() {
 		}
 	}
 
-	const handleUpgradeToYearly = (type: 'llamafeed' | 'api') => {
+	const handleUpgradeToYearly = (type: SubscriptionType) => {
 		setYearlyUpgradeType(type)
 		setIsYearlyUpgradeModalOpen(true)
 	}
 
 	const handleTopup = () => {
 		if (!activeSubscription) return
-		void handleLlamapayTopup(activeSubscription.type === 'api' ? 'api' : 'llamafeed', 'month')
+		const topupType =
+			activeSubscription.type === 'api' ? 'api' : activeSubscription.type === 'advanced' ? 'advanced' : 'llamafeed'
+		void handleLlamapayTopup(topupType, 'month')
 	}
 
 	const isMonthlyLlamapay = subscription?.provider === 'llamapay' && subscription?.billing_interval === 'month'
@@ -494,7 +524,7 @@ export function SubscriptionSection() {
 	}
 
 	const balanceCard =
-		(hasProSubscription || hasApiSubscription) && balance ? (
+		(hasProSubscription || hasApiSubscription || hasAdvancedSubscription) && balance ? (
 			<ExternalDataBalanceCard
 				freeRemaining={balance.freeRemaining}
 				toppedUpBalance={balance.toppedUpBalance}
@@ -503,7 +533,7 @@ export function SubscriptionSection() {
 				isLoading={isAiBalanceLoading}
 				onTopUp={() => setIsTopupModalOpen(true)}
 			/>
-		) : (hasProSubscription || hasApiSubscription) && isAiBalanceLoading ? (
+		) : (hasProSubscription || hasApiSubscription || hasAdvancedSubscription) && isAiBalanceLoading ? (
 			<ExternalDataBalanceCard
 				freeRemaining="0"
 				toppedUpBalance="0"
@@ -604,6 +634,9 @@ export function SubscriptionSection() {
 				/>
 				{isProMonthly && !isCancelPending && llamafeedSubscription?.provider === 'stripe' && (
 					<YearlyUpgradeBanner onUpgrade={() => handleUpgradeToYearly('llamafeed')} planType="pro" />
+				)}
+				{isAdvancedMonthly && !isCancelPending && advancedSubscription?.provider === 'stripe' && (
+					<YearlyUpgradeBanner onUpgrade={() => handleUpgradeToYearly('advanced')} planType="advanced" />
 				)}
 			</div>
 			{balanceCard}

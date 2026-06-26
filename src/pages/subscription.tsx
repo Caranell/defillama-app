@@ -8,9 +8,11 @@ import { EndTrialModal } from '~/containers/Account/EndTrialModal'
 import { useAuthContext } from '~/containers/Subscription/auth'
 import { ReturnModal } from '~/containers/Subscription/components/ReturnModal'
 import {
+	arePlanSiblings,
 	COMPARISON_SECTIONS,
 	FAQ_ITEMS,
 	PLAN_ORDER,
+	PLAN_TIER,
 	PRICING_CARDS_BY_CYCLE,
 	TRUST_LOGOS
 } from '~/containers/Subscription/data'
@@ -24,7 +26,7 @@ import {
 	SubscriptionTrustedBlock
 } from '~/containers/Subscription/sections'
 import { SignInModal } from '~/containers/Subscription/SignInModal'
-import type { BillingCycle, PlanKey } from '~/containers/Subscription/types'
+import type { BillingCycle, PlanKey, SubscriptionType } from '~/containers/Subscription/types'
 import { useSubscriptionPageState } from '~/containers/Subscription/usePageState'
 import { useSubscribe } from '~/containers/Subscription/useSubscribe'
 import { applySlackAcquisitionFromQuery } from '~/containers/Subscription/utils/slackAcquisition'
@@ -67,7 +69,7 @@ function SubscriptionContent() {
 
 	const [stripeCheckout, setStripeCheckout] = useState<{
 		isOpen: boolean
-		type: 'api' | 'llamafeed'
+		type: SubscriptionType
 		billingInterval: 'year' | 'month'
 		isTrial: boolean
 		isUpgradeFlow: boolean
@@ -151,12 +153,7 @@ function SubscriptionContent() {
 		action()
 	}
 
-	const openStripeCheckout = (
-		type: 'api' | 'llamafeed',
-		interval: 'year' | 'month',
-		trial = false,
-		upgrade = false
-	) => {
+	const openStripeCheckout = (type: SubscriptionType, interval: 'year' | 'month', trial = false, upgrade = false) => {
 		requireAuth(() => {
 			requireVerified(() => {
 				setStripeCheckout({ isOpen: true, type, billingInterval: interval, isTrial: trial, isUpgradeFlow: upgrade })
@@ -164,7 +161,8 @@ function SubscriptionContent() {
 		})
 	}
 
-	const planKeyToSubType = (key: PlanKey): 'api' | 'llamafeed' => (key === 'api' ? 'api' : 'llamafeed')
+	const planKeyToSubType = (key: PlanKey): SubscriptionType =>
+		key === 'api' ? 'api' : key === 'advanced' ? 'advanced' : 'llamafeed'
 
 	/* ── Card handlers ─────────────────────────────────────────────────── */
 	const handlePrimaryCtaClick = (cardKey: PlanKey) => {
@@ -199,8 +197,6 @@ function SubscriptionContent() {
 		openStripeCheckout('llamafeed', 'month', true, false)
 	}
 
-	const PLAN_TIER: Record<PlanKey, number> = { free: 0, pro: 1, api: 2, enterprise: 3 }
-
 	const handleComparisonPlanAction = (plan: PlanKey) => {
 		// Team-provided (manual) subscriptions can't be changed via self-serve checkout.
 		if (isManualSubscription) return
@@ -211,10 +207,12 @@ function SubscriptionContent() {
 		}
 
 		// Same guards the pricing cards enforce
-		if (isAuthenticated && currentPlan) {
+		if (isAuthenticated && currentPlan && currentPlan !== 'free') {
 			const isCurrentOrTrial = plan === currentPlan || (isTrial && plan === 'pro')
-			const isLowerTier = PLAN_TIER[plan] < PLAN_TIER[currentPlan]
-			if (isCurrentOrTrial || isLowerTier) return
+			// api ∥ advanced siblings can't self-serve switch — handled via contact-support
+			const isBlockedSwitch = arePlanSiblings(currentPlan, plan)
+			const isLowerTier = !isBlockedSwitch && PLAN_TIER[plan] < PLAN_TIER[currentPlan]
+			if (isCurrentOrTrial || isBlockedSwitch || isLowerTier) return
 		}
 
 		if (plan === 'free') {

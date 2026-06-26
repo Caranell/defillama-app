@@ -1,4 +1,5 @@
 import { Icon } from '~/components/Icon'
+import { arePlanSiblings, PLAN_TIER } from '~/containers/Subscription/data'
 import type {
 	Availability,
 	BillingCycle,
@@ -7,8 +8,6 @@ import type {
 	PricingCardCallbacks,
 	PricingCardData
 } from '~/containers/Subscription/types'
-
-const PLAN_TIER: Record<PlanKey, number> = { free: 0, pro: 1, api: 2, enterprise: 3 }
 
 /* ── Style maps ─────────────────────────────────────────────────────── */
 
@@ -117,6 +116,7 @@ function PricingCardCta({
 	canUpgradeCycle,
 	isUpgradeTier,
 	isLowerTier,
+	isBlockedSwitch,
 	isManualSubscription,
 	isPageStateLoading,
 	onPrimaryCtaClick,
@@ -137,6 +137,7 @@ function PricingCardCta({
 	canUpgradeCycle: boolean
 	isUpgradeTier: boolean
 	isLowerTier: boolean | '' | null | 0
+	isBlockedSwitch: boolean | '' | null | 0
 	isManualSubscription?: boolean
 	billingCycle: BillingCycle
 	isPageStateLoading?: boolean
@@ -194,7 +195,8 @@ function PricingCardCta({
 							Upgrade to Yearly
 						</button>
 						<p className="text-center text-[12px] leading-4 text-(--sub-text-slate-400) dark:text-(--sub-text-muted)">
-							Switch to annual billing — save {card.key === 'api' ? '$600' : '$98'}/year
+							Switch to annual billing — save {card.key === 'api' ? '$600' : card.key === 'advanced' ? '$800' : '$98'}
+							/year
 						</p>
 					</>
 				) : null}
@@ -220,6 +222,22 @@ function PricingCardCta({
 			>
 				{loading === 'stripe' ? 'Processing...' : `Upgrade to ${card.title} with Card`}
 			</button>
+		)
+	}
+
+	/* ── Blocked sibling switch (api ∥ advanced): no self-serve path ── */
+	if (isBlockedSwitch) {
+		return (
+			<p className="mt-4 text-center text-[13px] leading-5 text-(--sub-text-slate-400) dark:text-(--sub-text-muted)">
+				Switching between API and Advanced isn’t self-serve.{' '}
+				<a
+					href="mailto:sales@defillama.com"
+					className="font-medium text-(--sub-brand-primary) underline dark:text-(--sub-brand-secondary)"
+				>
+					Contact us
+				</a>{' '}
+				to change plans.
+			</p>
 		)
 	}
 
@@ -412,11 +430,15 @@ export function PricingCard({
 	isPageStateLoading?: boolean
 } & PricingCardCallbacks) {
 	const canUpgradeCycle = isCurrentPlan && userBillingCycle === 'monthly'
+	// api ∥ advanced are parallel premium tiers — neither can self-serve switch to the other
+	const isBlockedSwitch =
+		isAuthenticated && currentPlan && currentPlan !== 'free' && !isCurrentPlan && arePlanSiblings(currentPlan, card.key)
 	const isUpgradeTier =
 		isAuthenticated &&
 		currentPlan &&
 		currentPlan !== 'free' &&
 		!isCurrentPlan &&
+		!isBlockedSwitch &&
 		card.key !== 'free' &&
 		PLAN_TIER[card.key] > PLAN_TIER[currentPlan]
 	const isLowerTier =
@@ -424,6 +446,7 @@ export function PricingCard({
 		currentPlan &&
 		currentPlan !== 'free' &&
 		!isCurrentPlan &&
+		!isBlockedSwitch &&
 		PLAN_TIER[card.key] < PLAN_TIER[currentPlan]
 	const isHighlighted = card.highlighted === true
 	const wrapperClass = isHighlighted ? cardWrapperStyles.highlighted : cardWrapperStyles.default
@@ -451,6 +474,7 @@ export function PricingCard({
 							canUpgradeCycle={canUpgradeCycle}
 							isUpgradeTier={isUpgradeTier}
 							isLowerTier={isLowerTier}
+							isBlockedSwitch={isBlockedSwitch}
 							isManualSubscription={isManualSubscription}
 							billingCycle={billingCycle}
 							isPageStateLoading={isPageStateLoading}

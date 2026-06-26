@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { AUTH_SERVER } from '~/constants'
 import { useAuthContext } from '~/containers/Subscription/auth'
+import type { SubscriptionType } from '~/containers/Subscription/types'
 import { getStorageItem, removeStorageItem, setStorageItem, useStorageItem } from '~/contexts/localStorageStore'
 import { handleSimpleFetchResponse } from '~/utils/async'
 import pb from '~/utils/pocketbase'
@@ -193,7 +194,7 @@ export const useSubscribe = () => {
 	const handleSubscribe = useCallback(
 		async (
 			paymentMethod: 'stripe' | 'llamapay',
-			type: 'api' | 'llamafeed',
+			type: SubscriptionType,
 			onSuccess?: (checkoutUrl: string) => void,
 			billingInterval: 'year' | 'month' = 'month',
 			useEmbedded: boolean = false,
@@ -252,7 +253,7 @@ export const useSubscribe = () => {
 	)
 
 	const handleLlamapayTopup = useCallback(
-		async (type: 'api' | 'llamafeed', billingInterval: 'year' | 'month' = 'month') => {
+		async (type: SubscriptionType, billingInterval: 'year' | 'month' = 'month') => {
 			if (!isAuthenticated) {
 				toast.error('Please sign in to top up')
 				return
@@ -331,6 +332,8 @@ export const useSubscribe = () => {
 	const apiSubscription = subscriptionData?.type === 'api' ? subscriptionData : defaultInactiveSubscription
 
 	const llamafeedSubscription = subscriptionData?.type === 'llamafeed' ? subscriptionData : defaultInactiveSubscription
+
+	const advancedSubscription = subscriptionData?.type === 'advanced' ? subscriptionData : defaultInactiveSubscription
 
 	const legacySubscription = subscriptionData?.provider === 'legacy' ? subscriptionData : defaultInactiveSubscription
 
@@ -684,6 +687,7 @@ export const useSubscribe = () => {
 		isDisableOverageLoading: disableOverageMutation.isPending,
 		apiSubscription: apiSubscription,
 		llamafeedSubscription: llamafeedSubscription,
+		advancedSubscription: advancedSubscription,
 		legacySubscription: legacySubscription,
 		isTrialAvailable: isAuthenticated ? (trialAvailabilityQuery.data?.trialAvailable ?? false) : true,
 		isTrialStatusLoading: isAuthenticated && trialAvailabilityQuery.isLoading,

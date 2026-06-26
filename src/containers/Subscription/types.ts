@@ -1,4 +1,7 @@
-export type PlanKey = 'free' | 'pro' | 'api' | 'enterprise'
+export type PlanKey = 'free' | 'pro' | 'advanced' | 'api' | 'enterprise'
+
+export type SubscriptionType = 'llamafeed' | 'api' | 'advanced'
+
 export type BillingCycle = 'monthly' | 'yearly'
 export type Availability = 'check' | 'dash' | 'limited'
 

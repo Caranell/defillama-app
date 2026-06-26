@@ -15,7 +15,8 @@ interface PageState {
 export function useSubscriptionPageState(): PageState {
 	const isClient = useIsClient()
 	const { isAuthenticated, isTrial, loaders } = useAuthContext()
-	const { apiSubscription, llamafeedSubscription, isSubscriptionLoading, subscription } = useSubscribe()
+	const { apiSubscription, llamafeedSubscription, advancedSubscription, isSubscriptionLoading, subscription } =
+		useSubscribe()
 
 	const isLoading = isClient && (loaders.userLoading || (isAuthenticated && (isSubscriptionLoading || !subscription)))
 
@@ -26,6 +27,9 @@ export function useSubscriptionPageState(): PageState {
 		if (apiSubscription?.status === 'active') {
 			currentPlan = 'api'
 			userBillingCycle = apiSubscription.billing_interval === 'year' ? 'yearly' : 'monthly'
+		} else if (advancedSubscription?.status === 'active') {
+			currentPlan = 'advanced'
+			userBillingCycle = advancedSubscription.billing_interval === 'year' ? 'yearly' : 'monthly'
 		} else if (llamafeedSubscription?.status === 'active') {
 			currentPlan = 'pro'
 			userBillingCycle = llamafeedSubscription.billing_interval === 'year' ? 'yearly' : 'monthly'

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ComparisonCell, SELECTED_COLUMN_HIGHLIGHT } from '~/containers/Subscription/components'
-import { PLAN_META_BY_CYCLE } from '~/containers/Subscription/data'
+import { arePlanSiblings, PLAN_META_BY_CYCLE, PLAN_TIER } from '~/containers/Subscription/data'
 import type { BillingCycle, ComparisonSection, PlanKey } from '~/containers/Subscription/types'
 
 /* ── Style maps ────────────────────────────────────────────────────── */
@@ -48,8 +48,6 @@ function PlanGridBottomOutline({ left, width }: { left: number; width: number })
 
 /* ── ComparisonPlanHead ────────────────────────────────────────────── */
 
-const PLAN_TIER: Record<PlanKey, number> = { free: 0, pro: 1, api: 2, enterprise: 3 }
-
 function ComparisonPlanHead({
 	plan,
 	billingCycle,
@@ -58,6 +56,7 @@ function ComparisonPlanHead({
 	isSelected,
 	isCurrentPlan,
 	isLowerTier,
+	isBlocked,
 	onAction
 }: {
 	plan: PlanKey
@@ -67,6 +66,7 @@ function ComparisonPlanHead({
 	isSelected: boolean
 	isCurrentPlan: boolean
 	isLowerTier: boolean
+	isBlocked: boolean
 	onAction?: (plan: PlanKey) => void
 }) {
 	const meta = PLAN_META_BY_CYCLE[billingCycle][plan]
@@ -106,6 +106,10 @@ function ComparisonPlanHead({
 				{isCurrentPlan || isLowerTier ? (
 					<p className="text-center text-[10px] leading-7 font-medium text-(--sub-brand-primary) md:text-xs dark:text-(--sub-brand-secondary)">
 						{isCurrentPlan ? 'Current Plan' : 'Unlocked'}
+					</p>
+				) : isBlocked ? (
+					<p className="text-center text-[10px] leading-7 font-medium text-(--sub-text-slate-400) md:text-xs dark:text-(--sub-text-muted)">
+						Contact us
 					</p>
 				) : (
 					<button
@@ -237,7 +241,16 @@ export function SubscriptionComparisonSection({
 											isSelected={plan === selectedPlan}
 											isCurrentPlan={plan === currentPlan}
 											isLowerTier={
-												currentPlan != null && currentPlan !== 'free' && PLAN_TIER[plan] < PLAN_TIER[currentPlan]
+												currentPlan != null &&
+												currentPlan !== 'free' &&
+												!arePlanSiblings(currentPlan, plan) &&
+												PLAN_TIER[plan] < PLAN_TIER[currentPlan]
+											}
+											isBlocked={
+												currentPlan != null &&
+												currentPlan !== 'free' &&
+												plan !== currentPlan &&
+												arePlanSiblings(currentPlan, plan)
 											}
 											onAction={onPlanAction}
 										/>

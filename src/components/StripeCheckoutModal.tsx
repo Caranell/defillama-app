@@ -13,6 +13,7 @@ import { useCallback } from 'react'
 import { Icon } from '~/components/Icon'
 import { AUTH_SERVER, STRIPE_PUBLISHABLE_KEY } from '~/constants'
 import { useAuthContext } from '~/containers/Subscription/auth'
+import type { SubscriptionType } from '~/containers/Subscription/types'
 import type { FormSubmitEvent } from '~/types/forms'
 import { handleSimpleFetchResponse } from '~/utils/async'
 
@@ -71,7 +72,7 @@ interface StripeCheckoutModalProps {
 	isOpen: boolean
 	onClose: () => void
 	paymentMethod: 'stripe'
-	type: 'api' | 'llamafeed'
+	type: SubscriptionType
 	billingInterval?: 'year' | 'month'
 	isTrial?: boolean
 	isUpgradeFlow?: boolean
@@ -185,7 +186,7 @@ export function StripeCheckoutModal({
 	}
 
 	if (result?.kind === 'paidUpgrade') {
-		const planName = type === 'api' ? 'API' : type === 'llamafeed' ? 'Pro' : type
+		const planName = type === 'api' ? 'API' : type === 'llamafeed' ? 'Pro' : type === 'advanced' ? 'Advanced' : type
 		const billingPeriod = billingInterval === 'year' ? 'Annual' : 'Monthly'
 
 		return (

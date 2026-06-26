@@ -7,18 +7,37 @@ import type {
 	PricingCardData
 } from '~/containers/Subscription/types'
 
-export const PLAN_ORDER: PlanKey[] = ['free', 'pro', 'api', 'enterprise']
+export const PLAN_ORDER: PlanKey[] = ['free', 'pro', 'advanced', 'api', 'enterprise']
+
+/**
+ * Plan tiers are NOT strictly linear: `api` and `advanced` are parallel premium
+ * tiers that sit above `pro` (both share tier 2). You can subscribe to one, but
+ * cannot self-serve switch to the other — see {@link arePlanSiblings}.
+ */
+export const PLAN_TIER: Record<PlanKey, number> = { free: 0, pro: 1, advanced: 2, api: 2, enterprise: 3 }
+
+/**
+ * `api` and `advanced` are sibling premium tiers. Switching directly between them
+ * is blocked in self-serve checkout (handled via contact-support), the same way an
+ * API subscriber can't switch down to Pro.
+ */
+export function arePlanSiblings(a: PlanKey | null | undefined, b: PlanKey | null | undefined): boolean {
+	if (!a || !b) return false
+	return (a === 'api' && b === 'advanced') || (a === 'advanced' && b === 'api')
+}
 
 export const PLAN_META_BY_CYCLE: Record<BillingCycle, Record<PlanKey, PlanMeta>> = {
 	monthly: {
 		free: { title: 'Free', price: '$0/month', action: 'Get Started' },
 		pro: { title: 'Pro', price: '$49/month', action: 'Get Started' },
+		advanced: { title: 'Advanced', price: '$400/month', action: 'Get Started' },
 		api: { title: 'API', price: '$300/month', action: 'Get Started' },
 		enterprise: { title: 'Enterprise', price: 'Custom', action: 'Contact us' }
 	},
 	yearly: {
 		free: { title: 'Free', price: '$0/month', action: 'Get Started' },
 		pro: { title: 'Pro', price: '$40.83/month', priceSecondary: '$490/year', action: 'Get Started' },
+		advanced: { title: 'Advanced', price: '$333.33/month', priceSecondary: '$4,000/year', action: 'Get Started' },
 		api: { title: 'API', price: '$250/month', priceSecondary: '$3,000/year', action: 'Get Started' },
 		enterprise: { title: 'Enterprise', price: 'Custom', action: 'Contact us' }
 	}
@@ -90,6 +109,26 @@ const CARD_CONTENT: Omit<PricingCardData, 'priceMain' | 'priceUnit' | 'priceSeco
 		primaryCta: 'Get Pro Access',
 		secondaryCta: 'Pay with Crypto'
 	},
+	// TODO(advanced): finalize Advanced plan copy — subtitle, section title, and the
+	// boosted-Pro feature bullets below are placeholders pending product sign-off.
+	{
+		key: 'advanced',
+		title: 'Advanced',
+		subtitle: 'Pro, supercharged',
+		includedTierText: 'Includes all Pro tier features',
+		sections: [
+			{
+				title: 'Everything in Pro, plus',
+				items: [
+					{ label: 'TODO: Advanced-only benefit #1', availability: 'check' },
+					{ label: 'TODO: Advanced-only benefit #2', availability: 'check' },
+					{ label: 'TODO: Advanced-only benefit #3', availability: 'check' }
+				]
+			}
+		],
+		primaryCta: 'Get Advanced Access',
+		secondaryCta: 'Pay with Crypto'
+	},
 	{
 		key: 'api',
 		title: 'API',
@@ -153,12 +192,14 @@ const CYCLE_PRICING: Record<
 	monthly: {
 		free: { priceMain: '$0', priceUnit: '/month' },
 		pro: { priceMain: '$49', priceUnit: '/month', priceSecondary: '$588 /year' },
+		advanced: { priceMain: '$400', priceUnit: '/month', priceSecondary: '$4,800 /year' },
 		api: { priceMain: '$300', priceUnit: '/month', priceSecondary: '$3,600 /year' },
 		enterprise: {}
 	},
 	yearly: {
 		free: { priceMain: '$0', priceUnit: '/month' },
 		pro: { priceMain: '$40.83', priceUnit: '/month', priceSecondary: '$490 /year' },
+		advanced: { priceMain: '$333.33', priceUnit: '/month', priceSecondary: '$4,000 /year' },
 		api: { priceMain: '$250', priceUnit: '/month', priceSecondary: '$3,000 /year' },
 		enterprise: {}
 	}
@@ -176,6 +217,9 @@ export const PRICING_CARDS_BY_CYCLE: Record<BillingCycle, PricingCardData[]> = {
 	yearly: YEARLY_PRICING_CARDS
 }
 
+// TODO(advanced): `advanced` currently mirrors `pro` in every row. Add the
+// boosted-Pro differentiator rows (and bump the relevant cells to 'check') once
+// the Advanced feature set is finalized.
 export const COMPARISON_SECTIONS: ComparisonSection[] = [
 	{
 		title: 'Core Data & Dashboards',
@@ -185,6 +229,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'check',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -194,6 +239,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'check',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -203,6 +249,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'check',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -212,6 +259,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'check',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -227,6 +275,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'limited',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				},
@@ -239,6 +288,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'limited',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				},
@@ -251,6 +301,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'limited',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				},
@@ -264,6 +315,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -274,6 +326,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -283,6 +336,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -292,6 +346,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -308,6 +363,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'check',
 					pro: 'check',
+					advanced: 'check',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -319,6 +375,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'dash',
+					advanced: 'dash',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -329,6 +386,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'dash',
+					advanced: 'dash',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -339,6 +397,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'dash',
+					advanced: 'dash',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -348,6 +407,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'dash',
+					advanced: 'dash',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -359,6 +419,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'dash',
+					advanced: 'dash',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -368,6 +429,7 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 				values: {
 					free: 'dash',
 					pro: 'dash',
+					advanced: 'dash',
 					api: 'check',
 					enterprise: 'check'
 				}
@@ -379,24 +441,24 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 		rows: [
 			{
 				label: 'Direct raw access to our database',
-				values: { free: 'dash', pro: 'dash', api: 'dash', enterprise: 'check' }
+				values: { free: 'dash', pro: 'dash', advanced: 'dash', api: 'dash', enterprise: 'check' }
 			},
 			{
 				label: 'Custom bespoke solutions that fit your needs',
 				wrapLabel: true,
-				values: { free: 'dash', pro: 'dash', api: 'dash', enterprise: 'check' }
+				values: { free: 'dash', pro: 'dash', advanced: 'dash', api: 'dash', enterprise: 'check' }
 			},
 			{
 				label: 'Hourly data',
-				values: { free: 'dash', pro: 'dash', api: 'dash', enterprise: 'check' }
+				values: { free: 'dash', pro: 'dash', advanced: 'dash', api: 'dash', enterprise: 'check' }
 			},
 			{
 				label: 'Access to non-public data',
-				values: { free: 'dash', pro: 'dash', api: 'dash', enterprise: 'check' }
+				values: { free: 'dash', pro: 'dash', advanced: 'dash', api: 'dash', enterprise: 'check' }
 			},
 			{
 				label: 'Custom data licensing agreements',
-				values: { free: 'dash', pro: 'dash', api: 'dash', enterprise: 'check' }
+				values: { free: 'dash', pro: 'dash', advanced: 'dash', api: 'dash', enterprise: 'check' }
 			}
 		]
 	}
